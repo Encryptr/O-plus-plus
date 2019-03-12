@@ -13,14 +13,16 @@ Current Tasks = Tasks.txt
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_TOKEN_LENGTH 2048
+#define MAX_TOKEN 10000
+#define MAX_TOK 100
 #define IF_STRCMP(a,b) if (strcmp(a, b) == 0)
 
 void error();
 void parse();
 
-char tokens[255][255] = {};
+char tokens[MAX_TOKEN][MAX_TOKEN] = {};
 int idx = 0;
+
 
 int main (int argc, char *argv[])
 {
@@ -36,7 +38,7 @@ int main (int argc, char *argv[])
 	for(;;)
 	{
 
-		char tok[2048];
+		char tok[MAX_TOK];
 		fscanf(fin, " %s \n", tok);
 
 		IF_STRCMP(tok, "print")
