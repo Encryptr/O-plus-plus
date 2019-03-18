@@ -1,5 +1,5 @@
 #####################
-| TASKS FOR P++ LANG |
+| TASKS FOR O++ LANG |
 #####################
 
 ###VARIABLES###
