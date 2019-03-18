@@ -4,11 +4,6 @@
 
 ###VARIABLES###
 
-bool : name(true)
-int : name(10)
-
-or
-
 @var_name : 10
 
 ###FUNCTIONS###
