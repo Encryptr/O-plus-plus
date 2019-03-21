@@ -17,7 +17,7 @@ end
 
 print @age
 ```
-Using functions:
+Variables and Statments:
 ```ruby
 @a : 2
 @b : 6
