@@ -27,19 +27,19 @@ int main(int argc, char *argv[])
   }
 
   char fline[255];
-  char tok[50];
+  //char tok[50];
   
   //Condition
   const char *str_delim = " \n";
 
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
-    
+  	
     char *sword = strtok(fline, str_delim);
 
     while (sword != NULL)
     {
-      //printf("--->[%s] state=%d\n", sword, state);
+      printf("--->[%s] state=%d\n", sword, state);
 
       switch(state)
       {
@@ -53,16 +53,18 @@ int main(int argc, char *argv[])
           else 
           {
             printf("NO CLASS continuing...\n");
-            //state = FIND_ALL;
+            state = FIND_ALL;
           }
         break;
 
         case COPY_CONT:
           if (strcmp(sword, "end") == 0)
           {
-            for (int i=0; i<idx; ++i){ printf("%s\n", tokens[i]); }
-            //state = END;
-            //break;
+            // PRINT ALL INSIDE CLASS
+            for (int i=0; i<idx; ++i)
+            { 
+              printf("%s\n", tokens[i]); 
+            }
             exit(0);
           }
           strcpy(tokens[idx], sword);
@@ -70,7 +72,13 @@ int main(int argc, char *argv[])
         break;
 
         case FIND_ALL:
-          // ADD PRINT AND OTHERS!!
+          if (strcmp(sword, "print") == 0)
+          {
+            // ### FIX NOT REGOGNITION AND ADD "" ###
+          } else
+          {
+            printf("SYNTAX ERROR %s", sword);
+          }
         break;
       }
 
