@@ -8,7 +8,7 @@ When I started writing this language I wanted to learn more about C and introduc
 # Examples
 
 Using classes:
-```python
+```ruby
 class 
 
   @age : 10
