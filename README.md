@@ -8,7 +8,7 @@ When I started writing this language I wanted to learn more about C and introduc
 # Examples
 
 Using classes:
-
+```
 public class 
 
 @age : 10
@@ -16,4 +16,4 @@ public class
 end
 
 print @age
-
+```
