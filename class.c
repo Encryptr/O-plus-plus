@@ -1,14 +1,17 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define MAX_LENGTH 1000
 
 typedef enum 
 {
   IDLE,
-  STARTING,
-  STARTED,
-  ENDED,
+  FIND_CLASS,
+  FIND_END,
+  COPY_CONT,
+  END,
+  FIND_ALL,
 } States;
 
 char tokens[100][100] = {};
@@ -16,7 +19,7 @@ int idx = 0;
 
 int main(int argc, char *argv[])
 {
-  States state = IDLE;
+  States state = FIND_CLASS;
   FILE *file;
 
   file = fopen(argv[1], "rt");
@@ -39,32 +42,53 @@ int main(int argc, char *argv[])
 
     while (sword != NULL)
     {
-
-      if (strcmp(sword, "class") == 0)
-      {
-        state = STARTING;
-      }
-      else if (strcmp(sword, "end") == 0)
-      {
-        state = ENDED;
-      }
+      //printf("--->[%s] state=%d\n", sword, state);
 
       switch(state)
       {
-        case IDLE:
+        // case IDLE:
+        //   state = FIND_CLASS;
+        // break;
+
+        case FIND_CLASS:
+
+          if (strcmp(sword, "class") == 0)
+          {
+            state = COPY_CONT;
+          }
+          else 
+          {
+            printf("NO CLASS continuing...\n");
+            //state = FIND_ALL;
+          }
         break;
 
-        case STARTING:
-          state = STARTED;
-        break;
+        // case FIND_END:
+        //   if (strcmp(sword, "end") == 0)
+        //   {
+        //     state = END;
+        //   }
+        // break;
 
-        case STARTED:
+        case COPY_CONT:
+          if (strcmp(sword, "end") == 0)
+          {
+            for (int i=0; i<idx; ++i){ printf("%s\n", tokens[i]); }
+            //state = END;
+            //break;
+            exit(0);
+          }
           strcpy(tokens[idx], sword);
           idx++;
         break;
 
-        case ENDED:
-          for (int i=0; i<idx; ++i) printf("%s\n", tokens[i]);
+        // case END:
+        //   for (int i=0; i<idx; ++i){ printf("%s\n", tokens[i]); }
+        //   exit(0);
+        // break;
+
+        case FIND_ALL:
+          // ADD PRINT AND OTHERS!!
         break;
       }
 
