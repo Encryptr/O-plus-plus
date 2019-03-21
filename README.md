@@ -17,7 +17,7 @@ end
 
 print @age
 ```
-Variables and Statments:
+Variables and Statements:
 ```ruby
 @a : 2
 @b : 6
