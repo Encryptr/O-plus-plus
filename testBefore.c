@@ -9,6 +9,7 @@ typedef enum
   FIND_CLASS,
   COPY_CONT,
   FIND_ALL,
+  PRINT_TOK,
 } States;
 
 char tokens[100][100] = {};
@@ -39,7 +40,7 @@ int main(int argc, char *argv[])
 
     while (sword != NULL)
     {
-      printf("--->[%s] state=%d\n", sword, state);
+      //printf("--->[%s] state=%d\n", sword, state);
 
       switch(state)
       {
@@ -50,7 +51,8 @@ int main(int argc, char *argv[])
           {
             state = COPY_CONT;
           }
-          else 
+	  // ADD NO CLASS
+          else if (strcmp(sword, "noclass") == 0)
           {
             printf("NO CLASS continuing...\n");
             state = FIND_ALL;
@@ -74,12 +76,16 @@ int main(int argc, char *argv[])
         case FIND_ALL:
           if (strcmp(sword, "print") == 0)
           {
-            // ### FIX NOT REGOGNITION AND ADD "" ###
+	    state = PRINT_TOK;
           } else
           {
             printf("SYNTAX ERROR %s", sword);
           }
         break;
+
+	case PRINT_TOK:
+		printf("%s", sword);
+	break;
       }
 
       sword = strtok(NULL, str_delim);
