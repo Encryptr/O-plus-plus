@@ -78,32 +78,30 @@ int main(int argc, char *argv[])
         case FIND_ALL:
           if (strcmp(sword, "print") == 0)
           {
-            state = COPY_STRING;
+            state = PRINT_TOK;
           } else
           {
             printf("SYNTAX ERROR %s\n", sword);
           }
         break;
 
-      	case COPY_STRING:
-          if (strcmp(sword, "('") == 0)
-          {
-            state = PRINT_TOK;
-          }
-      	break;
+      	// case COPY_STRING:
+       //    if (strcmp(sword, "('") == 0)
+       //    {
+       //      state = PRINT_TOK;
+       //    }
+      	// break;
 
         case PRINT_TOK:
-        // ## FIX IGNORE WHITE SPACES ## 
-        // TESTED THIS IN OTHER FILE TestPrint.c
-        if (strcmp(sword, "')") == 0)
+        if (sscanf(sword, " (' %s ') ", tokens[i]) == 1)
         {
           for (i=0; i<idx; ++i)
           { 
             printf("%s ", tokens[i]); 
           }
         }
-        strcpy(tokens[idx], sword);
-        idx++;
+        // strcpy(tokens[idx], sword);
+        // idx++;
         break;
       }
 
