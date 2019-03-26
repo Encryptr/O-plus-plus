@@ -9,11 +9,15 @@ typedef enum
   FIND_CLASS,
   COPY_CONT,
   FIND_ALL,
+  COPY_STRING,
   PRINT_TOK,
+  
 } States;
 
 char tokens[100][100] = {};
+char class_tokens[100][100] = {};
 int idx = 0;
+int i;
 
 int main(int argc, char *argv[])
 {
@@ -23,12 +27,11 @@ int main(int argc, char *argv[])
   file = fopen(argv[1], "rt");
   if (file == NULL)
   {
-    printf("NO FILE %s\n", argv[1]);
+    printf("NO FILE NAMED %s\n", argv[1]);
     return -1;
   }
 
   char fline[255];
-  //char tok[50];
   
   //Condition
   const char *str_delim = " \n";
@@ -40,7 +43,7 @@ int main(int argc, char *argv[])
 
     while (sword != NULL)
     {
-      //printf("--->[%s] state=%d\n", sword, state);
+      //printf("[%s] state=%d\n", sword, state);
 
       switch(state)
       {
@@ -51,10 +54,9 @@ int main(int argc, char *argv[])
           {
             state = COPY_CONT;
           }
-	  // ADD NO CLASS
           else if (strcmp(sword, "noclass") == 0)
           {
-            printf("NO CLASS continuing...\n");
+            //printf("NO CLASS continuing...\n");
             state = FIND_ALL;
           }
         break;
@@ -63,29 +65,46 @@ int main(int argc, char *argv[])
           if (strcmp(sword, "end") == 0)
           {
             // PRINT ALL INSIDE CLASS
-            for (int i=0; i<idx; ++i)
+            for (i=0; i<idx; ++i)
             { 
-              printf("%s\n", tokens[i]); 
+              printf("%s \n", class_tokens[i]); 
             }
-            exit(0);
+            state = FIND_ALL;            
           }
-          strcpy(tokens[idx], sword);
+          strcpy(class_tokens[idx], sword);
           idx++;
         break;
 
         case FIND_ALL:
           if (strcmp(sword, "print") == 0)
           {
-	    state = PRINT_TOK;
+            state = COPY_STRING;
           } else
           {
-            printf("SYNTAX ERROR %s", sword);
+            printf("SYNTAX ERROR %s\n", sword);
           }
         break;
 
-	case PRINT_TOK:
-		printf("%s", sword);
-	break;
+      	case COPY_STRING:
+          if (strcmp(sword, "('") == 0)
+          {
+            state = PRINT_TOK;
+          }
+          
+      	break;
+
+        case PRINT_TOK:
+        // ## FIX IGNORE WHITE SPACES ## USE SOMETHING LIKE: fscanf(sword, " ' %s ' ")
+        if (strcmp(sword, "')") == 0)
+        {
+          for (i=0; i<idx; ++i)
+          { 
+            printf("%s ", tokens[i]); 
+          }
+        }
+        strcpy(tokens[idx], sword);
+        idx++;
+        break;
       }
 
       sword = strtok(NULL, str_delim);

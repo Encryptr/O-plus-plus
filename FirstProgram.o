@@ -1,3 +1,6 @@
-noclass
+class 
 
-print "hello"
+@var:10
+
+end
+print (' hello world ')
