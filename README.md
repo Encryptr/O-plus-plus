@@ -7,6 +7,14 @@ When I started writing this language I wanted to learn more about C and introduc
 
 # Examples
 
+Hello World:
+```ruby
+print 'Hello World!'
+``` 
+or 
+```ruby
+print ('Hello World!')
+```
 Using classes:
 ```ruby
 class 
