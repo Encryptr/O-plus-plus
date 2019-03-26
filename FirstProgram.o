@@ -1,3 +1,8 @@
-noclass 
+class 
 
-print (' hello world ')
+bye
+
+end
+print ('hello world im cool')
+
+print ('bye world')

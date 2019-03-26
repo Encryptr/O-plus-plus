@@ -33,12 +33,13 @@ int main(int argc, char *argv[])
 
   char fline[255];
   
-  //Condition
-  const char *str_delim = " \n";
+  //Condition Ignoring
+  const char *str_delim_def = " \t\n";
+  const char *str_delim = str_delim_def;
 
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
-  	
+    
     char *sword = strtok(fline, str_delim);
 
     while (sword != NULL)
@@ -69,6 +70,7 @@ int main(int argc, char *argv[])
             { 
               printf("%s \n", class_tokens[i]); 
             }
+            
             state = FIND_ALL;            
           }
           strcpy(class_tokens[idx], sword);
@@ -78,32 +80,26 @@ int main(int argc, char *argv[])
         case FIND_ALL:
           if (strcmp(sword, "print") == 0)
           {
-            state = COPY_STRING;
+            str_delim = "\n";
+            state = PRINT_TOK;
           } else
           {
             printf("SYNTAX ERROR %s\n", sword);
           }
         break;
 
-      	case COPY_STRING:
-          if (strcmp(sword, "('") == 0)
-          {
-            state = PRINT_TOK;
-          }
-      	break;
-
         case PRINT_TOK:
-        // ## FIX IGNORE WHITE SPACES ## 
-        // TESTED THIS IN OTHER FILE TestPrint.c
-        if (strcmp(sword, "')") == 0)
+        if (sscanf(sword, " (' %[^'\n] ') ", tokens) == 1)
         {
-          for (i=0; i<idx; ++i)
-          { 
-            printf("%s ", tokens[i]); 
-          }
+          printf("%s \n", tokens);  
+          str_delim = str_delim_def;
+          state = FIND_ALL;
         }
-        strcpy(tokens[idx], sword);
-        idx++;
+        else 
+        {
+          printf("SYNTAX PRINT ERROR %s \n", sword);
+          exit(1);
+        }
         break;
       }
 

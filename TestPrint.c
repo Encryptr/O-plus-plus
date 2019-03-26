@@ -14,7 +14,7 @@ typedef enum
   
 } States;
 
-char tokens[100];
+char tokens[100][100] = {};
 char class_tokens[100][100] = {};
 int idx = 0;
 int i;
@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
   char fline[255];
   
   //Condition
-  const char *str_delim = " \n";
+  const char *str_delim_def = " \n";
+  const char *str_delim = str_delim_def;
 
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
@@ -69,6 +70,7 @@ int main(int argc, char *argv[])
             { 
               printf("%s \n", class_tokens[i]); 
             }
+            
             state = FIND_ALL;            
           }
           strcpy(class_tokens[idx], sword);
@@ -78,6 +80,7 @@ int main(int argc, char *argv[])
         case FIND_ALL:
           if (strcmp(sword, "print") == 0)
           {
+            str_delim = "\n";
             state = PRINT_TOK;
           } else
           {
@@ -86,11 +89,16 @@ int main(int argc, char *argv[])
         break;
 
         case PRINT_TOK:
-        //printf("WERE HERE\n");
-        if (sscanf(sword, " (' %s ') ", tokens) == 1)
+        if (sscanf(sword, " (' %[^'\n] ') ", tokens) == 1)
         {
-          printf("WERE HERE\n");
-          printf("%s", sword);
+          printf("%s \n", tokens);  
+          str_delim = str_delim_def;
+          state = FIND_ALL;
+        }
+        else 
+        {
+          printf("SYNTAX PRINT ERROR %s \n", sword);
+          exit(1);
         }
         break;
       }
