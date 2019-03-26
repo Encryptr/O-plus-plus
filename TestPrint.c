@@ -14,7 +14,7 @@ typedef enum
   
 } States;
 
-char tokens[100][100] = {};
+char tokens[100];
 char class_tokens[100][100] = {};
 int idx = 0;
 int i;
@@ -85,23 +85,13 @@ int main(int argc, char *argv[])
           }
         break;
 
-      	// case COPY_STRING:
-       //    if (strcmp(sword, "('") == 0)
-       //    {
-       //      state = PRINT_TOK;
-       //    }
-      	// break;
-
         case PRINT_TOK:
-        if (sscanf(sword, " (' %s ') ", tokens[i]) == 1)
+        //printf("WERE HERE\n");
+        if (sscanf(sword, " (' %s ') ", tokens) == 1)
         {
-          for (i=0; i<idx; ++i)
-          { 
-            printf("%s ", tokens[i]); 
-          }
+          printf("WERE HERE\n");
+          printf("%s", sword);
         }
-        // strcpy(tokens[idx], sword);
-        // idx++;
         break;
       }
 
