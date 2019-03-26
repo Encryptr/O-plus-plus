@@ -11,21 +11,11 @@ func main
 
 end
 
-###PRINT###
-
-print @var
-print "Hello" #
-print 10
+###PRINT### FINISHED
 
 ###STATMENTS###
 
 if @var :: 10
-(
 
-)
-elif
-(
-
-)
-
+endif
 
