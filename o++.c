@@ -4,6 +4,14 @@
 
 #define MAX_LENGTH 1000
 
+void *lex_class(char toks[100][100]);
+
+typedef enum
+{
+  PRINT,
+  EQ,
+} Tok;
+
 typedef enum 
 {
   FIND_CLASS,
@@ -11,13 +19,13 @@ typedef enum
   FIND_ALL,
   COPY_STRING,
   PRINT_TOK,
-  
 } States;
 
 char tokens[100][100] = {};
 char class_tokens[100][100] = {};
 int idx = 0;
 int i;
+
 
 int main(int argc, char *argv[])
 {
@@ -66,10 +74,11 @@ int main(int argc, char *argv[])
           if (strcmp(sword, "end") == 0)
           {
             // PRINT ALL INSIDE CLASS
-            for (i=0; i<idx; ++i)
-            { 
-              printf("%s \n", class_tokens[i]); 
-            }
+            // for (i=0; i<idx; ++i)
+            // { 
+            //   printf("%s \n", class_tokens[i]); 
+            // }
+            lex_class(class_tokens);
             
             state = FIND_ALL;            
           }
@@ -106,5 +115,14 @@ int main(int argc, char *argv[])
       sword = strtok(NULL, str_delim);
     }
   }
-
 }
+
+// ADD LEXER TO CHECK IF WORTH TO PARSE
+void *lex_class(char toks[100][100])
+{
+  for (i=0;i<idx;i++)
+  {
+    printf("%s\n", toks[i]);
+  }
+}
+
