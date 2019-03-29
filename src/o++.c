@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
       {
 
         case FIND_CLASS:
-          // ## ADD IGNORE COMMENT ## TODO!!!
+          // ## ADD IGNORE COMMENT ## TODO!!! USE CONTINUE TO TELL IT TO GO ON!!
           // if (sscanf(sword, " < %[^'\n] > ", ignore) == 1)
           // {
           //   str_delim = str_delim_def;
