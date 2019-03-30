@@ -9,7 +9,7 @@ When I started writing this language I wanted to learn more about C and introduc
 
 Hello World & Comments:
 ```ruby
-< This is a comment >
+< Comment Example >
 print ('Hello World!')
 ```
 Using classes:
