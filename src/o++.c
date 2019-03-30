@@ -78,7 +78,15 @@ int main(int argc, char *argv[])
         break;
         
         case FIND_CLASS:
-
+          // ## ADD IGNORE COMMENT ## TODO!!! USE CONTINUE TO TELL IT TO GO ON!!
+          // if (sscanf(sword, " < %[^'\n] > ", ignore) == 1)
+          // {
+          //   str_delim = str_delim_def;
+          //   for (i=0;i<idx;i++)
+          //   {
+          //     printf("%s \n", ignore);
+          //   }  
+          // }
           if (strcmp(sword, "class") == 0)
           {
             state = COPY_CONT;
