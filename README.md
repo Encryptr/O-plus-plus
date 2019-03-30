@@ -7,8 +7,9 @@ When I started writing this language I wanted to learn more about C and introduc
 
 # Examples
 
-Hello World:
+Hello World & Comments:
 ```ruby
+< This is a comment >
 print ('Hello World!')
 ```
 Using classes:
