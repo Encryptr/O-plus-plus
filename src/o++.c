@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "o++.h"
 
 #define MAX_LENGTH 1000
 
@@ -52,8 +53,8 @@ int main(int argc, char *argv[])
   const char *str_delim_def = " \t\n";
   const char *str_delim = str_delim_def;
   char fline[255];
-  
-  //Condition Ignoring
+
+  //int force_next_line = 0;
 
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
@@ -62,21 +63,22 @@ int main(int argc, char *argv[])
 
     while (sword != NULL)
     {
-     printf("[%s] state=%d\n", sword, state);
+      //printf("[%s] state=%d\n", sword, state);
 
       switch(state)
       {
 
+        case IGNORE:
+
+          if (strcmp(sword, ">") == 0)
+          {
+            state = FIND_ALL;  
+          }
+          sword = "";
+        break;
+        
         case FIND_CLASS:
-          // ## ADD IGNORE COMMENT ## TODO!!!
-          // if (sscanf(sword, " < %[^'\n] > ", ignore) == 1)
-          // {
-          //   str_delim = str_delim_def;
-          //   for (i=0;i<idx;i++)
-          //   {
-          //     printf("%s \n", ignore);
-          //   }  
-          // }
+
           if (strcmp(sword, "class") == 0)
           {
             state = COPY_CONT;
@@ -96,7 +98,7 @@ int main(int argc, char *argv[])
         case COPY_CONT:
           if (strcmp(sword, "end") == 0)
           {
-            // NOT FULLY WORKING
+            // NOT FULLY WORKING DONT NEED FOR NOW!!!!
             //lex_class(class_tokens);
             // ADD GOTO IF NEEDED
             state = FIND_ALL;            
@@ -106,14 +108,25 @@ int main(int argc, char *argv[])
         break;
 
         case FIND_ALL:
-          if (strcmp(sword, "print") == 0)
+          // ## COMMENTS WORKING ##
+          if (strcmp(sword, "<") == 0)
+          {
+            //printf("FOUND COMMENT\n");
+            state = IGNORE;
+          }
+          else if (strcmp(sword, "print") == 0)
           {
             str_delim = "\n";
             state = PRINT_TOK;
           }
+          else if (strcmp(sword, "") == 0)
+          {
+            state = FIND_ALL;
+          }
           else
           {
             printf("SYNTAX ERROR %s\n", sword);
+            exit(1);
           }
         break;
 
@@ -132,6 +145,9 @@ int main(int argc, char *argv[])
         break;
 
       }
+
+      // FINISH SO NOT GOES BACK TO FIND CLASS
+      //if (force_next_line == 1) { break; }
 
       sword = strtok(NULL, str_delim);
     }
