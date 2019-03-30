@@ -3,7 +3,7 @@ noclass
 < This is a comment >
 < This is an example of using print >
 
-print 'Hello World!'
+print 'Hello Bye'
 
 < or >
 
