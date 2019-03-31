@@ -2,18 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include "o++.h"
+#include "errors.h"
 
 #define MAX_LENGTH 1000
 
-void *lex_class(char toks[100][100]);
+void lex_class(char toks[100][100]);
 
 typedef enum
-{
-  PRINT,
-  EQ,
-} Tok;
-
-typedef enum 
 {
   IGNORE,
   FIND_CLASS,
@@ -22,6 +17,7 @@ typedef enum
   COPY_STRING,
   PRINT_TOK,
 } States;
+
 
 // Conditions for Ignoring not working GLOBALLY
 // char *str_delim_def = " \t\n";
@@ -54,11 +50,10 @@ int main(int argc, char *argv[])
   const char *str_delim = str_delim_def;
   char fline[255];
 
-  //int force_next_line = 0;
 
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
-    
+
     char *sword = strtok(fline, str_delim);
 
     while (sword != NULL)
@@ -72,21 +67,13 @@ int main(int argc, char *argv[])
 
           if (strcmp(sword, ">") == 0)
           {
-            state = FIND_ALL;  
+            state = FIND_ALL;
           }
           sword = "";
         break;
-        
+
         case FIND_CLASS:
-          // ## ADD IGNORE COMMENT ## TODO!!! USE CONTINUE TO TELL IT TO GO ON!!
-          // if (sscanf(sword, " < %[^'\n] > ", ignore) == 1)
-          // {
-          //   str_delim = str_delim_def;
-          //   for (i=0;i<idx;i++)
-          //   {
-          //     printf("%s \n", ignore);
-          //   }  
-          // }
+
           if (strcmp(sword, "class") == 0)
           {
             state = COPY_CONT;
@@ -96,7 +83,7 @@ int main(int argc, char *argv[])
             //printf("NO CLASS continuing...\n");
             state = FIND_ALL;
           }
-          else 
+          else
           {
             printf("CLASS DECLARATION MISSING\n");
             exit(1);
@@ -106,10 +93,9 @@ int main(int argc, char *argv[])
         case COPY_CONT:
           if (strcmp(sword, "end") == 0)
           {
-            // NOT FULLY WORKING DONT NEED FOR NOW!!!!
-            //lex_class(class_tokens);
-            // ADD GOTO IF NEEDED
-            state = FIND_ALL;            
+            lex_class(class_tokens);
+
+            state = FIND_ALL;
           }
           strcpy(class_tokens[idx], sword);
           idx++;
@@ -141,11 +127,11 @@ int main(int argc, char *argv[])
         case PRINT_TOK:
         if ((sscanf(sword, " (' %[^'\n] ') ", tokens) == 1) || (sscanf(sword, " ' %[^'\n] ' ", tokens) == 1))
         {
-          printf("%s \n", tokens);  
+          printf("%s \n", tokens);
           str_delim = str_delim_def;
           state = FIND_ALL;
         }
-        else 
+        else
         {
           printf("SYNTAX PRINT ERROR %s \n", sword);
           exit(1);
@@ -162,32 +148,38 @@ int main(int argc, char *argv[])
   }
 }
 
-// ADD LEXER TO CHECK IF WORTH TO PARSE TODO
-// CURRENTLY ADDING VARIABLES
-void *lex_class(char toks[100][100])
-{
-  for (i=0;i<idx;i++)
-  {
-    printf("--> %s\n", toks[i]);
-  }
 
-  if (strcmp(*toks, "@") == 0)
+// TODO FIX SSCANF
+void lex_class(char toks[100][100])
+{
+  Tok t; // USE LATER TO RETURN TOK
+  Variable vv;
+  Variable *vptr = &vv;
+  // for (i=0;i<idx;i++)
+  // {
+  //   printf("--> %s\n", toks[i]);
+  // }
+
+// Not giving error but not going into the if
+  if (sscanf(*toks, " @ %[^\n] ", vptr->var_name) == 1)
   {
-    printf("VARIABLE\n");
+    printf("WERE EHRE\n");
+    printf("%s \n", vptr->var_name);
   }
-  else 
+  // if (strcmp(*toks, "@") == 0)
+  // {
+  //   printf("VARIABLE\n");
+  // }
+  else if (strcmp("", *toks) == 0)
   {
-    printf("ONLY VARIABLES IN CLASS\n");
+    ERROR_FOUND(1);
+    exit(1);
+  }
+  else
+  {
+    ERROR_FOUND(2);
     exit(1);
   }
 
-  // ## TRY SSCANF LATER ##
-  // if (sscanf(*toks, " @ %[^'\n] ", variables) == 1)
-  // {
-  //   printf("%s \n", variables);  
-  //   //str_delim = str_delim_def;
-  //   //state = FIND_ALL;
-  // }
 
 }
-

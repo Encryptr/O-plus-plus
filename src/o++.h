@@ -1,9 +1,17 @@
 
-#define INT 0
-#define FLOAT 1
+typedef enum
+{
+  VAR,
+  EQ,
+  INTEGER,
+  FLOAT,
 
-typedef struct 
+} Tok;
+
+// Make *struct for all varaibles
+typedef struct
 {
 	int val;
-	
+	char var_name;
+
 } Variable;
