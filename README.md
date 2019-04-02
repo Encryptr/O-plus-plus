@@ -10,7 +10,11 @@ When I started writing this language I wanted to learn more about C and introduc
 Hello World & Comments:
 ```ruby
 < Comment Example >
+< Use this for variables and strings >
 print ('Hello World!')
+< Or >
+< For Quick degugging strings >
+print 'Hello World!'
 ```
 Using classes:
 ```ruby
