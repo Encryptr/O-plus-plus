@@ -3,6 +3,7 @@ typedef enum
 {
   VAR,
   EQ,
+  TYPE,
   INTEGER,
   FLOAT,
 
@@ -12,6 +13,6 @@ typedef enum
 typedef struct
 {
 	int val;
-	char var_name;
+	char var_name[10];
 
 } Variable;

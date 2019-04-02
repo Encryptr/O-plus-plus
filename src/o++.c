@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
         case COPY_CONT:
           if (strcmp(sword, "end") == 0)
           {
+            // STILL IN PROGRESS
             lex_class(class_tokens);
 
             state = FIND_ALL;
@@ -152,34 +153,95 @@ int main(int argc, char *argv[])
 // TODO FIX SSCANF
 void lex_class(char toks[100][100])
 {
-  Tok t; // USE LATER TO RETURN TOK
+  Tok t = VAR; // USE LATER TO RETURN TOK
   Variable vv;
   Variable *vptr = &vv;
-  // for (i=0;i<idx;i++)
-  // {
-  //   printf("--> %s\n", toks[i]);
-  // }
 
-// Not giving error but not going into the if
-  if (sscanf(*toks, " @ %[^\n] ", vptr->var_name) == 1)
-  {
-    printf("WERE EHRE\n");
-    printf("%s \n", vptr->var_name);
-  }
-  // if (strcmp(*toks, "@") == 0)
-  // {
-  //   printf("VARIABLE\n");
-  // }
-  else if (strcmp("", *toks) == 0)
+  if (strcmp(*toks, "") == 0)
   {
     ERROR_FOUND(1);
     exit(1);
   }
-  else
+
+  for (i=0;i<idx;i++)
   {
-    ERROR_FOUND(2);
-    exit(1);
+    printf("--> %s\n", toks[i]);
+
+    switch (t)
+    {
+      case VAR:
+        if (sscanf(toks[i], "@%s", vptr->var_name) == 1)
+        {
+          printf("%s\n", vptr->var_name);
+          t = EQ;
+        }
+        else
+        {
+          ERROR_FOUND(2);
+          exit(1);
+        }
+      break;
+
+      case EQ:
+        printf("WERE HERE AT EQ\n");
+
+        if (strcmp(toks[i], ":") == 0)
+        {
+          printf("EQUALS FOUND\n");
+          t = TYPE;
+        }
+        else {ERROR_FOUND(3); exit(1);}
+
+      break;
+
+      case TYPE:
+        // NO TYPE IF FILE THROW ERROR IF NO TYPE FOUND
+        printf("HERE AT TYPE\n");
+        if (strcmp(toks[i], "[^A-Z]") == 0)
+        {
+          printf("IS DIGIT\n");
+        }
+
+      break;
+
+    }
+
+    // if (sscanf(toks[i], "@%s", vptr->var_name) == 1)
+    // {
+    //   printf("%s\n", vptr->var_name);
+    //   t = VAR;
+    //   printf("NOT HERE\n");
+    // }
+
+    // else
+    // {
+    //   ERROR_FOUND(2);
+    //   exit(1);
+    // }
+
   }
+
+
+// Not giving error but not going into the if
+  // if (sscanf(*toks, " @ %[^\n] ", vptr->var_name) == 1)
+  // {
+  //   printf("WERE EHRE\n");
+  //   printf("%s \n", vptr->var_name);
+  // }
+  // if (strcmp(*toks, "@") == 0)
+  // {
+  //   printf("VARIABLE\n");
+  // }
+  // else if (strcmp("", *toks) == 0)
+  // {
+  //   ERROR_FOUND(1);
+  //   exit(1);
+  // }
+  // else
+  // {
+  //   ERROR_FOUND(2);
+  //   exit(1);
+  // }
 
 
 }
