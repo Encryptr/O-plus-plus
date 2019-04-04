@@ -28,11 +28,11 @@ print @age
 ```
 Variables and Statements:
 ```ruby
-noclass
+class 
 
-@a : 2
-@b : 6
-@c : @a + @b
+@c : 10
+
+end
 
 if @c :: 8
   print "C is 8"
