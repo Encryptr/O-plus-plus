@@ -1,0 +1,10 @@
+< Declare Variable >
+
+class 
+
+@age : 24
+
+end
+
+print 'The age is '
+print @age
