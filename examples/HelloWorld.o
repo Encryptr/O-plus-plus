@@ -5,6 +5,4 @@ noclass
 
 print 'Hello World!!'
 
-< or >
-
-print ('Hello World!')
+< or with the @ symbol plus the var name >
