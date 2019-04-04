@@ -41,3 +41,5 @@ eif @c ! 8
 
 endif
 ```
+## Importing O++ Syntax
+If you want to use my own custom made o++ syntax highliting, I made an XML file under the XML folder that you can import to notepad++ to use O++ syntax and grammer.
