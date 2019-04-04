@@ -1,13 +1,19 @@
+#ifndef OPP
+#define OPP
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "o++.h"
-#include "errors.h"
+// #include "errors.h"
+//#include "pp_var.c"
 //#include <ctype.h>
 
 #define MAX_LENGTH 1000
 
 void lex_class(char toks[100][100]);
+//void print_var(const char *varname);
+
 
 typedef enum
 {
@@ -26,13 +32,16 @@ typedef enum
 
 
 // Storing Tokens
-char tokens[100][100] = {};
+char print_string[100][100] = {};
+char print_variable[10][10] = {};
 char class_tokens[100][100] = {};
 char variables[100][100] = {};
-char ignore[100][100] = {};
+// char ignore[100][100] = {};
 // Tokens variables
 int idx = 0;
 int i;
+
+int vars;
 
 
 int main(int argc, char *argv[])
@@ -77,6 +86,7 @@ int main(int argc, char *argv[])
 
           if (strcmp(sword, "class") == 0)
           {
+            has_class = 1;
             state = COPY_CONT;
           }
           else if (strcmp(sword, "noclass") == 0)
@@ -94,7 +104,6 @@ int main(int argc, char *argv[])
         case COPY_CONT:
           if (strcmp(sword, "end") == 0)
           {
-            // STILL IN PROGRESS
             lex_class(class_tokens);
 
             state = FIND_ALL;
@@ -127,11 +136,27 @@ int main(int argc, char *argv[])
         break;
 
         case PRINT_TOK:
-        if ((sscanf(sword, " (' %[^'\n] ') ", tokens) == 1) || (sscanf(sword, " ' %[^'\n] ' ", tokens) == 1))
+        if ((sscanf(sword, " ' %[^'\n] ' ", print_string) == 1))
         {
-          printf("%s \n", tokens);
+          printf("%s \n", print_string);
           str_delim = str_delim_def;
           state = FIND_ALL;
+        }
+        // Inplement Printing Variables
+        else if ((sscanf(sword, " @%s ", print_variable[vars]) == 1))
+        {
+          if (has_class == 1)
+          {
+            print_var(print_variable[vars]);
+            vars++;
+            str_delim = str_delim_def;
+            state = FIND_ALL;
+          }
+          else
+          {
+            ERROR_FOUND(5);
+            exit(1);
+          }
         }
         else
         {
@@ -142,21 +167,13 @@ int main(int argc, char *argv[])
 
       }
 
-      // FINISH SO NOT GOES BACK TO FIND CLASS
-      //if (force_next_line == 1) { break; }
-
       sword = strtok(NULL, str_delim);
     }
   }
 }
 
-
-// TODO FIX SSCANF
 void lex_class(char toks[100][100])
 {
-  Tok t = VAR; // USE LATER TO RETURN TOK
-  Variable vv;
-  Variable *vptr = &vv;
 
   if (strcmp(*toks, "") == 0)
   {
@@ -173,11 +190,10 @@ void lex_class(char toks[100][100])
       case VAR:
         if (sscanf(toks[i], "@%s", vptr->var_name[var_count]) == 1)
         {
-          var_count++;
           // printf("%s\n", vptr->var_name);
           // i is always one less than idx
-          // TODO Make quit with error if switchcannot be completed 
-          printf("%d | %d\n", i,idx);
+          // TODO Make quit with error if switchcannot be completed
+          //printf("%d | %d\n", i,idx);
           t = EQ;
 
         }
@@ -204,8 +220,8 @@ void lex_class(char toks[100][100])
         if (*toks[i] >= '0' && *toks[i] <= '9')
         {
           int num = atoi(toks[i]);
-          vptr->val[var_num_count] = num;
-          var_num_count++;
+          vptr->val[var_count] = num;
+          var_count++;
         }
         else
         {
@@ -221,33 +237,12 @@ void lex_class(char toks[100][100])
 
   }
 
-// Check if var names and values are alligned
-  for (i=0;i<var_count && var_num_count;i++)
-  {
-    printf("Name: %s Value: %d\n", vptr->var_name[i], vptr->val[i]);
-  }
 
-
-// Not giving error but not going into the if
-  // if (sscanf(*toks, " @ %[^\n] ", vptr->var_name) == 1)
+  // Check if var names and values are alligned
+  // for (i=0;i<var_count;i++)
   // {
-  //   printf("WERE EHRE\n");
-  //   printf("%s \n", vptr->var_name);
+  //   printf("Name: %s Value: %d\n", vptr->var_name[i], vptr->val[i]);
   // }
-  // if (strcmp(*toks, "@") == 0)
-  // {
-  //   printf("VARIABLE\n");
-  // }
-  // else if (strcmp("", *toks) == 0)
-  // {
-  //   ERROR_FOUND(1);
-  //   exit(1);
-  // }
-  // else
-  // {
-  //   ERROR_FOUND(2);
-  //   exit(1);
-  // }
-
 
 }
+#endif

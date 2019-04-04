@@ -1,9 +1,11 @@
 class
 
-@var : 10
-@dad : 47
-@mom : 35
+@dad_age : 10
+@moma : 234
 
 end
 
-print ('HELLO WORLD!')
+
+print 'My dads age is '
+print @dad_age
+print @moma
