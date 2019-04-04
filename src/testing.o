@@ -1,6 +1,8 @@
 class
 
-@var : 
+@var : 10
+@dad : 47
+@mom : 35
 
 end
 

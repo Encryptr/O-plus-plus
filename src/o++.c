@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "o++.h"
 #include "errors.h"
+//#include <ctype.h>
 
 #define MAX_LENGTH 1000
 
@@ -165,15 +166,20 @@ void lex_class(char toks[100][100])
 
   for (i=0;i<idx;i++)
   {
-    printf("--> %s\n", toks[i]);
+    //printf("--> %s\n", toks[i]);
 
     switch (t)
     {
       case VAR:
-        if (sscanf(toks[i], "@%s", vptr->var_name) == 1)
+        if (sscanf(toks[i], "@%s", vptr->var_name[var_count]) == 1)
         {
-          printf("%s\n", vptr->var_name);
+          var_count++;
+          // printf("%s\n", vptr->var_name);
+          // i is always one less than idx
+          // TODO Make quit with error if switchcannot be completed 
+          printf("%d | %d\n", i,idx);
           t = EQ;
+
         }
         else
         {
@@ -183,11 +189,9 @@ void lex_class(char toks[100][100])
       break;
 
       case EQ:
-        printf("WERE HERE AT EQ\n");
-
         if (strcmp(toks[i], ":") == 0)
         {
-          printf("EQUALS FOUND\n");
+          //printf("EQUALS FOUND\n");
           t = TYPE;
         }
         else {ERROR_FOUND(3); exit(1);}
@@ -196,29 +200,31 @@ void lex_class(char toks[100][100])
 
       case TYPE:
         // NO TYPE IF FILE THROW ERROR IF NO TYPE FOUND
-        printf("HERE AT TYPE\n");
-        if (strcmp(toks[i], "[^A-Z]") == 0)
+        //printf("HERE AT TYPE\n");
+        if (*toks[i] >= '0' && *toks[i] <= '9')
         {
-          printf("IS DIGIT\n");
+          int num = atoi(toks[i]);
+          vptr->val[var_num_count] = num;
+          var_num_count++;
         }
+        else
+        {
+          printf("Var is not equal to a Number: %s\n", toks[i]);
+        }
+
+        t = VAR;
 
       break;
 
     }
 
-    // if (sscanf(toks[i], "@%s", vptr->var_name) == 1)
-    // {
-    //   printf("%s\n", vptr->var_name);
-    //   t = VAR;
-    //   printf("NOT HERE\n");
-    // }
 
-    // else
-    // {
-    //   ERROR_FOUND(2);
-    //   exit(1);
-    // }
+  }
 
+// Check if var names and values are alligned
+  for (i=0;i<var_count && var_num_count;i++)
+  {
+    printf("Name: %s Value: %d\n", vptr->var_name[i], vptr->val[i]);
   }
 
 
