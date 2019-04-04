@@ -13,7 +13,7 @@ Hello World & Comments:
 < Use this for variables and strings >
 print ('Hello World!')
 < Or >
-< For Quick degugging strings >
+< For Quick Printing Strings >
 print 'Hello World!'
 ```
 Using classes:
@@ -28,11 +28,11 @@ print @age
 ```
 Variables and Statements:
 ```ruby
-noclass
+class 
 
-@a : 2
-@b : 6
-@c : @a + @b
+@c : 10
+
+end
 
 if @c :: 8
   print "C is 8"
