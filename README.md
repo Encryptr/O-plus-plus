@@ -10,9 +10,8 @@ When I started writing this language I wanted to learn more about C and introduc
 Hello World & Comments:
 ```ruby
 < Comment Example >
-< Use this for variables and strings >
-print ('Hello World!')
-< Or >
+< Use this for variables >
+print @
 < For Quick Printing Strings >
 print 'Hello World!'
 ```
