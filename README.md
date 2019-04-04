@@ -13,7 +13,7 @@ Hello World & Comments:
 < Use this for variables and strings >
 print ('Hello World!')
 < Or >
-< For Quick degugging strings >
+< For Quick Printing Strings >
 print 'Hello World!'
 ```
 Using classes:
