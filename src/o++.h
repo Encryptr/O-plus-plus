@@ -1,14 +1,16 @@
 #ifndef OH
 #define OH
+
 #include "o++.c"
 #include "errors.h"
 
-
+// TODO: MOVE VARIABLES INTO A BIG STRUCT
 int has_class = 0;
 int var_count = 0;
 int a;
-// int var_num_count = 0;
 
+//-----------------------------------------
+// STRUCTS + ENUMS
 typedef enum
 {
   VAR,
@@ -23,29 +25,35 @@ typedef struct
 
 } Variable;
 
-Tok t = VAR;
-Variable vv;
-Variable *vptr = &vv;
+typedef enum
+{
+  IGNORE,
+  FIND_CLASS,
+  COPY_CONT,
+  FIND_ALL,
+  COPY_STRING,
+  PRINT_TOK,
+} States;
+//-----------------------------------------
 
+// TODO: MOVE THIS BACK INTO MAIN POSSIBLY
+const char *str_delim_def = " \t\n";
+const char *str_delim;
+
+char fline[255];
+
+char print_string[100][100] = {};
+char print_variable[10][10] = {};
+char class_tokens[100][100] = {};
+char variables[100][100] = {};
+
+
+int idx = 0;
+int i;
+int vars;
 
 // Move to main if you want to
-void print_var(const char *varname)
-{
-  // printf("Vars in class %d\n", var_count);
-  // printf("Vars %d\n", vars);
-  for (a=0;a<var_count;a++)
-  {
-    if (strcmp(varname, vptr->var_name[a]) == 0)
-    {
-      printf("%d\n", vptr->val[a]);
-      return;
-    }
 
-  }
-    ERROR_FOUND(6);
-    printf("->%s\n", varname);
-
-}
 
 
 #endif

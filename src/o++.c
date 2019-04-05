@@ -5,48 +5,24 @@
 #include <string.h>
 #include <stdlib.h>
 #include "o++.h"
-// #include "errors.h"
-//#include "pp_var.c"
-//#include <ctype.h>
+//#include "lex.c"
 
 #define MAX_LENGTH 1000
 
+Tok t = VAR;
+Variable vv;
+Variable *vptr = &vv;
+States state = FIND_CLASS;
+
+
 void lex_class(char toks[100][100]);
+void print_var(const char *varname);
 //void print_var(const char *varname);
 
-
-typedef enum
-{
-  IGNORE,
-  FIND_CLASS,
-  COPY_CONT,
-  FIND_ALL,
-  COPY_STRING,
-  PRINT_TOK,
-} States;
-
-
-// Conditions for Ignoring not working GLOBALLY
-// char *str_delim_def = " \t\n";
-// char *str_delim = str_delim_def;
-
-
-// Storing Tokens
-char print_string[100][100] = {};
-char print_variable[10][10] = {};
-char class_tokens[100][100] = {};
-char variables[100][100] = {};
-// char ignore[100][100] = {};
-// Tokens variables
-int idx = 0;
-int i;
-
-int vars;
 
 
 int main(int argc, char *argv[])
 {
-  States state = FIND_CLASS;
   FILE *file;
 
   file = fopen(argv[1], "rt");
@@ -56,14 +32,9 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  const char *str_delim_def = " \t\n";
-  const char *str_delim = str_delim_def;
-  char fline[255];
-
-
+  str_delim = str_delim_def;
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
-
     char *sword = strtok(fline, str_delim);
 
     while (sword != NULL)
@@ -169,8 +140,9 @@ int main(int argc, char *argv[])
 
       sword = strtok(NULL, str_delim);
     }
-  }
+   }
 }
+
 
 void lex_class(char toks[100][100])
 {
@@ -245,4 +217,24 @@ void lex_class(char toks[100][100])
   // }
 
 }
+
+
+void print_var(const char *varname)
+{
+  // printf("Vars in class %d\n", var_count);
+  // printf("Vars %d\n", vars);
+  for (a=0;a<var_count;a++)
+  {
+    if (strcmp(varname, vptr->var_name[a]) == 0)
+    {
+      printf("%d\n", vptr->val[a]);
+      return;
+    }
+
+  }
+    ERROR_FOUND(6);
+    printf("->%s\n", varname);
+
+}
+
 #endif

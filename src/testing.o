@@ -1,11 +1,6 @@
-class
-
-@dad_age : 10
-@moma : 234
-
-end
-
+noclass
 
 print 'My dads age is '
 print @dad_age
 print @moma
+print @m
