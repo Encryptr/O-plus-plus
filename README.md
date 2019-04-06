@@ -13,8 +13,7 @@ If you want to use my own custom made o++ syntax highliting, I made an XML file 
 Hello World & Comments:
 ```ruby
 < Comment Example >
-< Use this for variables >
-print @
+print @var_name
 < For Quick Printing Strings >
 print 'Hello World!'
 ```
