@@ -7,6 +7,7 @@
 // TODO: MOVE VARIABLES INTO A BIG STRUCT
 int has_class = 0;
 int var_count = 0;
+int state_if_count = 0;
 int a;
 
 //-----------------------------------------
@@ -33,7 +34,29 @@ typedef enum
   FIND_ALL,
   COPY_STRING,
   PRINT_TOK,
+  IF_STATE,
 } States;
+
+typedef enum
+{
+  CHECK_VAR,
+  EQEQ,
+  NUM_CHECK,
+} IFSTATE;
+
+typedef struct
+{
+  char comp_var[10][10];
+  int comp_val[10];
+
+} COMPARE_IF;
+
+/* Add all Variables later
+typedef struct
+{
+
+} Data;
+*/
 //-----------------------------------------
 
 // TODO: MOVE THIS BACK INTO MAIN POSSIBLY

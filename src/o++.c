@@ -10,13 +10,19 @@
 #define MAX_LENGTH 1000
 
 Tok t = VAR;
+IFSTATE ifstate = CHECK_VAR;
 Variable vv;
 Variable *vptr = &vv;
+COMPARE_IF ci;
+COMPARE_IF *cif = &ci;
+
 States state = FIND_CLASS;
 
 
 void lex_class(char toks[100][100]);
 void print_var(const char *varname);
+// int if_statment(const char *comp, char *curr);
+int if_statment(const char *comp);
 //void print_var(const char *varname);
 
 
@@ -95,13 +101,21 @@ int main(int argc, char *argv[])
             str_delim = "\n";
             state = PRINT_TOK;
           }
+          else if (strcmp(sword, "if") == 0)
+          {
+            if (has_class == 1)
+            {
+                state = IF_STATE;
+            }
+            else {ERROR_FOUND(10); exit(1);}
+          }
           else if (strcmp(sword, "") == 0)
           {
             state = FIND_ALL;
           }
           else
           {
-            printf("SYNTAX ERROR %s\n", sword);
+            printf("NOT VALID -> %s\n", sword);
             exit(1);
           }
         break;
@@ -131,9 +145,18 @@ int main(int argc, char *argv[])
         }
         else
         {
-          printf("SYNTAX PRINT ERROR %s \n", sword);
+          printf("SYNTAX PRINT ERROR -> %s \n", sword);
           exit(1);
         }
+        break;
+
+        case IF_STATE:
+          // Assing to int later to compare if should go on or now or else it will still stay at same postion
+          // printf("RESULT: %d\n", if_statment(sword));
+          // if_statment(sword);
+          // state_if_count++;
+
+          state = FIND_ALL;
         break;
 
       }
@@ -206,9 +229,7 @@ void lex_class(char toks[100][100])
 
     }
 
-
   }
-
 
   // Check if var names and values are alligned
   // for (i=0;i<var_count;i++)
@@ -217,12 +238,10 @@ void lex_class(char toks[100][100])
   // }
 
 }
-
-
+//---------------------------------------------------
+//---------------------------------------------------
 void print_var(const char *varname)
 {
-  // printf("Vars in class %d\n", var_count);
-  // printf("Vars %d\n", vars);
   for (a=0;a<var_count;a++)
   {
     if (strcmp(varname, vptr->var_name[a]) == 0)
@@ -234,7 +253,67 @@ void print_var(const char *varname)
   }
     ERROR_FOUND(6);
     printf("->%s\n", varname);
+}
+//---------------------------------------------------
+//---------------------------------------------------
 
+int if_statment(const char *comp)
+{
+  // while (comp != NULL)
+  // {
+    switch (ifstate)
+    {
+      case CHECK_VAR:
+        if (sscanf(comp, "@%s", cif->comp_var[state_if_count]) == 1)
+        {
+          for (a=0;a<var_count;a++)
+          {
+            // FIX CHANGING STATE PROBLEM
+            if (strcmp(cif->comp_var[state_if_count], vptr->var_name[a]) == 0)
+            {
+              //printf("ITS THE SAME\n");
+              ifstate = EQEQ;
+              break;
+            }
+          }
+          if (ifstate != EQEQ) {
+            ERROR_FOUND(8); printf("-> %s\n", comp); exit(1);
+          }
+        }
+        else {ERROR_FOUND(9); printf("-> %s\n", comp); exit(1);}
+      break;
+
+      case EQEQ:
+        if (strcmp(comp, "::") == 0)
+        {
+          // printf("READY TO CHECK NUM\n");
+          ifstate = NUM_CHECK;
+        }
+        else {ERROR_FOUND(3); printf("-> %s\n", comp); exit(1);}
+      break;
+
+      case NUM_CHECK:
+        if (*comp >= '0' && *comp <= '9')
+        {
+          int value = atoi(comp);
+          cif->comp_val[state_if_count] = value;
+          //printf("COMP VAR: %s ITS VALUE: %d\n", cif->comp_var[state_if_count], cif->comp_val[state_if_count]);
+        }
+        for (a=0;a<var_count;a++)
+        {
+            if (cif->comp_val[state_if_count] == vptr->val[a])
+            {
+              printf("Same NUM\n");
+              return 2;
+              break;
+            }
+        }
+        printf("NOT SAME\n");
+        return 1;
+      break;
+
+    }
+  // ERROR_FOUND(11); exit(1);
 }
 
 #endif

@@ -1,6 +1,11 @@
-noclass
+class
 
-print 'My dads age is '
-print @dad_age
-print @moma
-print @m
+@age : 10
+@dad : 89
+
+end
+
+
+if @age :: 23
+
+print @dad
