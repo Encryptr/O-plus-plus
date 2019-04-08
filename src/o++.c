@@ -105,7 +105,9 @@ int main(int argc, char *argv[])
           {
             if (has_class == 1)
             {
-                state = IF_STATE;
+              // Change when finishing IF
+              state = FIND_ALL;
+                //state = IF_STATE;
             }
             else {ERROR_FOUND(10); exit(1);}
           }
@@ -155,7 +157,7 @@ int main(int argc, char *argv[])
           // printf("RESULT: %d\n", if_statment(sword));
           // if_statment(sword);
           // state_if_count++;
-
+          // printf("%s\n", sword);
           state = FIND_ALL;
         break;
 

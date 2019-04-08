@@ -6,6 +6,6 @@ class
 end
 
 
-if @age :: 23
+if 
 
 print @dad
