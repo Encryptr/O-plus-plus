@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
             if (has_class == 1)
             {
               // Change when finishing IF
-              state = FIND_ALL;
+              //state = FIND_ALL;
                 //state = IF_STATE;
             }
             else {ERROR_FOUND(10); exit(1);}
@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
         break;
 
         case PRINT_TOK:
+        // TODO: Add printing @var + @var
         if ((sscanf(sword, " ' %[^'\n] ' ", print_string) == 1))
         {
           printf("%s \n", print_string);
@@ -153,12 +154,12 @@ int main(int argc, char *argv[])
         break;
 
         case IF_STATE:
-          // Assing to int later to compare if should go on or now or else it will still stay at same postion
-          // printf("RESULT: %d\n", if_statment(sword));
+          // TODO: sword IS STILL AT IF STATMENT POSTION FIX!!
+          printf("RESULT: %d\n", if_statment(sword));
           // if_statment(sword);
           // state_if_count++;
           // printf("%s\n", sword);
-          state = FIND_ALL;
+          //state = FIND_ALL;
         break;
 
       }
@@ -180,19 +181,13 @@ void lex_class(char toks[100][100])
 
   for (i=0;i<idx;i++)
   {
-    //printf("--> %s\n", toks[i]);
-
     switch (t)
     {
       case VAR:
         if (sscanf(toks[i], "@%s", vptr->var_name[var_count]) == 1)
         {
-          // printf("%s\n", vptr->var_name);
-          // i is always one less than idx
           // TODO Make quit with error if switchcannot be completed
-          //printf("%d | %d\n", i,idx);
           t = EQ;
-
         }
         else
         {
@@ -233,7 +228,7 @@ void lex_class(char toks[100][100])
 
   }
 
-  // Check if var names and values are alligned
+  // Check all Variables assigned
   // for (i=0;i<var_count;i++)
   // {
   //   printf("Name: %s Value: %d\n", vptr->var_name[i], vptr->val[i]);
