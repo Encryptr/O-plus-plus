@@ -1,8 +1,7 @@
 class
 
 @age : 10
-@dad : 89
+
+
 
 end
-
-print @age

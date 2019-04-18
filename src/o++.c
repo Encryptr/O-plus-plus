@@ -217,7 +217,8 @@ void lex_class(char toks[100][100])
         }
         else
         {
-          printf("Var is not equal to a Number: %s\n", toks[i]);
+          printf("Var is not equal to a Number: %s\n", vptr->var_name[var_count]);
+          exit(1);
         }
 
         t = VAR;
@@ -225,7 +226,11 @@ void lex_class(char toks[100][100])
       break;
 
     }
+  }
 
+  if (i != var_count * 3)
+  {
+    ERROR_FOUND(12); exit(1);
   }
 
   // Check all Variables assigned
