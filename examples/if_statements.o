@@ -1,0 +1,10 @@
+class
+
+  @var : 10
+
+end
+
+if @var :: 10
+
+
+endif
