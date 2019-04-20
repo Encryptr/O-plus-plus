@@ -1,7 +1,4 @@
 class
 
-@age : 10
-
-
-
+  @var : sh
 end

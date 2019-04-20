@@ -7,13 +7,13 @@ if (in == X){printf("X\n");}
 
 */
 
-/*
-#define ERROR_FOUND(in) \
-  printf("ERROR ln=%d -> ", __LINE__); ERROR_FOUNDx(in);
-*/
+
+// #define ERROR_FOUND(in) \
+//   printf("ERROR ln=%d -> ", __LINE__); ERROR_FOUNDx(in);
+
 void ERROR_FOUND(int in)
 {
-  if (in == 1){printf("USE NOCLASS IF NOTHING IN CLASS\n");}
+  if (in == 1){printf("USE noclass IF NOTHING IN CLASS\n");}
   if (in == 2){printf("ONLY VARIABLES IN CLASS\n");}
   if (in == 3){printf("NO EQUALS SYMBOL OR NO SPACE\n");}
   if (in == 4){printf("Missing Equal Symbol\n");}
@@ -25,4 +25,7 @@ void ERROR_FOUND(int in)
   if (in == 10){printf("Need A Class To Use If Statments\n");}
   if (in == 11){printf("Not A Complete If Statment\n");}
   if (in == 12){printf("Uncomplete Variable Declaration\n");}
+  if (in == 13){printf("Variable Already Declared with the name\n");}
+  if (in == 14){printf("Endif found without an if statment\n");}
+  if (in == 15){printf("Variable equal to SYNTAX ERROR\n");}
 }

@@ -18,14 +18,11 @@ COMPARE_IF *cif = &ci;
 
 States state = FIND_CLASS;
 
-
+// TODO: CLEAN UP LATER!!
+void main_lex(char intake[MAX_LENGTH]);
 void lex_class(char toks[100][100]);
 void print_var(const char *varname);
-// int if_statment(const char *comp, char *curr);
 int if_statment(const char *comp);
-//void print_var(const char *varname);
-
-
 
 int main(int argc, char *argv[])
 {
@@ -37,10 +34,15 @@ int main(int argc, char *argv[])
     printf("NO FILE NAMED %s\n", argv[1]);
     return -1;
   }
-
-  str_delim = str_delim_def;
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
+    main_lex(fline);
+  }
+}
+
+void main_lex(char intake[MAX_LENGTH])
+{
+    str_delim = str_delim_def;
     char *sword = strtok(fline, str_delim);
 
     while (sword != NULL)
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
         break;
 
         case FIND_CLASS:
-
+          // TODO: START THINKING OF HOW TO IMPLEMENT COMPILER CLASS
           if (strcmp(sword, "class") == 0)
           {
             has_class = 1;
@@ -68,7 +70,6 @@ int main(int argc, char *argv[])
           }
           else if (strcmp(sword, "noclass") == 0)
           {
-            //printf("NO CLASS continuing...\n");
             state = FIND_ALL;
           }
           else
@@ -90,7 +91,6 @@ int main(int argc, char *argv[])
         break;
 
         case FIND_ALL:
-          // ## COMMENTS WORKING ##
           if (strcmp(sword, "<") == 0)
           {
             //printf("FOUND COMMENT\n");
@@ -105,11 +105,17 @@ int main(int argc, char *argv[])
           {
             if (has_class == 1)
             {
-              // Change when finishing IF
-              //state = FIND_ALL;
-                //state = IF_STATE;
+                state = IF_STATE;
             }
             else {ERROR_FOUND(10); exit(1);}
+          }
+          else if (strcmp(sword, "endif") == 0)
+          {
+            if (endif_amount >= 1)
+            {
+              endif_amount--;
+            }
+            else {ERROR_FOUND(14); exit(1);}
           }
           else if (strcmp(sword, "") == 0)
           {
@@ -123,6 +129,7 @@ int main(int argc, char *argv[])
         break;
 
         case PRINT_TOK:
+        // TODO: MOVE ALL INTO FUNCTION
         // TODO: Add printing @var + @var
         if ((sscanf(sword, " ' %[^'\n] ' ", print_string) == 1))
         {
@@ -130,7 +137,6 @@ int main(int argc, char *argv[])
           str_delim = str_delim_def;
           state = FIND_ALL;
         }
-        // Inplement Printing Variables
         else if ((sscanf(sword, " @%s ", print_variable[vars]) == 1))
         {
           if (has_class == 1)
@@ -146,29 +152,48 @@ int main(int argc, char *argv[])
             exit(1);
           }
         }
+        else if (sscanf(sword, "#%s", print_string[ascii_amount]) == 1)
+        {
+          // NEVER FINISHED "," FINISH IF WANT!!
+          int res = atoi(print_string[ascii_amount]);
+          putchar(res);
+          ascii_amount++;
+          state = FIND_ALL;
+        }
         else
         {
+          // REMOVE IF WANT!!
+          printf("\n");
           printf("SYNTAX PRINT ERROR -> %s \n", sword);
           exit(1);
         }
         break;
 
         case IF_STATE:
-          // TODO: sword IS STILL AT IF STATMENT POSTION FIX!!
-          printf("RESULT: %d\n", if_statment(sword));
-          // if_statment(sword);
-          // state_if_count++;
-          // printf("%s\n", sword);
-          //state = FIND_ALL;
+          if_result = if_statment(sword);
+          state_if_count++;
+          // TODO: ADD ERROR NOT COMPLETE IF STATMENT using if_step var
+          if (if_result == 2)
+          {
+            endif_amount++;
+            state = FIND_ALL;
+
+          }
+          if (if_result == 1)
+          {
+            if (strcmp(sword, "endif") == 0)
+            {
+              state = FIND_ALL;
+            }
+            sword = "";
+          }
         break;
 
       }
 
       sword = strtok(NULL, str_delim);
-    }
    }
 }
-
 
 void lex_class(char toks[100][100])
 {
@@ -186,7 +211,13 @@ void lex_class(char toks[100][100])
       case VAR:
         if (sscanf(toks[i], "@%s", vptr->var_name[var_count]) == 1)
         {
-          // TODO Make quit with error if switchcannot be completed
+          for (a=0;a<var_count;a++)
+          {
+              if (strcmp(vptr->var_name[var_count], vptr->var_name[a]) == 0)
+              {
+                ERROR_FOUND(13); printf("-> %s\n", vptr->var_name[var_count]); exit(1);
+              }
+          }
           t = EQ;
         }
         else
@@ -199,7 +230,6 @@ void lex_class(char toks[100][100])
       case EQ:
         if (strcmp(toks[i], ":") == 0)
         {
-          //printf("EQUALS FOUND\n");
           t = TYPE;
         }
         else {ERROR_FOUND(3); exit(1);}
@@ -207,19 +237,22 @@ void lex_class(char toks[100][100])
       break;
 
       case TYPE:
-        // NO TYPE IF FILE THROW ERROR IF NO TYPE FOUND
-        //printf("HERE AT TYPE\n");
         if (*toks[i] >= '0' && *toks[i] <= '9')
         {
           int num = atoi(toks[i]);
           vptr->val[var_count] = num;
           var_count++;
         }
-        else
+        /*
+        // TODO: FINISH ADDING STRINGS
+        else if ((*toks[i] >= 'A' && *toks[i] <= 'Z')||(*toks[i] >= 'a' && *toks[i] <= 'z'))
         {
-          printf("Var is not equal to a Number: %s\n", vptr->var_name[var_count]);
-          exit(1);
+          printf("string\n");
+          exit(0);
         }
+        */
+        else
+        {ERROR_FOUND(15); printf("->%s\n", toks[i]); exit(1);}
 
         t = VAR;
 
@@ -227,18 +260,10 @@ void lex_class(char toks[100][100])
 
     }
   }
-
   if (i != var_count * 3)
   {
     ERROR_FOUND(12); exit(1);
   }
-
-  // Check all Variables assigned
-  // for (i=0;i<var_count;i++)
-  // {
-  //   printf("Name: %s Value: %d\n", vptr->var_name[i], vptr->val[i]);
-  // }
-
 }
 //---------------------------------------------------
 //---------------------------------------------------
@@ -261,8 +286,6 @@ void print_var(const char *varname)
 
 int if_statment(const char *comp)
 {
-  // while (comp != NULL)
-  // {
     switch (ifstate)
     {
       case CHECK_VAR:
@@ -299,23 +322,22 @@ int if_statment(const char *comp)
         {
           int value = atoi(comp);
           cif->comp_val[state_if_count] = value;
-          //printf("COMP VAR: %s ITS VALUE: %d\n", cif->comp_var[state_if_count], cif->comp_val[state_if_count]);
         }
         for (a=0;a<var_count;a++)
         {
             if (cif->comp_val[state_if_count] == vptr->val[a])
             {
-              printf("Same NUM\n");
+              //printf("Same NUM\n");
               return 2;
               break;
             }
+
         }
-        printf("NOT SAME\n");
+        //printf("NOT SAME\n");
         return 1;
       break;
 
     }
-  // ERROR_FOUND(11); exit(1);
 }
 
 #endif

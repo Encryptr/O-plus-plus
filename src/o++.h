@@ -1,7 +1,8 @@
 #ifndef OH
 #define OH
 
-#include "o++.c"
+// TODO: ?? WHY INCLUDE O++.C
+//#include "o++.c"
 #include "errors.h"
 
 // TODO: MOVE VARIABLES INTO A BIG STRUCT
@@ -59,24 +60,25 @@ typedef struct
 */
 //-----------------------------------------
 
-// TODO: MOVE THIS BACK INTO MAIN POSSIBLY
 const char *str_delim_def = " \t\n";
 const char *str_delim;
 
-char fline[255];
+char fline[1000];
 
 char print_string[100][100] = {};
 char print_variable[10][10] = {};
 char class_tokens[100][100] = {};
 char variables[100][100] = {};
 
-
+// IDX IS FOR CLASS
 int idx = 0;
 int i;
 int vars;
-
-// Move to main if you want to
-
+int ascii_amount;
+// IDK MOVE SOMEWHERE
+int endif_amount;
+int if_result;
+int if_step;
 
 
 #endif
