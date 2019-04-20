@@ -14,7 +14,6 @@ Hello World & Comments:
 ```ruby
 < Comment Example >
 print @var_name
-< For Quick Printing Strings >
 print 'Hello World!'
 ```
 Using classes:
