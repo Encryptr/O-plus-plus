@@ -5,13 +5,17 @@
 //#include "o++.c"
 #include "errors.h"
 
+void main_lex(char intake[1000]);
+void lex_class(char toks[100][100]);
+void print_var(const char *varname);
+int if_statment(const char *comp);
+
 // TODO: MOVE VARIABLES INTO A BIG STRUCT
 int has_class = 0;
 int var_count = 0;
 int state_if_count = 0;
 int a;
 
-//-----------------------------------------
 // STRUCTS + ENUMS
 typedef enum
 {
@@ -58,7 +62,6 @@ typedef struct
 
 } Data;
 */
-//-----------------------------------------
 
 const char *str_delim_def = " \t\n";
 const char *str_delim;

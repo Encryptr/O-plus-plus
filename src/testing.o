@@ -1,19 +1,22 @@
 class
 
-  @var : 10
+	@var : 10
+	@dd : 32
 
 end
 
-if @var :: 2
+if @dd :: 23
 
-print 'HERE'
+print 'non'
 
 endif
 
 if @var :: 10
 
-print 'its 10'
+print 'good'
+print @var
 
 endif
 
-print 'GOOD JOB'
+print #65
+print 'thank you'
