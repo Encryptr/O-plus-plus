@@ -1,4 +1,19 @@
 class
 
-  @var : sh
+  @var : 10
+
 end
+
+if @var :: 2
+
+print 'HERE'
+
+endif
+
+if @var :: 10
+
+print 'its 10'
+
+endif
+
+print 'GOOD JOB'
