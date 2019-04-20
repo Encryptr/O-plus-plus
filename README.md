@@ -35,10 +35,8 @@ class
 end
 
 if @c :: 8
+
   print "C is 8"
-
-eif @c ! 8
-  print "C is not 8"
-
+  
 endif
 ```
