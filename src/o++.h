@@ -1,11 +1,9 @@
 #ifndef OH
 #define OH
 
-// TODO: ?? WHY INCLUDE O++.C
-//#include "o++.c"
 #include "errors.h"
 
-void main_lex(char intake[1000]);
+void main_lex(char intake[1000], FILE *fi);
 void lex_class(char toks[100][100]);
 void print_var(const char *varname);
 int if_statment(const char *comp);
@@ -40,6 +38,8 @@ typedef enum
   COPY_STRING,
   PRINT_TOK,
   IF_STATE,
+  ENDIF_FIND,
+
 } States;
 
 typedef enum
@@ -79,9 +79,10 @@ int i;
 int vars;
 int ascii_amount;
 // IDK MOVE SOMEWHERE
-int endif_amount;
+int endif_counter;
+int if_counter;
 int if_result;
-int if_step;
+// int if_step;
 
 
 #endif

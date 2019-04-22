@@ -1,16 +1,17 @@
 #include "o++.h"
 #include "function.c"
 
-void main_lex(char intake[1000])
+void main_lex(char intake[1000], FILE *fi)
 {
     str_delim = str_delim_def;
     char *sword = strtok(fline, str_delim);
+
 
     while (sword != NULL)
     {
       //printf("[%s] state=%d\n", sword, state);
 
-      switch(state)
+      switch (state)
       {
 
         case IGNORE:
@@ -23,12 +24,17 @@ void main_lex(char intake[1000])
         break;
 
         case FIND_CLASS:
-          // TODO: START THINKING OF HOW TO IMPLEMENT COMPILER CLASS
+          // TODO: ADD INT MAIN CLASSES
           if (strcmp(sword, "class") == 0)
           {
             has_class = 1;
             state = COPY_CONT;
           }
+          // else if (feof(fi))
+          // {
+          //   printf("NOCLASS\n");
+          //   exit(1);
+          // }
           else if (strcmp(sword, "noclass") == 0)
           {
             state = FIND_ALL;
@@ -66,32 +72,30 @@ void main_lex(char intake[1000])
           {
             if (has_class == 1)
             {
+                if_counter++;
                 state = IF_STATE;
+                //printf("if_ALL ENDIF->%d IF_COUNT->%d\n", endif_counter, if_counter);
+
             }
             else {ERROR_FOUND(10); exit(1);}
           }
+          // FIX FIX FIX ALL!!!
+          //--------------------------------------------------------------------
           else if (strcmp(sword, "endif") == 0)
           {
-            if (endif_amount >= 1)
-            {
-              // TODO: ADD IF ENDIF_AMOUNT NOT MATCHED UP TO IF
-              endif_amount--;
-            }
-            else {ERROR_FOUND(14); exit(1);}
+            if_counter--;
+            state = FIND_ALL;
           }
+          //--------------------------------------------------------------------
           else if (strcmp(sword, "") == 0)
           {
             state = FIND_ALL;
           }
           else
-          {
-            printf("NOT VALID -> %s\n", sword);
-            exit(1);
-          }
+          {printf("NOT VALID -> %s\n", sword); exit(1);}
         break;
 
         case PRINT_TOK:
-        // TODO: MOVE ALL INTO FUNCTION
         // TODO: Add printing @var + @var
         if ((sscanf(sword, " ' %[^'\n] ' ", print_string) == 1))
         {
@@ -133,22 +137,38 @@ void main_lex(char intake[1000])
 
         case IF_STATE:
           if_result = if_statment(sword);
-          state_if_count++;
-          // TODO: ADD ERROR NOT COMPLETE IF STATMENT using if_step var
+          // TODO: FIX NESTED IF STATMENTS AND ADD COUNTER FOR ENDIF
           if (if_result == 2)
           {
-            endif_amount++;
+            state_if_count++;
             state = FIND_ALL;
-
           }
+
           if (if_result == 1)
           {
-            if (strcmp(sword, "endif") == 0)
-            {
-              state = FIND_ALL;
-            }
-            sword = "";
+            state_if_count++;
+            endif_counter = if_counter;
+
+            state = ENDIF_FIND;
+            // if (strcmp(sword, "endif") == 0)
+            // {
+            //   endif_amount--;
+            //   state_if_count++;
+            //   state = FIND_ALL;
+            // }
+            // sword = "";
           }
+        break;
+
+        case ENDIF_FIND:
+          if (strcmp(sword, "endif") == 0)
+          {
+            //printf("find_edn ENDIF->%d IF_COUNT->%d\n", endif_counter, if_counter);
+            if (endif_counter == if_counter) {state = FIND_ALL;}
+            if_counter--;
+          } else if (strcmp(sword, "if") == 0) { if_counter++; }
+          // sword = "";
+
         break;
 
       }

@@ -1,22 +1,11 @@
-class
 
-	@var : 10
-	@dd : 32
 
-end
 
 if @dd :: 23
-
-print 'non'
-
+	if @var :: 23
+		print 'non'
+	endif
+print 'ok bye'
 endif
 
-if @var :: 10
-
-print 'good'
-print @var
-
-endif
-
-print #65
-print 'thank you'
+print 'GOOD JOB'

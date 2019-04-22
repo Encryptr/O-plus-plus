@@ -1,18 +1,10 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "o++.h"
 #include "parser.c"
-//#include "lex.c"
 
 #define MAX_LENGTH 1000
-
-// TODO: CLEAN UP LATER!!
-// void main_lex(char intake[MAX_LENGTH]);
-// void lex_class(char toks[100][100]);
-// void print_var(const char *varname);
-// int if_statment(const char *comp);
 
 int main(int argc, char *argv[])
 {
@@ -26,6 +18,6 @@ int main(int argc, char *argv[])
   }
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
-    main_lex(fline);
+    main_lex(fline, file);
   }
 }

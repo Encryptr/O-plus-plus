@@ -26,6 +26,7 @@ void ERROR_FOUND(int in)
   if (in == 11){printf("Not A Complete If Statment\n");}
   if (in == 12){printf("Uncomplete Variable Declaration\n");}
   if (in == 13){printf("Variable Already Declared with the name\n");}
-  if (in == 14){printf("Endif found without an if statment\n");}
+  if (in == 14){printf("Unexpected ENDIF or amount of if != endif\n");}
   if (in == 15){printf("Variable equal to SYNTAX ERROR\n");}
+  if (in == 16){printf("Only compare variables to Numbers\n");}
 }

@@ -56,14 +56,14 @@ void lex_class(char toks[100][100])
           vptr->val[var_count] = num;
           var_count++;
         }
-        /*
+
         // TODO: FINISH ADDING STRINGS
-        else if ((*toks[i] >= 'A' && *toks[i] <= 'Z')||(*toks[i] >= 'a' && *toks[i] <= 'z'))
-        {
-          printf("string\n");
-          exit(0);
-        }
-        */
+        // else if ((*toks[i] >= 'A' && *toks[i] <= 'Z')||(*toks[i] >= 'a' && *toks[i] <= 'z'))
+        // {
+        //   printf("string\n");
+        //   exit(0);
+        // }
+
         else
         {ERROR_FOUND(15); printf("->%s\n", toks[i]); exit(1);}
 
@@ -97,15 +97,16 @@ void print_var(const char *varname)
 
 int if_statment(const char *comp)
 {
+    int var_idx;
     switch (ifstate)
     {
       case CHECK_VAR:
         if (sscanf(comp, "@%s", cif->comp_var[state_if_count]) == 1)
         {
-          for (a=0;a<var_count;a++)
+          for (var_idx=0;var_idx<var_count;var_idx++)
           {
             // FIX CHANGING STATE PROBLEM
-            if (strcmp(cif->comp_var[state_if_count], vptr->var_name[a]) == 0)
+            if (strcmp(cif->comp_var[state_if_count], vptr->var_name[var_idx]) == 0)
             {
               //printf("ITS THE SAME\n");
               ifstate = EQEQ;
@@ -133,20 +134,21 @@ int if_statment(const char *comp)
         {
           int value = atoi(comp);
           cif->comp_val[state_if_count] = value;
+          ifstate = CHECK_VAR;
         }
-        for (a=0;a<var_count;a++)
-        {
-            if (cif->comp_val[state_if_count] == vptr->val[a])
-            {
-              //printf("Same NUM\n");
-              return 2;
-              break;
-            }
+        // ADD EXIT
+          if (cif->comp_val[state_if_count] == vptr->val[var_idx])
+          {
+            //printf("Same NUM\n");
+            return 2;
+            break;
+          }
 
-        }
         //printf("NOT SAME\n");
         return 1;
       break;
 
     }
+
+    return 0;
 }
