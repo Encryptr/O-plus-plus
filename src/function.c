@@ -6,7 +6,9 @@ Variable *vptr = &vv;
 COMPARE_IF ci;
 COMPARE_IF *cif = &ci;
 States state = FIND_CLASS;
-
+Change_Var cv;
+Change_Var *pcv = &cv;
+Order_Change order = IDENTIFY;
 
 void lex_class(char toks[100][100])
 {
@@ -56,16 +58,12 @@ void lex_class(char toks[100][100])
           vptr->val[var_count] = num;
           var_count++;
         }
-
-        // TODO: FINISH ADDING STRINGS
-        // else if ((*toks[i] >= 'A' && *toks[i] <= 'Z')||(*toks[i] >= 'a' && *toks[i] <= 'z'))
-        // {
-        //   printf("string\n");
-        //   exit(0);
-        // }
-
-        else
-        {ERROR_FOUND(15); printf("->%s\n", toks[i]); exit(1);}
+        else if (sscanf(toks[i], " ' %[^'\n]s ' ", vptr->string[var_count]) == 1)
+        {
+            is_string++;
+            var_count++;
+        }
+        else {ERROR_FOUND(15); printf("->%s\n", toks[i]); exit(1);}
 
         t = VAR;
 
@@ -85,6 +83,12 @@ void print_var(const char *varname)
   {
     if (strcmp(varname, vptr->var_name[a]) == 0)
     {
+      if (is_string >= 1)
+      {
+        printf("%s\n", vptr->string[a]);
+        is_string--;
+        return;
+      }
       printf("%d\n", vptr->val[a]);
       return;
     }
@@ -101,6 +105,7 @@ int if_statment(const char *comp)
     switch (ifstate)
     {
       case CHECK_VAR:
+      // TODO: ADD IF STATMENT FOR STRINGS
         if (sscanf(comp, "@%s", cif->comp_var[state_if_count]) == 1)
         {
           for (var_idx=0;var_idx<var_count;var_idx++)
@@ -151,4 +156,47 @@ int if_statment(const char *comp)
     }
 
     return 0;
+}
+
+void change_variable(const char *curr)
+{
+  switch (order)
+  {
+    case IDENTIFY:
+      if (strcmp(curr, operators[0]) == 0)
+      {pcv->op_result = 1;}
+      else if (strcmp(curr, operators[1]) == 0)
+      {pcv->op_result = 2;}
+      else if (strcmp(curr, operators[2]) == 0)
+      {pcv->op_result = 3;}
+      else if (strcmp(curr, operators[3]) == 0)
+      {pcv->op_result = 4;}
+      else {ERROR_FOUND(18); printf("->%s\n", curr); exit(1);}
+      order = EXECUTE;
+    break;
+
+    case EXECUTE:
+    // TODO: INPLEMENT FLOATS
+    // if (sscanf(curr, " %f ", pcv->change_by_num[change_count]) == 1)
+    // {
+    //   pcv->change_by_num[change_count] = strtof(curr, NULL);
+    //   printf("%d\n",vptr->val[pcv->which_match]);
+    //   //pcv->change_by_num[change_count] + vptr->val[pcv->which_match];
+    // }
+    // TODO: ADD MINUS STATES MULTIPLY AND MORE
+    if (*curr >= '0' && *curr <= '9')
+    {
+      pcv->change_by_num[change_count] = atoi(curr);
+      vptr->val[pcv->which_match] += pcv->change_by_num[change_count];
+      // USE CONT TO TELL IF KEEP GOING
+      pcv->cont = 1;
+      change_count++;
+      order = IDENTIFY;
+      return;
+    }
+    else {ERROR_FOUND(-1); printf("->%s\n", curr);exit(1);}
+    break;
+  }
+
+  return;
 }

@@ -15,27 +15,27 @@ void main_lex(char intake[1000], FILE *fi)
       {
 
         case IGNORE:
-
-          if (strcmp(sword, ">") == 0)
+          if (strcmp(sword, stdlib[7]) == 0)
           {
-            state = FIND_ALL;
+            if (back_to_class == 1) { back_to_class = 0; state = FIND_CLASS; }
+            else state = FIND_ALL;
           }
           sword = "";
         break;
 
         case FIND_CLASS:
           // TODO: ADD INT MAIN CLASSES
-          if (strcmp(sword, "class") == 0)
+          if (strcmp(sword, stdlib[6]) == 0)
+          {
+            back_to_class = 1;
+            state = IGNORE;
+          }
+          else if (strcmp(sword, stdlib[0]) == 0)
           {
             has_class = 1;
             state = COPY_CONT;
           }
-          // else if (feof(fi))
-          // {
-          //   printf("NOCLASS\n");
-          //   exit(1);
-          // }
-          else if (strcmp(sword, "noclass") == 0)
+          else if (strcmp(sword, stdlib[2]) == 0)
           {
             state = FIND_ALL;
           }
@@ -47,7 +47,7 @@ void main_lex(char intake[1000], FILE *fi)
         break;
 
         case COPY_CONT:
-          if (strcmp(sword, "end") == 0)
+          if (strcmp(sword, stdlib[1]) == 0)
           {
             lex_class(class_tokens);
 
@@ -58,30 +58,37 @@ void main_lex(char intake[1000], FILE *fi)
         break;
 
         case FIND_ALL:
-          if (strcmp(sword, "<") == 0)
+          if (strcmp(sword, stdlib[6]) == 0)
           {
-            //printf("FOUND COMMENT\n");
             state = IGNORE;
           }
-          else if (strcmp(sword, "print") == 0)
+          //--------------------------------------------------------------------
+          else if (strcmp(sword, stdlib[5]) == 0)
           {
             str_delim = "\n";
             state = PRINT_TOK;
           }
-          else if (strcmp(sword, "if") == 0)
+          //--------------------------------------------------------------------
+          else if (sscanf(sword, "@%s", pcv->change_comp_var[change_count]) == 1)
+          {
+            if (has_class == 1)
+            {
+                state = CHANGE_VAR;
+            }
+            else {ERROR_FOUND(17); exit(1);}
+          }
+          //--------------------------------------------------------------------
+          //--------------------------------------------------------------------
+          else if (strcmp(sword, stdlib[3]) == 0)
           {
             if (has_class == 1)
             {
                 if_counter++;
                 state = IF_STATE;
-                //printf("if_ALL ENDIF->%d IF_COUNT->%d\n", endif_counter, if_counter);
-
             }
             else {ERROR_FOUND(10); exit(1);}
           }
-          // FIX FIX FIX ALL!!!
-          //--------------------------------------------------------------------
-          else if (strcmp(sword, "endif") == 0)
+          else if (strcmp(sword, stdlib[4]) == 0)
           {
             if_counter--;
             state = FIND_ALL;
@@ -93,6 +100,7 @@ void main_lex(char intake[1000], FILE *fi)
           }
           else
           {printf("NOT VALID -> %s\n", sword); exit(1);}
+          //--------------------------------------------------------------------
         break;
 
         case PRINT_TOK:
@@ -137,38 +145,52 @@ void main_lex(char intake[1000], FILE *fi)
 
         case IF_STATE:
           if_result = if_statment(sword);
-          // TODO: FIX NESTED IF STATMENTS AND ADD COUNTER FOR ENDIF
           if (if_result == 2)
           {
             state_if_count++;
             state = FIND_ALL;
           }
-
           if (if_result == 1)
           {
             state_if_count++;
             endif_counter = if_counter;
-
             state = ENDIF_FIND;
-            // if (strcmp(sword, "endif") == 0)
-            // {
-            //   endif_amount--;
-            //   state_if_count++;
-            //   state = FIND_ALL;
-            // }
-            // sword = "";
           }
         break;
 
         case ENDIF_FIND:
           if (strcmp(sword, "endif") == 0)
           {
-            //printf("find_edn ENDIF->%d IF_COUNT->%d\n", endif_counter, if_counter);
             if (endif_counter == if_counter) {state = FIND_ALL;}
             if_counter--;
-          } else if (strcmp(sword, "if") == 0) { if_counter++; }
-          // sword = "";
+          }
+          else if (strcmp(sword, "if") == 0) { if_counter++; }
+        break;
 
+        case CHANGE_VAR:
+        for (pcv->which_match=0;pcv->which_match<var_count;pcv->which_match++)
+        {
+            if (strcmp(pcv->change_comp_var[change_count], vptr->var_name[pcv->which_match]) == 0)
+            {
+              pcv->does_match = 1;
+              break;
+            }
+        }
+        if (pcv->does_match == 0)
+        {
+          ERROR_FOUND(6);
+          printf("->%s\n", pcv->change_comp_var[change_count]);
+          exit(1);
+        }
+        pcv->does_match = 0;
+
+        change_variable(sword);
+
+        if (pcv->cont == 1)
+        {
+          pcv->cont = 0;
+          state = FIND_ALL;
+        }
         break;
 
       }

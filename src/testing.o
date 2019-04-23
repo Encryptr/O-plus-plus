@@ -1,11 +1,11 @@
 
+< This is a script for all testing going on with o++ >
 
+class
 
-if @dd :: 23
-	if @var :: 23
-		print 'non'
-	endif
-print 'ok bye'
-endif
+@dd : 10
+@dsa : 13
 
-print 'GOOD JOB'
+end
+
+print @dd

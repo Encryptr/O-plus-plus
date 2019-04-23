@@ -13,6 +13,7 @@ if (in == X){printf("X\n");}
 
 void ERROR_FOUND(int in)
 {
+  if (in == -1){printf("NOT VALID\n");}
   if (in == 1){printf("USE noclass IF NOTHING IN CLASS\n");}
   if (in == 2){printf("ONLY VARIABLES IN CLASS\n");}
   if (in == 3){printf("NO EQUALS SYMBOL OR NO SPACE\n");}
@@ -29,4 +30,6 @@ void ERROR_FOUND(int in)
   if (in == 14){printf("Unexpected ENDIF or amount of if != endif\n");}
   if (in == 15){printf("Variable equal to SYNTAX ERROR\n");}
   if (in == 16){printf("Only compare variables to Numbers\n");}
+  if (in == 17){printf("Need Class to use Variables\n");}
+  if (in == 18){printf("Not a valid operator\n");}
 }
