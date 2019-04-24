@@ -184,6 +184,7 @@ void change_variable(const char *curr)
     //   //pcv->change_by_num[change_count] + vptr->val[pcv->which_match];
     // }
     // TODO: ADD MINUS STATES MULTIPLY AND MORE
+    // TODO: ADD VAR + VAR
     if (*curr >= '0' && *curr <= '9')
     {
       pcv->change_by_num[change_count] = atoi(curr);
