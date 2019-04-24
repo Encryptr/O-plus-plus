@@ -141,6 +141,7 @@ int if_statment(const char *comp)
           cif->comp_val[state_if_count] = value;
           ifstate = CHECK_VAR;
         }
+        else {ERROR_FOUND(19); printf("->%s\n", comp); exit(1);}
         // ADD EXIT
           if (cif->comp_val[state_if_count] == vptr->val[var_idx])
           {

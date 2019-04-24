@@ -8,4 +8,6 @@ class
 
 end
 
-@dd + 34532253
+if @dd :: @dsa
+  print 'no'
+endif

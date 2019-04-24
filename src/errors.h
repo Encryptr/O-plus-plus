@@ -32,4 +32,5 @@ void ERROR_FOUND(int in)
   if (in == 16){printf("Only compare variables to Numbers\n");}
   if (in == 17){printf("Need Class to use Variables\n");}
   if (in == 18){printf("Not a valid operator\n");}
+  if (in == 19){printf("NOT VALID COMPERESON\n");}
 }
