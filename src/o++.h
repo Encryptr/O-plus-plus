@@ -1,9 +1,12 @@
 #ifndef OH
 #define OH
 
+#define MAX_VAL 99
+
 #include "errors.h"
 
 void main_lex(char intake[1000], FILE *fi);
+// CHANGE TOKS VAL 
 void lex_class(char toks[100][100]);
 void print_var(const char *varname);
 int if_statment(const char *comp);
@@ -26,9 +29,9 @@ typedef enum
 typedef struct
 {
   // Change size for larger same for IF vals
-	int val[10];
-  char string[10][10];
-	char var_name[10][10];
+	int val[MAX_VAL];
+  char string[MAX_VAL][MAX_VAL];
+	char var_name[MAX_VAL][MAX_VAL];
 
 } Variable;
 
@@ -62,17 +65,17 @@ typedef enum
 
 typedef struct
 {
-  char comp_var[10][10];
-  int comp_val[10];
+  char comp_var[MAX_VAL][MAX_VAL];
+  int comp_val[MAX_VAL];
 
 } COMPARE_IF;
 
 typedef struct
 {
   int cont;
-  char change_comp_var[10][10];
+  char change_comp_var[MAX_VAL][MAX_VAL];
   int op_result;
-  int change_by_num[10];
+  int change_by_num[MAX_VAL];
   int does_match;
   int which_match;
 } Change_Var;

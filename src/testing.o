@@ -8,6 +8,8 @@ class
 
 end
 
-if @dd :: @dsa
-  print 'no'
-endif
+@dd + 1
+@dsa + 12
+
+print @dd
+print @dsa
