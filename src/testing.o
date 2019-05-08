@@ -3,13 +3,7 @@
 
 class
 
-@dd : 10
-@dsa : 13
+@dd : 19
 
 end
 
-@dd + 1
-@dsa + 12
-
-print @dd
-print @dsa
