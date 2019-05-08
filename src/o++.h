@@ -62,6 +62,11 @@ typedef enum
   EXECUTE,
 } Order_Change;
 
+typedef enum 
+{
+  FCLASS,
+  CCONT,
+} Class;
 
 typedef struct
 {

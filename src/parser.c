@@ -1,3 +1,5 @@
+#ifndef PARSE
+#define PARSE
 
 Tok t = VAR;
 IFSTATE ifstate = CHECK_VAR;
@@ -5,14 +7,13 @@ Variable vv;
 Variable *vptr = &vv;
 COMPARE_IF ci;
 COMPARE_IF *cif = &ci;
-States state = FIND_CLASS;
+States state = FIND_ALL;
 Change_Var cv;
 Change_Var *pcv = &cv;
 Order_Change order = IDENTIFY;
 
 void lex_class(char toks[100][100])
 {
-
   if (strcmp(*toks, "") == 0)
   {
     ERROR_FOUND(1);
@@ -202,3 +203,5 @@ void change_variable(const char *curr)
 
   return;
 }
+
+#endif

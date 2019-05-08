@@ -1,5 +1,5 @@
 #include "o++.h"
-#include "function.c"
+#include "parser.c"
 
 void main_lex(char intake[1000], FILE *fi)
 {
@@ -13,52 +13,31 @@ void main_lex(char intake[1000], FILE *fi)
 
       switch (state)
       {
-
         case IGNORE:
           if (strcmp(sword, stdlib[7]) == 0)
           {
-            if (back_to_class == 1) { back_to_class = 0; state = FIND_CLASS; }
-            else state = FIND_ALL;
+            state = FIND_ALL;
           }
           sword = "";
         break;
 
-        case FIND_CLASS:
-          // TODO: ADD INT MAIN CLASSES
-          if (strcmp(sword, stdlib[6]) == 0)
-          {
-            back_to_class = 1;
-            state = IGNORE;
-          }
-          else if (strcmp(sword, stdlib[0]) == 0)
-          {
-            has_class = 1;
-            state = COPY_CONT;
-          }
-          else if (strcmp(sword, stdlib[2]) == 0)
-          {
-            state = FIND_ALL;
-          }
-          else
-          {
-            printf("CLASS DECLARATION MISSING\n");
-            exit(1);
-          }
-        break;
+        // case FIND_CLASS:
+        //   state = FIND_ALL;
+        // break;
 
         case COPY_CONT:
           if (strcmp(sword, stdlib[1]) == 0)
           {
-            lex_class(class_tokens);
-
             state = FIND_ALL;
           }
-          strcpy(class_tokens[idx], sword);
-          idx++;
         break;
 
         case FIND_ALL:
-          if (strcmp(sword, stdlib[6]) == 0)
+          if (strcmp(sword, "class") == 0)
+          {
+            state = COPY_CONT;
+          }
+          else if (strcmp(sword, stdlib[6]) == 0)
           {
             state = IGNORE;
           }
