@@ -14,16 +14,8 @@ If you want to use my own custom made o++ syntax highlighting, I made an XML fil
 
 Hello World & Comments:
 ```ruby
-< Comment Example >
+## Comment Example ##
 print @var_name
 print 'Hello World!'
 ```
-Using classes:
-```ruby
-class
-
-  @age : 10
-
-end
-``` 
 More examples under the "example" folder!

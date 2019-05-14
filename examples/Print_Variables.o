@@ -1,4 +1,8 @@
 ## Declare Variable ##
+## classes have a feature where they can be declared anywhere and you can still use variables from them ##
+
+print 'The age is '
+print @age
 
 class 
 
@@ -6,5 +10,4 @@ class
 
 endclass
 
-print 'The age is '
-print @age
+## This code works!! ##
