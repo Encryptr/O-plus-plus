@@ -5,12 +5,15 @@
 
 #include "errors.h"
 
-void main_lex(char intake[1000], FILE *fi);
+void call_func(const char* c);
+void main_lex(char intake[1000]);
 // CHANGE TOKS VAL 
 void lex_class(char toks[100][100]);
-void print_var(const char *varname);
-int if_statment(const char *comp);
-void change_variable(const char *curr);
+void print_var(const char* varname);
+int if_statment(const char* comp);
+void change_variable(const char* curr);
+void create_func(char* c);
+
 
 int has_class = 0;
 int var_count = 0;
@@ -38,7 +41,6 @@ typedef struct
 typedef enum
 {
   IGNORE,
-  FIND_CLASS,
   COPY_CONT,
   FIND_ALL,
   COPY_STRING,
@@ -46,6 +48,7 @@ typedef enum
   IF_STATE,
   ENDIF_FIND,
   CHANGE_VAR,
+  FUNC,
 
 } States;
 
@@ -67,6 +70,19 @@ typedef enum
   FCLASS,
   CCONT,
 } Class;
+
+typedef struct 
+{
+  char gvar[MAX_VAL][MAX_VAL];
+  int gvar_idx;
+} Global_Var;
+
+typedef struct 
+{
+  char fvar[MAX_VAL][MAX_VAL];
+  int fvar_amount;
+  int done_call;
+} Func_Var;
 
 typedef struct
 {
@@ -99,10 +115,15 @@ const char *str_delim;
 char fline[1000];
 
 // Chars to hold tokens to parse
-char print_string[100][100] = {};
-char print_variable[10][10] = {};
+// char print_string[MAX_VAL][MAX_VAL] = {};
+char print_string[MAX_VAL][MAX_VAL] = {};
+char print_variable[MAX_VAL][MAX_VAL] = {};
 char class_tokens[100][100] = {};
-char variables[100][100] = {};
+char variables[MAX_VAL][MAX_VAL] = {};
+
+
+//ADD IDX ONLY WHEN NEW VAR
+char func_tokens[MAX_VAL][MAX_VAL];
 
 // amount of tokens in class
 int idx = 0;
@@ -112,6 +133,7 @@ int i;
 int vars;
 // Ascii value to print
 int ascii_amount;
+int str_amount;
 // Variables for nested if
 int endif_counter;
 int if_counter;
@@ -121,9 +143,20 @@ int back_to_class = 0;
 // idx for variable changing
 int change_count;
 
+int func_amount;
+int done_func;
+
+int expect_quote;
+
+// TEMP SOLUTION FOR CHANGE VAR EXITING THE CASE
+int cpy_keep;
+
+// Used for formating print in functions
+int is_print;
 
 const char *operators[] = {"+", "-", "*", "/"};
 const char *stdlib[] =
-{"class", "end", "noclass", "if", "endif", "print", "<", ">"};
+{"class", "endclass", "noclass", "if", "endif", "print", "##", "##"};
 
 #endif
+

@@ -1,11 +1,11 @@
 #include "o++.h"
 #include "parser.c"
+#include "reuse.c"
 
-void main_lex(char intake[1000], FILE *fi)
+void main_lex(char intake[1000])
 {
     str_delim = str_delim_def;
-    char *sword = strtok(fline, str_delim);
-
+    char *sword = strtok(intake, str_delim);
 
     while (sword != NULL)
     {
@@ -14,16 +14,13 @@ void main_lex(char intake[1000], FILE *fi)
       switch (state)
       {
         case IGNORE:
+        // WORK ON COMMENT ERROR WITH VARIABLES
           if (strcmp(sword, stdlib[7]) == 0)
           {
             state = FIND_ALL;
           }
           sword = "";
         break;
-
-        // case FIND_CLASS:
-        //   state = FIND_ALL;
-        // break;
 
         case COPY_CONT:
           if (strcmp(sword, stdlib[1]) == 0)
@@ -48,13 +45,15 @@ void main_lex(char intake[1000], FILE *fi)
             state = PRINT_TOK;
           }
           //--------------------------------------------------------------------
-          else if (sscanf(sword, "@%s", pcv->change_comp_var[change_count]) == 1)
+          else if (sscanf(sword, "@%s", pva->gvar[pva->gvar_idx]) == 1)
           {
-            if (has_class == 1)
-            {
-                state = CHANGE_VAR;
-            }
-            else {ERROR_FOUND(17); exit(1);}
+            state = CHANGE_VAR;
+          }
+          else if (sscanf(sword, "( @%[^)\n] )", pva->gvar[pva->gvar_idx]) == 1)
+          {
+            
+            call_func(pva->gvar[pva->gvar_idx]);
+            
           }
           //--------------------------------------------------------------------
           //--------------------------------------------------------------------
@@ -83,7 +82,7 @@ void main_lex(char intake[1000], FILE *fi)
         break;
 
         case PRINT_TOK:
-        // TODO: Add printing @var + @var
+        // TODO: FIX PRINT 
         if ((sscanf(sword, " ' %[^'\n] ' ", print_string) == 1))
         {
           printf("%s \n", print_string);
@@ -105,14 +104,14 @@ void main_lex(char intake[1000], FILE *fi)
             exit(1);
           }
         }
-        else if (sscanf(sword, "#%s", print_string[ascii_amount]) == 1)
-        {
-          // NEVER FINISHED "," FINISH IF WANT!!
-          int res = atoi(print_string[ascii_amount]);
-          putchar(res);
-          ascii_amount++;
-          state = FIND_ALL;
-        }
+        // else if (sscanf(sword, "#%s", print_string[ascii_amount]) == 1)
+        // {
+        //   // NEVER FINISHED "," FINISH IF WANT!!
+        //   int res = atoi(print_string[ascii_amount]);
+        //   putchar(res);
+        //   ascii_amount++;
+        //   state = FIND_ALL;
+        // }
         else
         {
           // REMOVE IF WANT!!
@@ -147,31 +146,62 @@ void main_lex(char intake[1000], FILE *fi)
         break;
 
         case CHANGE_VAR:
-        for (pcv->which_match=0;pcv->which_match<var_count;pcv->which_match++)
+        if (strcmp(sword, "->") == 0)
         {
+          strcpy(pfv->fvar[pfv->fvar_amount],pva->gvar[pva->gvar_idx]);
+          // IDX 
+          pva->gvar_idx++;
+          state = FUNC;
+          break;
+        }
+        else
+        {
+          if (cpy_keep == 0)
+          {
+            strcpy(pcv->change_comp_var[change_count],pva->gvar[pva->gvar_idx]);
+            pva->gvar_idx++;
+            cpy_keep = 1;
+          }
+          for (pcv->which_match=0;pcv->which_match<var_count;pcv->which_match++)
+          {
             if (strcmp(pcv->change_comp_var[change_count], vptr->var_name[pcv->which_match]) == 0)
             {
               pcv->does_match = 1;
               break;
             }
-        }
-        if (pcv->does_match == 0)
-        {
-          ERROR_FOUND(6);
-          printf("->%s\n", pcv->change_comp_var[change_count]);
-          exit(1);
-        }
-        pcv->does_match = 0;
+          }
+          if (pcv->does_match == 0)
+          {
+            ERROR_FOUND(6);
+            printf("->%s\n", pcv->change_comp_var[change_count]);
+            exit(1);
+          }
+          pcv->does_match = 0;
 
-        change_variable(sword);
+          change_variable(sword);
 
-        if (pcv->cont == 1)
-        {
-          pcv->cont = 0;
-          state = FIND_ALL;
-        }
+          if (pcv->cont == 1)
+          {
+            cpy_keep = 0;
+            pcv->cont = 0;
+            state = FIND_ALL;
+          } 
+        }      
+        //else {ERROR_FOUND(20); printf("->%s\n", sword); exit(1);}
+
         break;
 
+        case FUNC:
+
+          create_func(sword);
+          if (done_func == 1)
+          {
+            done_func = 0;
+            state = FIND_ALL;
+            break;
+          }
+
+        break;
       }
 
       sword = strtok(NULL, str_delim);

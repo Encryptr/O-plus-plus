@@ -1,0 +1,11 @@
+## Functions are variables ##
+
+@print_hi ->
+
+	print 'hi'
+
+endfun
+
+## To call a function ##
+
+(@print_hi)

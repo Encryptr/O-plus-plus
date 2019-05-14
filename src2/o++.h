@@ -24,11 +24,7 @@ typedef struct
 
 typedef struct 
 {
-	struct Var
-	{
-		char name[MAX];
-		int val[MAX];
-	}
+	
 } Parse_OPP;
 
 const char* keys[] = {

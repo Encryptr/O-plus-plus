@@ -1,10 +1,11 @@
 class
 
   @var : 10
-
-end
+  
+endclass
 
 if @var :: 10
 
+print 'do something'
 
 endif

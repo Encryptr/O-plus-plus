@@ -11,6 +11,24 @@ States state = FIND_ALL;
 Change_Var cv;
 Change_Var *pcv = &cv;
 Order_Change order = IDENTIFY;
+Global_Var gva;
+Global_Var *pva = &gva;
+Func_Var fv;
+Func_Var *pfv = &fv;
+
+static void append(char *original, char *add)
+{
+ while(*original)
+    original++;
+   
+ while(*add)
+ {
+    *original = *add;
+    add++;
+    original++;
+ }
+ *original = '\0';
+}
 
 void lex_class(char toks[100][100])
 {
@@ -61,8 +79,8 @@ void lex_class(char toks[100][100])
         }
         else if (sscanf(toks[i], " ' %[^'\n]s ' ", vptr->string[var_count]) == 1)
         {
-            is_string++;
-            var_count++;
+          is_string++;
+          var_count++;
         }
         else {ERROR_FOUND(15); printf("->%s\n", toks[i]); exit(1);}
 
@@ -99,6 +117,17 @@ void print_var(const char *varname)
     printf("->%s\n", varname);
 }
 
+void create_func(char* c)
+{
+  if (strcmp(c, "endfun") == 0)
+  {
+    pfv->fvar_amount++;
+    done_func = 1;
+    return;
+  }
+  append(func_tokens[pfv->fvar_amount], c);
+  append(func_tokens[pfv->fvar_amount], "\n");
+}
 
 int if_statment(const char *comp)
 {
@@ -202,6 +231,27 @@ void change_variable(const char *curr)
   }
 
   return;
+}
+
+void call_func(const char* c)
+{
+  if (pfv->done_call == 0)
+  {
+    for (a=0;a<pfv->fvar_amount;a++)
+    {
+      if (strcmp(c, pfv->fvar[a]) == 0)
+      {
+        pfv->done_call = 1;
+        break;
+      }
+    }
+    //if (pfv->done_call == 0) printf("NOT AN FUNCTION -> @%s\n", c); exit(1);
+  }
+  if (pfv->done_call == 1)
+  {
+    main_lex(func_tokens[a]);
+    pfv->done_call = 0;
+  }
 }
 
 #endif

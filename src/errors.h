@@ -14,7 +14,7 @@ if (in == X){printf("X\n");}
 void ERROR_FOUND(int in)
 {
   if (in == -1){printf("NOT VALID\n");}
-  if (in == 1){printf("USE noclass IF NOTHING IN CLASS\n");}
+  if (in == 1){printf("Remove class IF NOTHING IN CLASS\n");}
   if (in == 2){printf("ONLY VARIABLES IN CLASS\n");}
   if (in == 3){printf("NO EQUALS SYMBOL OR NO SPACE\n");}
   if (in == 4){printf("Missing Equal Symbol\n");}
@@ -33,4 +33,5 @@ void ERROR_FOUND(int in)
   if (in == 17){printf("Need Class to use Variables\n");}
   if (in == 18){printf("Not a valid operator\n");}
   if (in == 19){printf("NOT VALID COMPERESON\n");}
+  if (in == 20){printf("Unexpected token after variable\n");}
 }

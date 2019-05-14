@@ -1,8 +1,7 @@
-noclass
 
-< This is a comment >
-< This is an example of using print >
+## This is a comment ##
+## This is an example of using print ##
 
 print 'Hello World!!'
 
-< or with the @ symbol plus the var name >
+## or with the @ symbol plus the var name ##

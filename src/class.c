@@ -3,7 +3,6 @@
 
 Class class = FCLASS;
 
-
 void check_main(char intake[1000])
 {
 	str_delim = str_delim_def;
@@ -31,6 +30,7 @@ void check_main(char intake[1000])
           		strcpy(class_tokens[idx], sword);
           		idx++;
     		break;
+
     	}
 
     	sword = strtok(NULL, str_delim);	

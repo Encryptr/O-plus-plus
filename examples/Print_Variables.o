@@ -1,10 +1,10 @@
-< Declare Variable >
+## Declare Variable ##
 
 class 
 
 @age : 24
 
-end
+endclass
 
 print 'The age is '
 print @age

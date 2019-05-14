@@ -27,6 +27,6 @@ int main(int argc, char *argv[])
 
   while (fgets(fline, MAX_LENGTH, file) != NULL)
   {
-    main_lex(fline, file);
+    main_lex(fline);
   }
 }
