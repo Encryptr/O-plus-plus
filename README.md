@@ -10,6 +10,9 @@ When I started writing this language I wanted to learn more about C and introduc
 
 Recently a friend pointed out that the name of this language is the same name as the "universal donor" blood type O. This made me change the idea for o++ quite a bit. I want O++ to expand to be a universal donor or capable of being used for lots of purposes. For this to be achieved I hope people are inspired to create libraries and expand the power of O++ to reach its full potential. 
 
+# Run / Compile
+To run O++ go into the src file and run the command "gcc o++.c -o o++" in the terminal. Ignore any warning and then launch the interpreter on any file by typing "./o++ filname" on linux and mac on windows simply type "o++ filename".
+
 # Using O++ Syntax
 If you want to use my own custom made o++ syntax highlighting, I made an XML file under the XML folder that you can import to notepad++ to use O++ syntax and grammar.
 
