@@ -5,12 +5,19 @@
 #include "class.c"
 #include "lexer.c"
 
+#define VERSION "BETA 1.0"
+
 #define MAX_LENGTH 1000
 
 int main(int argc, char *argv[])
 {
   FILE *file;
 
+  if (strcmp(argv[1], "-v") == 0)
+  {
+    printf("Current Version is %s\n", VERSION);
+    exit(1);
+  }
   file = fopen(argv[1], "rt");
   if (file == NULL)
   {

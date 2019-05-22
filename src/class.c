@@ -7,7 +7,6 @@ void check_main(char intake[1000])
 {
 	str_delim = str_delim_def;
     char *sword = strtok(fline, str_delim);
-
     while (sword != NULL)
     {
     	switch (class)

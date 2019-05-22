@@ -154,6 +154,8 @@ int cpy_keep;
 // Used for formating print in functions
 int is_print;
 
+
+int test;
 const char *operators[] = {"+", "-", "*", "/"};
 const char *stdlib[] =
 {"class", "endclass", "noclass", "if", "endif", "print", "##", "##"};

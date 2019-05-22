@@ -1,2 +1,10 @@
-
 ## File for testing O++ features ##
+
+class
+
+@a : 10
+
+endclass
+
+print @a
+

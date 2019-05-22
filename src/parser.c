@@ -47,10 +47,10 @@ void lex_class(char toks[100][100])
         {
           for (a=0;a<var_count;a++)
           {
-              if (strcmp(vptr->var_name[var_count], vptr->var_name[a]) == 0)
-              {
-                ERROR_FOUND(13); printf("-> %s\n", vptr->var_name[var_count]); exit(1);
-              }
+            if (strcmp(vptr->var_name[var_count], vptr->var_name[a]) == 0)
+            {
+              ERROR_FOUND(13); printf("-> %s\n", vptr->var_name[var_count]); exit(1);
+            }
           }
           t = EQ;
         }
@@ -77,7 +77,7 @@ void lex_class(char toks[100][100])
           vptr->val[var_count] = num;
           var_count++;
         }
-        else if (sscanf(toks[i], " ' %[^'\n]s ' ", vptr->string[var_count]) == 1)
+        else if (sscanf(toks[i], " ' %[^'\n] ' ", vptr->string[var_count]) == 1)
         {
           is_string++;
           var_count++;
@@ -117,6 +117,7 @@ void print_var(const char *varname)
     printf("->%s\n", varname);
 }
 
+// FIX PRINT IN FUNCTIONS
 void create_func(char* c)
 {
   if (strcmp(c, "endfun") == 0)
@@ -229,10 +230,10 @@ void change_variable(const char *curr)
     else {ERROR_FOUND(-1); printf("->%s\n", curr);exit(1);}
     break;
   }
-
   return;
 }
 
+// REVIEW BUT WORKING
 void call_func(const char* c)
 {
   if (pfv->done_call == 0)
@@ -242,11 +243,14 @@ void call_func(const char* c)
       if (strcmp(c, pfv->fvar[a]) == 0)
       {
         pfv->done_call = 1;
+        goto sucsess;
         break;
       }
     }
-    //if (pfv->done_call == 0) printf("NOT AN FUNCTION -> @%s\n", c); exit(1);
+    printf("No FUNCTION with that name -> %s\n",c); exit(1);
   }
+
+  sucsess: 
   if (pfv->done_call == 1)
   {
     main_lex(func_tokens[a]);
