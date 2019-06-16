@@ -1,5 +1,11 @@
 # Announcement
-This O++ interpreter is under reconstruction. The current interpreter has many disadvantages and Im working on a new one at the moment. For now this current version will still be up and public but expect a new interpreter soon! 
+LAST O++ COMMIT FOR NOW!! THE COMPILER!! 
+I started the compiler for O++ as a final mini implementation to o++. The simple compiler can handle prininting string and the interpreter can do the rest. Under the "compiler" file to launch the new o++ you have to do this. 
+gcc main.c -o o++
+Then you have two options: o++ test.o++ or the -c flag
+The first option is a regular interpret and the -c flag is the compiler.
+The -c flag is used like this: o++ source_file -c file_to_output_asm
+After that you will get an .exe called "out" that only works on windows and can be launched by running in the cmd "out" in the compiled directory. 
 
 # O++ Language
 By: Maks Sawoniewicz
