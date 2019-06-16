@@ -1,0 +1,27 @@
+
+|MORSE LANG|
+
+@ - For variable declaration
+	
+(@.-|-... ..---)
+   ^ 	    ^- Value
+   The vars name
+
+@.--. .----;
+
+|O++|
+
+print 'Hello World';
+
+@add => {
+
+};
+
+group Data
+{
+	@a; 
+	@b;	
+};
+
+
+
