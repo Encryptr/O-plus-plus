@@ -1,0 +1,50 @@
+# O++ Tests
+# By: Maksymilian Sawoniewicz
+
+############################
+# Var Test #
+let a = 10;
+let b = 3;
+
+print a;
+print b;
+print a;
+############################
+############################
+# Return Test #
+
+fn returnTest() [ 
+
+	print 'Begginning of return test';
+	print 'End of return test';
+	ret 12;
+]
+
+returnTest();
+print returnTest();
+
+############################
+############################
+# Change Var Test #
+
+fn changetest() [
+
+	print 'Begginning of var change test';
+	let test = 0;
+	test + 10;
+	print test;
+	test - 5;
+	print test;
+	test * 5;
+	print test;
+	test / 5;
+	print test;
+]
+
+changetest();
+
+
+
+############################
+
+

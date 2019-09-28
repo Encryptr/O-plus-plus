@@ -1,0 +1,20 @@
+let a = 10;
+
+if a == 10
+[
+	print 'goof';
+	if a == 9
+	[
+		print 'nono';
+	]
+
+	a + 1;
+	print a;
+
+	if a == 11
+	[
+		print 'good';
+	]
+]
+
+print 'bye';

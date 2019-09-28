@@ -1,0 +1,30 @@
+
+-----------------------
+## NEEDS FOR O++ ##
+1. Variables
+ - Integers
+ - Floats
+ - Negatives
+ - Long strings
+ - String array
+ - Array
+
+2. Basic Statments
+ - If
+ - While 
+ - Switch
+
+3. Functions
+ - Argument support
+ - Return Types
+
+4. Macros
+ - Support for Tengine
+-----------------------
+
+## CHECK-LIST ##
+
+# DONE # 1. Inplement var types 
+# DONE # 2. Add statments
+# DONE # 3. Functions 
+4. Add macros for Tengine support
