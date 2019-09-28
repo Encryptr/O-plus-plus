@@ -1,11 +1,5 @@
 # Announcement
-LAST O++ COMMIT FOR NOW!! THE COMPILER!! 
-I started the compiler for O++ as a final mini implementation to o++. The simple compiler can handle prininting string and the interpreter can do the rest. Under the "compiler" file to launch the new o++ you have to do this. 
-gcc main.c -o o++
-Then you have two options: o++ test.o++ or the -c flag
-The first option is a regular interpret and the -c flag is the compiler.
-The -c flag is used like this: o++ source_file -c file_to_output_asm
-After that you will get an .exe called "out" that only works on windows and can be launched by running in the cmd "out" in the compiled directory. 
+More commits coming to O++. I recently wanted to play some more with language design and looking back at the old O++ code from when I was 13 I needed to fix it. The new O++ Interpreter is similar to the last "Compiler commit" I made. Although its still lacking many features like AST and Hashmaps I wanted to clean it up a bit. I hope to keep updating O++ from time to time as I continue to learn how to implement features like the AST.
 
 # O++ Language
 By: Maks Sawoniewicz
