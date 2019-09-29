@@ -18,3 +18,22 @@ if a == 10
 ]
 
 print 'bye';
+
+let b = 1;
+
+if b==1
+[
+	if b==1
+	[
+		if b==1
+		[
+			if b==1
+			[
+				print 'ok';
+			]
+		]
+
+	]
+]
+
+print 'bye for real';

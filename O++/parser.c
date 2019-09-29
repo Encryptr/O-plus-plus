@@ -65,6 +65,11 @@ void parse_print(Morse *m, Parser *p, Variable *pv, Func *f)
 			getnext(p);
 			if (m->tokens[p->position] == SEMICO)
 			{
+				if (strcmp(pv->str[var_idx], "\0"))
+				{
+					printf("%s\n", pv->str[var_idx]);
+					return;
+				}
 				printf("%ld\n", pv->val[var_idx]);
 			} else {ERROR_FOUND(3, ";", m->lexeme[p->position]); exit(1);}
 		}
@@ -112,12 +117,42 @@ void parse_expr(Morse *m, Parser *p, Variable *pv)
 			pv->amount++;
 		} else {ERROR_FOUND(3, ";", m->lexeme[p->position]); exit(1);}
 	}
+	else if (m->tokens[p->position] == MINUS)
+	{
+		getnext(p);
+		if (!expect(NUM,m,p)) puts("Expected Number after '-'\n"), exit(1);
+		int res = atoi(m->lexeme[p->position]);
+		res *= -1;
+		pv->val[pv->amount] = res;
+		getnext(p);
+		if (expect(SEMICO,m,p))
+		{
+			res = 0;
+			pv->amount++;
+		} else {ERROR_FOUND(3, ";", m->lexeme[p->position]); exit(1);}
+	}
+	else if (m->tokens[p->position] == TIK)
+	{
+		getnext(p);
+		while (m->tokens[p->position] != TIK)
+		{
+			append_string(pv->str[pv->amount], m->lexeme[p->position]);
+			getnext(p);
+			if (m->tokens[p->position] != TIK) append_string(pv->str[pv->amount], " ");
+		}
+		getnext(p);
+		if (expect(SEMICO,m,p))
+		{
+			pv->amount++;
+		} else {ERROR_FOUND(3, ";", m->lexeme[p->position]); exit(1);}
+	}
 }
 
 void parse_call(Morse *m, Parser *p, Variable *pv, Func *f, int i, int op)
 {
 	int og_pos = p->position;
 	p->position = f->st_pos[i];
+
 
 	if (op == 1)
 	{
@@ -131,9 +166,10 @@ void parse_call(Morse *m, Parser *p, Variable *pv, Func *f, int i, int op)
 				case IDENT: parse_ident(m,p,pv,f); break;
 				case TFUNC: parse_func(m,p,f); break;
 				case TRET: parse_return(m,p,f); break;
+				//case LOCAL: parse_local_var(m,p,f); break;
 
 				default:
-					printf("Invaid expr in function -> %s\n", m->lexeme[p->position]); exit(1);
+					printf("Invaid expr in function\n"); exit(1);
 				break;
 			}
 			p->position++;
@@ -167,6 +203,15 @@ void parse_return(Morse *m, Parser *p, Func *f)
 	if (!expect(SEMICO,m,p)) puts("Expected ';' after 'ret'\n"), exit(1);
 }
 
+void parse_local_var(Morse *m, Parser *p, Func *f)
+{
+	int var_idx = 0;
+	getnext(p);
+	if (!expect(IDENT,m,p)) puts("Expected Identifier after '@'\n"), exit(1);
+	// CHECK IF IS FUNCTION and if has those parmaters
+
+}
+
 void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 {
 	int var_num = 0;
@@ -179,7 +224,17 @@ void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 		{
 			case PLUS: 
 				getnext(p);
-				if (!expect(NUM,m,p)) puts("Expected number after '+'\n"), exit(1);
+				if ((!expect(NUM,m,p)) && (!expect(MINUS,m,p))) puts("Expected number after '+'\n"), exit(1);
+				if (expect(MINUS,m,p))
+				{
+					getnext(p);
+					effect = atoi(m->lexeme[p->position]);
+					effect *= -1;
+					getnext(p);
+					if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
+					pv->val[var_num] += effect;
+					return;
+				}
 				effect = atoi(m->lexeme[p->position]);
 				getnext(p);
 				if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
@@ -187,7 +242,17 @@ void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 			break;
 			case MINUS:
 				getnext(p);
-				if (!expect(NUM,m,p)) puts("Expected number after '-'\n"), exit(1);
+				if ((!expect(NUM,m,p)) && (!expect(MINUS,m,p))) puts("Expected number after '-'\n"), exit(1);
+				if (expect(MINUS,m,p))
+				{
+					getnext(p);
+					effect = atoi(m->lexeme[p->position]);
+					effect *= -1;
+					getnext(p);
+					if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
+					pv->val[var_num] -= effect;
+					return;
+				}
 				effect = atoi(m->lexeme[p->position]);
 				getnext(p);
 				if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
@@ -195,7 +260,17 @@ void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 			break;
 			case TIMES:
 				getnext(p);
-				if (!expect(NUM,m,p)) puts("Expected number after '*'\n"), exit(1);
+				if ((!expect(NUM,m,p)) && (!expect(MINUS,m,p))) puts("Expected number after '*'\n"), exit(1);
+				if (expect(MINUS,m,p))
+				{
+					getnext(p);
+					effect = atoi(m->lexeme[p->position]);
+					effect *= -1;
+					getnext(p);
+					if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
+					pv->val[var_num] *= effect;
+					return;
+				}
 				effect = atoi(m->lexeme[p->position]);
 				getnext(p);
 				if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
@@ -203,12 +278,42 @@ void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 			break;
 			case DIVIDE:
 				getnext(p);
-				if (!expect(NUM,m,p)) puts("Expected number after '/'\n"), exit(1);
+				if ((!expect(NUM,m,p)) && (!expect(MINUS,m,p))) puts("Expected number after '/'\n"), exit(1);
+				if (expect(MINUS,m,p))
+				{
+					getnext(p);
+					effect = atoi(m->lexeme[p->position]);
+					effect *= -1;
+					getnext(p);
+					if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
+					pv->val[var_num] /= effect;
+					return;
+				}
 				effect = atoi(m->lexeme[p->position]);
 				getnext(p);
 				if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
 				pv->val[var_num] /= effect;
 			break;
+
+			case EQ:
+				getnext(p);
+				if ((!expect(NUM,m,p)) && (!expect(MINUS,m,p))) puts("Expected number after '='\n"), exit(1);
+				if (expect(MINUS,m,p))
+				{
+					getnext(p);
+					effect = atoi(m->lexeme[p->position]);
+					effect *= -1;
+					getnext(p);
+					if (!isSemi(m,p)) puts("Expected ';' after Identifier\n"), exit(1);
+					pv->val[var_num] = effect;
+					return;
+				}
+				effect = atoi(m->lexeme[p->position]);
+				getnext(p);
+				if (!isSemi(m,p)) puts("Expected ';' after Number\n"), exit(1);
+				pv->val[var_num] = effect;
+			break;
+
 		}
 	}
 	else if (isFunc(f, m->lexeme[p->position]) != -1)
@@ -217,6 +322,10 @@ void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 		getnext(p);
 		if (!expect(OPER,m,p)) printf("ERROR PARSING Identifier [%s]\n", m->lexeme[p->position]),exit(1);
 		getnext(p);
+		if (strcmp(f->fn_param[var_num], "\0"))
+		{
+			// Inplement Paramaters
+		}
 		if (!expect(CPER,m,p)) printf("Syntax ERROR PARSING Identifier [%s]\n", m->lexeme[p->position]),exit(1);
 		getnext(p);
 		if (!expect(SEMICO,m,p)) printf("Expected ';' after function call [%s]\n", m->lexeme[p->position]),exit(1);
@@ -229,7 +338,6 @@ void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f)
 	}
 }
 
-#if 0
 void parse_params(const char* str, Morse *m, Parser *p, Func *f)
 {
 	bool exp = false;
@@ -238,28 +346,26 @@ void parse_params(const char* str, Morse *m, Parser *p, Func *f)
 	{
 		if (isLetter(*str))
 		{
-			f->param_idx++;
 			exp = true;
 			while (isLetter(*str))
 			{
-				append(f->fn_param[f->param_idx], *str);
+				append(f->fn_param[f->fn_idx], *str);
 				str++;
 			}
+			append(f->fn_param[f->fn_idx], '|');
 		}
 		if (*str == ',') 
 		{
+			str++;
+			if (*str == '\0')
+				puts("Error Unexpected ','\n"), exit(1);
+			str--;
 			if (exp == true) exp = false;
 			else puts("Error Unexpected ','\n"), exit(1);
 		}
-		// ADD CHECK FOR END OF PARAMS SO NOT EXPECTED ,
-		// if (exp == true)
-		// {
-		// 	puts("ERROR ADD"); exit(1);
-		// }
 		str++;
 	}
 }
-#endif
 
 void parse_func(Morse *m, Parser *p, Func *f)
 {
@@ -276,7 +382,7 @@ void parse_func(Morse *m, Parser *p, Func *f)
 		append_string(parm, m->lexeme[p->position]);
 		p->position++;
 	}
-	// parse_params(parm,m,p,f); ## ADD PARAMS LATER ##
+	parse_params(parm,m,p,f);
 	getnext(p);
 	if (!expect(OBRACK,m,p)) puts("Expected '[' at function\n"), exit(1);
 	getnext(p);

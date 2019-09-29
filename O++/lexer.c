@@ -83,6 +83,11 @@ bool keyword(Morse *m)
 		m->tokens[pos] = TIF;
 		goto end;
 	}
+	else if (!strcmp(m->lexeme[pos], "while"))
+	{
+		m->tokens[pos] = TWHILE;
+		goto end;
+	}
 	else if (!strcmp(m->lexeme[pos], "fn"))
 	{
 		m->tokens[pos] = TFUNC;
@@ -216,11 +221,15 @@ void interpret(Morse *m)
 				return;
 			break;
 
-
 			case ']':
 				m->tokens[pos] = CBRACK;
 				pos++;
 				return;
+			break;
+
+			case '@':
+				m->tokens[pos] = LOCAL;
+				pos++;
 			break;
 
 			default:

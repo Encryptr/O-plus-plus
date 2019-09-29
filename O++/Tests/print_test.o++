@@ -1,0 +1,27 @@
+print 'hello';
+
+let a = 10;
+
+if a == 10
+[
+	if a == 10
+	[
+		if a == 10
+		[
+			a - 1;
+			if a==10
+			[
+				print 'okok';
+			]
+		]
+	]
+	print 'eat';
+]
+
+let b = 'out';
+
+let c = -25;
+
+print c;
+
+

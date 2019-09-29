@@ -1,0 +1,14 @@
+
+let a = 10;
+
+fn test()
+[
+	print 'hey test';
+	ret 0;
+]
+test();
+
+fn args(a,b,c)
+[
+	ret 0;
+]

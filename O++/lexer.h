@@ -11,12 +11,11 @@ typedef enum
 	VAR,
 	SEPARTOR,
 	TIK,
-
 	TPRINT,
 	TIF,
 	TFUNC,
 	TRET,
-
+	TWHILE,
 	EQ,
 	EQEQ,
 	PLUS,
@@ -28,8 +27,7 @@ typedef enum
 	OPER,
 	CPER,
 	COMMA,
-	
-
+	LOCAL
 } Tok;
 
 typedef struct 
