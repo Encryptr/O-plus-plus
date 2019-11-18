@@ -1,0 +1,84 @@
+#############
+# O++ LISP  #
+#############
+
+Syntax Ideas:
+
+# Comments #
+# Single line comment
+]
+	Multi line comment
+[
+
+# Variable # 
+(var a 10)  -> Use in global
+(var! a 10) -> Use in local
+
+# Define Constant #
+(def a 10)
+(def b (+ 1 2 3 4))
+ 
+# Math #
+(+ ...) -> Addition
+(- ...) -> Subtraction
+(* ...) -> Multiplication
+(/ ...) -> Division
+(% ...) -> Modulus
+(++ _)  -> Increment
+(-- _)  -> Decrement
+(cos _)
+(sin _)
+(tan _)
+
+# Function #
+(def (add x)(+ x 10))
+(lambda(x)(+ x 10)) 
+
+# If Statment #
+(if (= 10 10))  Equal
+(if (< 10 10))  Less than
+(if (> 10 10))  Greater than
+(if (! 10 10))  Not Equal
+(if (<= 10 10)) Less than or equal to
+(if (>= 10 10)) Greater than or equal to
+
+(if (< 10 2) 
+(print 'yes') -> True case
+(print 'no')) -> False case
+
+# List #
+(print (list 1 2 3 4))
+
+# While loop #
+(while (< a 10)
+(++ a))
+
+# Structs #
+(def-struct (name) 
+(var (list a b)))
+
+# Macros #
+Equal:
+(eq? (10 10))     -> True
+(eq? (10 '10))    -> False
+(eq? ('hi' 'hi')) -> True
+
+Defined:
+(def? a) -> True or False
+
+Nil Value:
+(nil? a) -> True or False
+
+Defined Variable:
+(var? a) -> True or False
+
+# Conditions # 
+(def a 10)
+(cond?
+(= a 10 (print 'yes')) # Executes first condition that = true
+(> a 20 (print 'no'))
+(print 'All false'))
+
+
+
+

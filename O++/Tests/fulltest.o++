@@ -1,0 +1,19 @@
+(print 'Start')
+
+(print (+ 1 (- 10 (* 2 (/ 10 5)))))
+(print 'Expected 7')
+
+(print (= (+ 5 5) 10))
+(print 'Expected true')
+(print (= (- 10 3)3))
+(print 'Expected false')
+(print (list 1 2 3 4 5))
+(print 'Expected 1 2 3 4 5')
+
+(if (= 10 10)
+	(if (< 10 12)
+		(if (> 10 11)
+			(print 'bad')(print 'good')))
+
+
+(print 'Exit succsessful')

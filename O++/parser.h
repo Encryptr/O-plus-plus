@@ -1,36 +1,43 @@
-typedef struct 
-{
-	int position;
-	char string[SMALL];
-	long len;
-} Parser;
+#include "type.c"
 
-typedef struct 
-{
-	long val[LENGTH];
-	char str[LENGTH][LENGTH];
-	char name[LENGTH][LENGTH];
-	int amount;
-} Variable;
+#define TEST 100
 
-#define FUNCTION 50
-typedef struct 
-{
-	int st_pos[FUNCTION], ed_pos[FUNCTION];
-	char fn_name[20][20];
-	int fn_idx;
-	int iret[FUNCTION];
-	char fn_param[20][20];
-} Func;
+struct Obj {
+	enum Token type;
+	int num;
+	char string[TEST];
+	bool op;
+	struct Obj *car, *cdr;
+};
 
-void parse_begin(Morse *m, Parser *p, Variable *pv);
-void parse_call(Morse *m, Parser *p, Variable *pv, Func *f, int i, int op);
-void parse_print(Morse *m, Parser *p, Variable *pv, Func *f);
-void parse_expr(Morse *m, Parser *p, Variable *pv);
-void parse_ident(Morse *m, Parser *p, Variable *pv, Func *f);
-void parse_func(Morse *m, Parser *p, Func *f);
-void parse_params(const char* str, Morse *m, Parser *p, Func *f);
-void parse_return(Morse *m, Parser *p, Func *f);
-void parse_local_var(Morse *m, Parser *p, Func *f);
-void parse_ifstmt(Morse *m, Parser *p, Variable *pv, Func *f);
-void balance(Morse *m, Parser *p);
+struct Hash_Node {
+	enum Types type;
+
+	union {
+		int v1;
+		double v2;
+		char* v3;
+	};
+	char key[20];
+	struct Hash_Node *next;
+};
+
+struct Table {
+	int size;
+	struct Hash_Node **list;
+};
+
+struct Obj* analize(struct Scan* d);
+struct Obj* make(int type, int num);
+
+struct Obj* binary_cond(struct Scan *d, int type);
+struct Obj* con(struct Scan *d);
+struct Obj* number(struct Scan *d);
+struct Obj* string(struct Scan *d);
+struct Obj* list_make(struct Scan *d);
+struct Obj* import(struct Scan *d);
+
+struct Table* createMap(int size);
+uint32_t hash_str(const char * data, int len);
+void insert(struct Table *t, int hash);
+int lookup(struct Table* t, int hash);
