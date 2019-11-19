@@ -1,5 +1,5 @@
 # Announcement
-More commits coming to O++. I recently wanted to play some more with language design and looking back at the old O++ code from when I was 13 I needed to fix it. The new O++ Interpreter is similar to the last "Compiler commit" I made. Although its still lacking many features like AST and Hashmaps I wanted to clean it up a bit. I hope to keep updating O++ from time to time as I continue to learn how to implement features like the AST.
+NEW UPDATE! O++ has temporarily turned into a lisp family language for learning purposes. I have successfully implemented an AST and I'm hoping to expand on that with the old O++ syntax. New updates will be coming soon as I keep slowly working, I am hoping to finish by having a stable O++ Language release and ports for O++ to other platforms and frameworks.
 
 # O++ Language
 By: Maks Sawoniewicz
