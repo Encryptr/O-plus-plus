@@ -49,15 +49,16 @@ void init(const char* fname, struct Obj* root)
 	}
 
 	free(content);
+
 }
 
 int main(int argc, const char** argv)
 {
-	struct Obj* cell;
-	if (argc==2)
-		init(argv[1], cell);
-	else
-		help_menu();
+	// struct Obj* cell;
+	// if (argc==2)
+	// 	init(argv[1], cell);
+	// else
+	// 	help_menu();
 
 	return 0;
 } 

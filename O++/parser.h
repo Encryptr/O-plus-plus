@@ -1,3 +1,6 @@
+#ifndef PARSER
+#define PARSER
+
 #define TEST 100
 
 struct Obj {
@@ -17,3 +20,8 @@ struct Obj* number(struct Scan *d);
 struct Obj* string(struct Scan *d);
 struct Obj* list_make(struct Scan *d);
 struct Obj* import(struct Scan *d);
+
+void init(const char* fname, struct Obj* root);
+
+
+#endif

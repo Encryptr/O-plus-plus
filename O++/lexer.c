@@ -79,7 +79,15 @@ enum Token singleChar(struct Scan *s)
 
 		case '+': return PLUS; break;
 
-		case '-': return MINUS; break;
+		case '-': 
+			s->src++;
+			if (isnum(*s->src))
+			{
+				lex_num(s, 1);
+				return NUM;
+			}
+			return MINUS; 
+		break;
 
 		case '*': return TIMES; break;
 
@@ -117,8 +125,12 @@ void identifier(struct Scan *s)
 	return;
 }
 
-void lex_num(struct Scan* s)
+void lex_num(struct Scan* s, bool neg)
 {
+	if (neg == 1)
+	{
+		append(s->lexeme, '-');
+	}
 	while (isnum(*s->src))
 	{
 		append(s->lexeme, *s->src);
@@ -159,7 +171,7 @@ void next(struct Scan *s)
 		else if (isletter(*s->src))
 			{identifier(s); return;}
 		else if (isnum(*s->src))
-			{lex_num(s); return;}
+			{lex_num(s, 0); return;}
 		else
 		{
 			s->tok = singleChar(s);

@@ -1,3 +1,2 @@
-(print 'giii dfd')
-
+(import 'gi')
 

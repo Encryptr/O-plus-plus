@@ -69,15 +69,25 @@ struct Obj* list_make(struct Scan *d)
 struct Obj* import(struct Scan *d)
 {
 	struct Obj* obj;
+	obj = make(TIMPORT, 0);
+
 	next(d);
 	if (d->tok != TIK)
 		PRINT_ERROR(1);
 
+	if (all_until(39, d) != 1)
+		printf("[%ld] ", d->line), PRINT_ERROR(5);
+
+	if (d->lexeme[0] != '\0') 
+		strcpy(obj->string, d->lexeme);
+
 	next(d);
-	if (d->tok != IDENT)
-		invalid(d);
-	//init(d->lexeme, obj);
- 	// FIX IMPORT
+
+	if (d->tok != TIK)
+		printf("[%ld] ", d->line), PRINT_ERROR(5);
+
+	obj->cdr = analize(d);
+
 	return obj;
 }
 
@@ -118,11 +128,11 @@ struct Obj* analize(struct Scan* d)
 				struct Obj* ifcond = binary_cond(d,TIF);
 				return ifcond;
 			}
-			// case TIMPORT:
-			// {
-			// 	struct Obj* newfile = import(d);
-			// 	return newfile;
-			// }
+			case TIMPORT:
+			{
+				struct Obj* newfile = import(d);
+				return newfile;
+			}
 			case PLUS: case MINUS: case TIMES: case DIVIDE: 
 			case LESSTHAN: case MORETHAN: case EQ: case TPRINT:
 			{

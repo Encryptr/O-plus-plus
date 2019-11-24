@@ -20,7 +20,7 @@ void preprocessor(struct Scan *s);
 bool keyword(struct Scan *s);
 enum Token singleChar(struct Scan *s);
 void identifier(struct Scan *s);
-void lex_num(struct Scan* s);
+void lex_num(struct Scan* s, bool neg);
 int all_until(const char end, struct Scan *s);
 
 void init_lex(struct Scan *s, char* source);

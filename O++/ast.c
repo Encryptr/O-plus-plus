@@ -1,6 +1,7 @@
 
 //--------------------------------------
 struct Obj* eval(struct Obj* node);
+struct Obj* eval_import(struct Obj* node);
 
 struct Obj* plus(struct Obj* node);
 struct Obj* minus(struct Obj* node);
@@ -18,6 +19,10 @@ struct Obj* eval(struct Obj* node)
 	{
 		case CON:
 			return eval(node->car);
+		break;
+
+		case TIMPORT:
+			return eval_import(node);
 		break;
 
 		case PLUS:  return plus(node->cdr);  break;
@@ -46,6 +51,18 @@ struct Obj* eval(struct Obj* node)
 	printf("ERROR: %d\n", node->type);
 	exit(1);
 	//return eval(node->cdr);
+}
+
+struct Obj* eval_import(struct Obj* node)
+{
+	struct Obj* obj;
+	struct Obj* fileobj;
+	
+	init(node->string, fileobj);
+
+	obj = make(NUM, 0);
+
+	return obj;
 }
 
 struct Obj* if_stmt(struct Obj* node)
