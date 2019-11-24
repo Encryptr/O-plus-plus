@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-
-// #include "main.h"
+#include "hashmap.c"
 #include "lexer.c"
 #include "error.h"
 #include "parser.c"

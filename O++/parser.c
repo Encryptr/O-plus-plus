@@ -1,15 +1,5 @@
 #include "parser.h"
 
-// struct Table* createMap(int size)
-// {
-// 	struct Table* t = (struct Table*)malloc(sizeof(struct Table));
-// 	t->list = (struct Hash_Node**)malloc(sizeof(struct Hash_Node*)*size);
-// 	for (int i=0;i<size;++i) {
-// 		t->list[i] = (struct Table*)malloc(size*sizeof(struct Table));
-// 	}
-// 	return t;
-// }
-
 struct Obj* make(int type, int num)
 {
 	struct Obj* obj = (struct Obj*)malloc(sizeof(struct Obj));
