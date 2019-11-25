@@ -11,14 +11,14 @@ unsigned long hash_str(char *string)
 }
 
 // REVIEW FOR DEPRICATION
-struct Hash_Node* new_node(const char* key)
-{
-	struct Hash_Node* node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
-	strcpy(node->key, key);
-	node->next = NULL;
+// struct Hash_Node* new_node(const char* key)
+// {
+// 	struct Hash_Node* node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+// 	strcpy(node->key, key);
+// 	node->next = NULL;
 
-	return node;
-}
+// 	return node;
+// }
 
 struct Table* createMap()
 {
@@ -30,6 +30,21 @@ struct Table* createMap()
 		t->list[i] = NULL;
 	}
 	return t;
+}
+
+void free_table(struct Table* t)
+{
+	free(t);
+	free(t->list);
+}
+
+void delete_node(struct Table* t, char* key)
+{
+	unsigned int loc = hash_str(key);
+
+	if (t->list[loc] == NULL)
+		return;
+	free(t->list[loc]);
 }
 
 int insert_str(struct Table *t, char* key, char* value)

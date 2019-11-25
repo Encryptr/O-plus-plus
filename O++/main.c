@@ -8,6 +8,12 @@
 #include "parser.c"
 #include "ast.c"
 
+enum Flags {
+	NONE, NO_WARNING, DUMP_TOKS
+};
+
+enum Flags flags = NONE;
+
 void help_menu()
 {
 	system("clear");
@@ -19,10 +25,26 @@ void help_menu()
 	exit(1);
 }
 
-void init(const char* fname, struct Obj* root)
+void inter_options(char** option, int amount)
 {
-	struct Scan data = {0};
-	char* content = NULL;
+	for (int i=1;i<amount;i++)
+	{
+		if (!strcmp(option[i], "-nowarn"))
+		{
+			flags = NO_WARNING;
+		}
+		else if (!strcmp(option[i], "-dump"))
+		{
+			flags = DUMP_TOKS;
+		}
+		else {
+			printf("Not a O++ flag... [%s]\n", option[i]);
+		}
+	}
+}
+
+void init_file(const char* fname, struct Scan *d, char* content)
+{
 	long size;
 	FILE *file;
 
@@ -37,7 +59,15 @@ void init(const char* fname, struct Obj* root)
 	fread(content, size, 1, file);
 	fclose(file);
 
-	init_lex(&data, content);
+	init_lex(d, content);
+}
+
+void init_opp(const char* fname, struct Obj* root)
+{
+	struct Scan data = {0};
+	char* content = NULL;
+
+	init_file(fname, &data, content);
 	preprocessor(&data);
 
 	root = analize(&data);
@@ -48,17 +78,31 @@ void init(const char* fname, struct Obj* root)
 		root = root->cdr;
 	}
 
+	if (flags != NO_WARNING)
+		warning_dump(&data);
+
 	free(content);
 
 }
 
-int main(int argc, const char** argv)
+int main(int argc, char** argv)
 {
-	// struct Obj* cell;
-	// if (argc==2)
-	// 	init(argv[1], cell);
-	// else
-	// 	help_menu();
+	struct Obj* cell;
+
+	map = createMap();
+
+	if (argc==2)
+		init_opp(argv[1], cell);
+	else if (argc > 2)
+	{
+		int len = 0;
+		while (argv[len] != NULL)
+			len++;
+		inter_options(argv, len-1);
+		init_opp(argv[len-1], cell);
+	}
+	else
+		help_menu();
 
 	return 0;
 } 

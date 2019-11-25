@@ -21,11 +21,13 @@ struct Table {
 	struct Hash_Node **list;
 };
 
+struct Table* map;
+
 unsigned long hash_str(char *string);
 struct Table* createMap();
+void free_table(struct Table* t);
+void delete_node(struct Table* t, char* key);
 
-// TODO: Decide wether to split up
-struct Hash_Node* new_node(const char* key);
 
 int insert_str(struct Table *t, char* key, char* value);
 int insert_int(struct Table *t, char* key, int value);

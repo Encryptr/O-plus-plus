@@ -60,7 +60,7 @@ bool keyword(struct Scan *s)
 {
 	if (!strcmp(s->lexeme, "print"))
 		{s->tok = TPRINT; return 1;}
-	else if (!strcmp(s->lexeme, "define"))
+	else if (!strcmp(s->lexeme, "def"))
 		{s->tok = TDEFINE; return 1;}
 	else if (!strcmp(s->lexeme, "list"))
 		{s->tok = TLIST; return 1;}
@@ -68,6 +68,8 @@ bool keyword(struct Scan *s)
 		{s->tok = TIF; return 1;}
 	else if (!strcmp(s->lexeme, "import"))
 		{s->tok = TIMPORT; return 1;}
+	else if (!strcmp(s->lexeme, "var"))
+		{s->tok = TVAR; return 1;}
 	return 0;
 }
 
@@ -84,8 +86,10 @@ enum Token singleChar(struct Scan *s)
 			if (isnum(*s->src))
 			{
 				lex_num(s, 1);
+				s->src--;
 				return NUM;
 			}
+			s->src--;
 			return MINUS; 
 		break;
 
@@ -95,9 +99,15 @@ enum Token singleChar(struct Scan *s)
 
 		case '=': return EQ; break;
 
-		case '(': return OPER; break;
+		case '(':
+			++s->paren_idx; 
+			return OPER; 
+		break;
 
-		case ')': return CPER; break;
+		case ')':
+			--s->paren_idx; 
+			return CPER; 
+		break;
 
 		case '>': return MORETHAN; break;
 

@@ -1,6 +1,6 @@
 enum Token {
 	NIL=-1, INVALID, CON, IDENT, NUM, TDEFINE, TLIST,
- 	TIK, TPRINT, TIF, EQ, LESSTHAN, MORETHAN, PLUS, TIMPORT, TTRUE, 
+ 	TIK, TPRINT, TVAR, TIF, EQ, LESSTHAN, MORETHAN, PLUS, TIMPORT, TTRUE, 
  	TFALSE, MINUS, TIMES, DIVIDE, OPER, CPER, FEND
 };
 
@@ -9,6 +9,7 @@ struct Scan {
 	char lexeme[99];
 	enum Token tok;
 	long line;
+	int paren_idx;
 };
 
 static inline bool ignore(char i);

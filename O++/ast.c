@@ -42,8 +42,8 @@ struct Obj* eval(struct Obj* node)
 			return if_stmt(node);
 		break;
 
-		case NUM: case NIL: case IDENT: 
-		case TLIST: case TTRUE: case TFALSE:
+		case NUM: case NIL: case TLIST: 
+		case TTRUE: case TFALSE: case IDENT:
 			return node;
 		break;
 	}
@@ -58,7 +58,7 @@ struct Obj* eval_import(struct Obj* node)
 	struct Obj* obj;
 	struct Obj* fileobj;
 	
-	init(node->string, fileobj);
+	init_opp(node->string, fileobj);
 
 	obj = make(NUM, 0);
 

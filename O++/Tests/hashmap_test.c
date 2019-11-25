@@ -8,7 +8,6 @@ char* words[] = {
 	"int", "i", "a", "x", "name"
 };
 
-
 int main()
 {
 	struct Table* t = createMap();

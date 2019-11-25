@@ -4,7 +4,9 @@ const char* ERROR_LIST[] = {
 	"Expected condtion after 'if'",
 	"No else case in 'if' statment",
 	"Invalid type in 'print'",
-	"No terminating \'"
+	"No terminating \'",
+	"'var' Expected identifier",
+	"Variable has already been defined"
 };
 
 void syntax_error(struct Scan *s, char* og)

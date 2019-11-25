@@ -1,2 +1,7 @@
 (print 'In the Included File')
 (print 'Bye Now')
+
+(var abc 20)
+(print (abc))
+
+(print '============ INCLUDE.O++ END ==============')

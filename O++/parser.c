@@ -1,5 +1,7 @@
 #include "parser.h"
 
+#define CLEAR_STR(a) (a[0] = '\0')
+
 struct Obj* make(int type, int num)
 {
 	struct Obj* obj = (struct Obj*)malloc(sizeof(struct Obj));
@@ -91,6 +93,76 @@ struct Obj* import(struct Scan *d)
 	return obj;
 }
 
+struct Obj* defvar(struct Scan *d)
+{
+	struct Obj* obj;
+	char varname[11];
+	varname[0] = '\0';
+
+	next(d);
+
+	if (d->tok != IDENT)
+		printf("[%ld]", d->line), PRINT_ERROR(6);
+
+	strcpy(varname, d->lexeme);
+	next(d);
+
+	if (d->tok == NUM)
+	{
+		int number = 0;
+		number = atoi(d->lexeme);
+		if (!insert_int(map, varname, number))
+			printf("[%ld] [%s] ", d->line, varname), PRINT_ERROR(7);
+	}
+	else if (d->tok == TIK)
+	{
+		if (all_until(39, d) != 1)
+			printf("[%ld] ", d->line), PRINT_ERROR(5);
+		insert_str(map, varname, d->lexeme);
+
+		next(d);
+
+		if (d->tok != TIK)
+			printf("[%ld] ", d->line), PRINT_ERROR(5);
+	}
+	else {
+		printf("[%ld] Invalid type initializing to var\n", d->line);
+		exit(1);
+	}
+
+	obj = make(NUM, 0);
+	obj->cdr = analize(d);
+
+	return obj;
+}
+
+struct Obj* variable(struct Scan *d)
+{
+	struct Obj* obj;
+
+	unsigned int loc = hash_str(d->lexeme);
+	if (map->list[loc] == NULL)
+	{
+		printf("[%ld] Variable [%s] not defined\n", d->line, d->lexeme);
+		exit(1);
+	}
+	switch (map->list[loc]->type)
+	{
+		case INT: 
+			obj = make(NUM, map->list[loc]->v1);
+		break;
+
+		case STRING:
+			obj = make(IDENT, 0);
+			strcpy(obj->string, map->list[loc]->v3);
+		break;
+		// ADD FLOATS
+	}
+	obj->cdr = analize(d);
+
+	return obj;
+}
+
 struct Obj* analize(struct Scan* d)
 {
 	for (;;)
@@ -133,6 +205,16 @@ struct Obj* analize(struct Scan* d)
 				struct Obj* newfile = import(d);
 				return newfile;
 			}
+			case TVAR:
+			{
+				struct Obj* var = defvar(d);
+				return var;
+			}
+			case IDENT:
+			{
+				struct Obj* obj = variable(d);
+				return obj;
+			}
 			case PLUS: case MINUS: case TIMES: case DIVIDE: 
 			case LESSTHAN: case MORETHAN: case EQ: case TPRINT:
 			{
@@ -149,4 +231,10 @@ struct Obj* analize(struct Scan* d)
 
 		}
 	}
+}
+
+void warning_dump(struct Scan *d)
+{
+	if (d->paren_idx != 0)
+		printf("\x1b[31m* WARNING *\x1b[0m Parentheses Unmatched!\n");
 }

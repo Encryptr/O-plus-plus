@@ -20,8 +20,13 @@ struct Obj* number(struct Scan *d);
 struct Obj* string(struct Scan *d);
 struct Obj* list_make(struct Scan *d);
 struct Obj* import(struct Scan *d);
+struct Obj* variable(struct Scan *d);
+struct Obj* defvar(struct Scan *d);
 
-void init(const char* fname, struct Obj* root);
+void warning_dump(struct Scan *d);
+
+void init_file(const char* fname, struct Scan *d, char* source);
+void init_opp(const char* fname, struct Obj* root);
 
 
 #endif

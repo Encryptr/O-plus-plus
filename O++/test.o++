@@ -1,2 +1,3 @@
-(import 'gi')
+(var b -4)
 
+(print (* -3 3))

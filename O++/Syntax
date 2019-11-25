@@ -38,7 +38,7 @@ Syntax Ideas:
 (if (= 10 10))  Equal
 (if (< 10 10))  Less than
 (if (> 10 10))  Greater than
-(if (! 10 10))  Not Equal
+(if (not 10 10))  Not Equal
 (if (<= 10 10)) Less than or equal to
 (if (>= 10 10)) Greater than or equal to
 

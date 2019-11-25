@@ -1,6 +1,19 @@
 (import './Tests/include.o++')
 
 (print 'Start')
+(var a -10)
+
+(print (a))
+(print 'Expected -10')
+
+(var b 'hello')
+(print (b))
+(print 'Expected hello')
+
+(print (+ a 10))
+(print 'Expected 0')
+
+#(print (abc))
 
 (print (+ 1 (- 10 (* 2 (/ 10 5)))))
 (print 'Expected 7')
