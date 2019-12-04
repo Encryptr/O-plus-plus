@@ -22,6 +22,8 @@ struct Obj* list_make(struct Scan *d);
 struct Obj* import(struct Scan *d);
 struct Obj* variable(struct Scan *d);
 struct Obj* defvar(struct Scan *d);
+struct Obj* setvar(struct Scan *d);
+struct Obj* changevar(struct Scan *d);
 
 void warning_dump(struct Scan *d);
 

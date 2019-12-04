@@ -13,7 +13,8 @@
 (print (+ a 10))
 (print 'Expected 0')
 
-#(print (abc))
+(print 'From other file abc = 20 | expected 20')
+(print (abc))
 
 (print (+ 1 (- 10 (* 2 (/ 10 5)))))
 (print 'Expected 7')
@@ -29,5 +30,19 @@
 	(if (< 10 12)
 		(if (> 10 11)
 			(print 'bad')(print 'good'))))
+			
+(var test 10)
+(print (test))
+(print ('Expected 10 var test'))
+(-- test)
+(print (test))
+(print ('Expected 9'))
+(++ test)
+(print (test))
+(print ('Expected 10'))
+(set test -10)
+(print (test))
+(print ('Expected -10'))
+
 
 (print 'Exit succsessful')

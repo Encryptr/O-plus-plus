@@ -1,5 +1,3 @@
-#include "lexer.h"
-
 static inline bool ignore(char i) {
 	return (i == ' ' || i == '\t' || i=='\r');
 }

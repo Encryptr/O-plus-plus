@@ -71,7 +71,8 @@ struct Obj* list_make(struct Scan *d)
 struct Obj* import(struct Scan *d)
 {
 	struct Obj* obj;
-	obj = make(TIMPORT, 0);
+	struct Obj* filetree;
+	obj = make(NIL, 0);
 
 	next(d);
 	if (d->tok != TIK)
@@ -89,6 +90,8 @@ struct Obj* import(struct Scan *d)
 		printf("[%ld] ", d->line), PRINT_ERROR(5);
 
 	obj->cdr = analize(d);
+
+	init_opp(obj->string, filetree);
 
 	return obj;
 }
@@ -130,12 +133,12 @@ struct Obj* defvar(struct Scan *d)
 		exit(1);
 	}
 
-	obj = make(NUM, 0);
+	obj = make(NIL, 0);
 	obj->cdr = analize(d);
 
 	return obj;
 }
-
+//////// PUT EVERYTHING INTO THE AST
 struct Obj* variable(struct Scan *d)
 {
 	struct Obj* obj;
@@ -156,8 +159,54 @@ struct Obj* variable(struct Scan *d)
 			obj = make(IDENT, 0);
 			strcpy(obj->string, map->list[loc]->v3);
 		break;
-		// ADD FLOATS
 	}
+	obj->cdr = analize(d);
+
+	return obj;
+}
+
+struct Obj* setvar(struct Scan *d)
+{
+	struct Obj* obj;
+	obj = make(TSET, 0);
+
+	next(d);
+	strcpy(obj->string, d->lexeme);
+	unsigned int loc = hash_str(d->lexeme);
+
+	if (map->list[loc] == NULL)
+		printf("[%ld] [%s] ", d->line, d->lexeme), PRINT_ERROR(8);
+
+	obj->cdr = analize(d);
+
+	return obj;
+}
+
+struct Obj* changevar(struct Scan *d)
+{
+	struct Obj* obj;
+	int op = d->tok;
+
+	next(d);
+	unsigned int loc = hash_str(d->lexeme);
+
+	if (map->list[loc] == NULL)
+		printf("[%ld] [%s] ", d->line, d->lexeme), PRINT_ERROR(8);
+
+	if (map->list[loc]->type != INT)
+	{
+		if (op == TDECR)
+			printf("[%ld] Required int type variable for '--'\n", d->line), exit(1);
+		else if (op == TINCR)
+			printf("[%ld] Required int type variable for '++'\n", d->line), exit(1);
+	}
+
+	if (op == TDECR)
+		map->list[loc]->v1--;
+	else if (op == TINCR)
+		map->list[loc]->v1++;
+
+	obj = make(NIL, 0);
 	obj->cdr = analize(d);
 
 	return obj;
@@ -214,6 +263,16 @@ struct Obj* analize(struct Scan* d)
 			{
 				struct Obj* obj = variable(d);
 				return obj;
+			}
+			case TSET:
+			{
+				struct Obj* set = setvar(d);
+				return set;
+			}
+			case TINCR: case TDECR:
+			{
+				struct Obj* effect = changevar(d);
+				return effect;
 			}
 			case PLUS: case MINUS: case TIMES: case DIVIDE: 
 			case LESSTHAN: case MORETHAN: case EQ: case TPRINT:

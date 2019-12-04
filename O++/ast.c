@@ -1,7 +1,6 @@
 
 //--------------------------------------
 struct Obj* eval(struct Obj* node);
-struct Obj* eval_import(struct Obj* node);
 
 struct Obj* plus(struct Obj* node);
 struct Obj* minus(struct Obj* node);
@@ -9,6 +8,7 @@ struct Obj* times(struct Obj* node);
 struct Obj* divide(struct Obj* node);
 struct Obj* stmt_eval(struct Obj* node);
 struct Obj* if_stmt(struct Obj* node);
+struct Obj* eval_set(struct Obj* node);
 
 struct Obj* print(struct Obj* node);
 //--------------------------------------
@@ -19,10 +19,6 @@ struct Obj* eval(struct Obj* node)
 	{
 		case CON:
 			return eval(node->car);
-		break;
-
-		case TIMPORT:
-			return eval_import(node);
 		break;
 
 		case PLUS:  return plus(node->cdr);  break;
@@ -42,8 +38,13 @@ struct Obj* eval(struct Obj* node)
 			return if_stmt(node);
 		break;
 
-		case NUM: case NIL: case TLIST: 
+		case TSET:
+			return eval_set(node);
+		break;
+
+		case NUM: case NIL: case TLIST:
 		case TTRUE: case TFALSE: case IDENT:
+		case TDECR: case TINCR:
 			return node;
 		break;
 	}
@@ -51,18 +52,6 @@ struct Obj* eval(struct Obj* node)
 	printf("ERROR: %d\n", node->type);
 	exit(1);
 	//return eval(node->cdr);
-}
-
-struct Obj* eval_import(struct Obj* node)
-{
-	struct Obj* obj;
-	struct Obj* fileobj;
-	
-	init_opp(node->string, fileobj);
-
-	obj = make(NUM, 0);
-
-	return obj;
 }
 
 struct Obj* if_stmt(struct Obj* node)
@@ -81,6 +70,31 @@ struct Obj* if_stmt(struct Obj* node)
 	}
 	else 
 		PRINT_ERROR(1);
+}
+
+struct Obj* eval_set(struct Obj* node)
+{
+	struct Obj* next;
+	int value = 0;
+	char varname[11];
+	varname[0] = '\0';
+
+	unsigned int loc = hash_str(node->string);
+	strcpy(varname, node->string);
+
+	struct Obj* p = eval(node->cdr);
+
+	if (p->type == IDENT)
+	{
+		strcpy(map->list[loc]->v3, p->string);
+	}
+	else if (p->type == NUM)
+	{
+		map->list[loc]->v1 = p->num;
+	}
+	next = make(NIL, 0);
+
+	return next;
 }
 
 struct Obj* stmt_eval(struct Obj* node)

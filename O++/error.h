@@ -6,7 +6,8 @@ const char* ERROR_LIST[] = {
 	"Invalid type in 'print'",
 	"No terminating \'",
 	"'var' Expected identifier",
-	"Variable has already been defined"
+	"Variable has already been defined",
+	"Variable not defined in 'set'"
 };
 
 void syntax_error(struct Scan *s, char* og)

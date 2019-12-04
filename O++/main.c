@@ -82,7 +82,6 @@ void init_opp(const char* fname, struct Obj* root)
 		warning_dump(&data);
 
 	free(content);
-
 }
 
 int main(int argc, char** argv)
@@ -103,6 +102,8 @@ int main(int argc, char** argv)
 	}
 	else
 		help_menu();
+
+	free_table(map);
 
 	return 0;
 } 
