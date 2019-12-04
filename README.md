@@ -1,6 +1,11 @@
 # Announcement
 NEW UPDATE! O++ has temporarily turned into a lisp family language for learning purposes. I have successfully implemented an AST and I'm hoping to expand on that with the old O++ syntax. New updates will be coming soon as I keep slowly working, I am hoping to finish by having a stable O++ Language release and ports for O++ to other platforms and frameworks.
 
+# Announcement 12/3
+O++ is still currently in its lisp syntax stage however I am working on a rewrite of the whole syntax. The current idea for O++ now is to have a functional programming langauges with some features from OOP. Also O++ will most likely become a VM, having an compiler to the VM opcodes and an interpretor of the VM. Also one feature I will try my best to implement is providing basic porting of C libraries to O++. 
+
+- Maks S
+
 # O++ Language
 By: Maks Sawoniewicz
 
