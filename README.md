@@ -1,8 +1,5 @@
 # Announcement
-NEW UPDATE! O++ has temporarily turned into a lisp family language for learning purposes. I have successfully implemented an AST and I'm hoping to expand on that with the old O++ syntax. New updates will be coming soon as I keep slowly working, I am hoping to finish by having a stable O++ Language release and ports for O++ to other platforms and frameworks.
-
-# Announcement 12/3
-O++ is still currently in its lisp syntax stage however I am working on a rewrite of the whole syntax. The current idea for O++ now is to have a functional programming langauges with some features from OOP. Also O++ will most likely become a VM, having an compiler to the VM opcodes and an interpretor of the VM. Also one feature I will try my best to implement is providing basic porting of C libraries to O++. 
+NEW UPDATE!! O++ is finally evolving into its new syntax. For now I am working on creating the O++ interpreter however I'm Deciding on whether to keep O++ as an interpreter or have a portable VM for it 
 
 - Maks S
 
@@ -16,17 +13,15 @@ When I started writing this language I wanted to learn more about C and introduc
 Recently a friend pointed out that the name of this language is the same name as the "universal donor" blood type O. This made me change the idea for o++ quite a bit. I want O++ to expand to be a universal donor or capable of being used for lots of purposes. For this to be achieved I hope people are inspired to create libraries and expand the power of O++ to reach its full potential. 
 
 # Run / Compile
-To run O++ go into the src file and run the command "gcc o++.c -o o++" in the terminal. Ignore any warning and then launch the interpreter on any file by typing "./o++ filname" on linux and mac on windows simply type "o++ filename".
+To run O++ go into the O++ folder and in Opp-Interpreter there is a 'Build.bash' file that you can run to compile O++ from source.
 
 # Using O++ Syntax
 If you want to use my own custom made o++ syntax highlighting, I made an XML file under the XML folder that you can import to notepad++ to use O++ syntax and grammar.
 
 # Examples
 
-Hello World & Comments:
 ```ruby
-## Comment Example ##
-print @var_name
-print 'Hello World!'
+# Comment
+
+print 'Hello World';
 ```
-More examples under the "example" folder!
