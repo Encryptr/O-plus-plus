@@ -1,9 +1,12 @@
+#include "lexer.h"
+
 static inline bool ignore(char i) {
 	return (i == ' ' || i == '\t' || i=='\r');
 }
 
 static inline bool isletter(char i) {
-	return ((i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z'));
+	return ((i >= 'a' && i <= 'z') || 
+		(i >= 'A' && i <= 'Z') || (i == '_'));
 }
 
 static inline bool isnum(char i) {
@@ -39,7 +42,6 @@ void init_lex(struct Scan *s, char* source)
 void preprocessor(struct Scan *s)
 {
 	char* pre = s->src;
-	char lexeme[10];
 
 	while (*pre)
 	{
@@ -50,26 +52,16 @@ void preprocessor(struct Scan *s)
 				pre++;
 			}
 		}
+
 		pre++;
 	}
 }
 
 bool keyword(struct Scan *s)
 {
-	if (!strcmp(s->lexeme, "print"))
-		{s->tok = TPRINT; return 1;}
-	else if (!strcmp(s->lexeme, "def"))
-		{s->tok = TDEFINE; return 1;}
-	else if (!strcmp(s->lexeme, "list"))
-		{s->tok = TLIST; return 1;}
-	else if (!strcmp(s->lexeme, "if"))
-		{s->tok = TIF; return 1;}
-	else if (!strcmp(s->lexeme, "import"))
-		{s->tok = TIMPORT; return 1;}
-	else if (!strcmp(s->lexeme, "var"))
-		{s->tok = TVAR; return 1;}
-	else if (!strcmp(s->lexeme, "set"))
-		{s->tok = TSET; return 1;}
+	if (!strcmp(s->lexeme, "func"))
+		{s->tok = TFUNC; return 1;}
+
 	return 0;
 }
 
@@ -78,11 +70,12 @@ enum Token singleChar(struct Scan *s)
 	switch (*s->src)
 	{
 		case '\'': return TIK; break;
+		case ';': return SEMICOLON; break;
 
 		case '+': 
 			s->src++;
 			if (*s->src == '+')
-				return TINCR;
+				return TDECR;
 			s->src--;
 			return PLUS; 
 		break;
@@ -101,24 +94,10 @@ enum Token singleChar(struct Scan *s)
 			return MINUS; 
 		break;
 
-		case '*': return TIMES; break;
-
+		case '*': return MULTI; break;
 		case '/': return DIVIDE; break;
-
 		case '=': return EQ; break;
-
-		case '(':
-			++s->paren_idx; 
-			return OPER; 
-		break;
-
-		case ')':
-			--s->paren_idx; 
-			return CPER; 
-		break;
-
 		case '>': return MORETHAN; break;
-
 		case '<': return LESSTHAN; break;
 
 		default:
@@ -199,4 +178,61 @@ void next(struct Scan *s)
 		s->src++;
 	}
 	s->tok = FEND;
+}
+
+char* type_to_str(const int type)
+{
+	switch (type)
+	{
+		case TIK:
+			return "Tik: \'";
+		break;
+
+		case IDENT:
+			return "Ident:";
+		break;
+
+		case NUM:
+			return "Number:";
+		break;
+
+		case TFUNC:
+			return "Function:";
+		break;
+
+		case SEMICOLON:
+			return "End\n";
+		break;
+
+		case PLUS:
+			return "Plus";
+		break;
+
+		case MINUS:
+			return "Minus";
+		break;
+
+		case MULTI:
+			return "Multiplied";
+		break;
+
+		case DIVIDE:
+			return "Divided";
+		break;
+	}
+
+	return NULL;
+}
+
+void dump_tokens(struct Scan *s)
+{
+	while (s->tok != FEND)
+	{
+		next(s);
+		if (s->tok == FEND) return;
+		if (strlen(s->lexeme) == 0)
+			printf("%s\n", type_to_str(s->tok));
+		else
+			printf("%s %s\n", type_to_str(s->tok), s->lexeme);
+	} 
 }

@@ -10,16 +10,6 @@ unsigned long hash_str(char *string)
 	return h;
 }
 
-// REVIEW FOR DEPRICATION
-// struct Hash_Node* new_node(const char* key)
-// {
-// 	struct Hash_Node* node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
-// 	strcpy(node->key, key);
-// 	node->next = NULL;
-
-// 	return node;
-// }
-
 struct Table* createMap()
 {
 	struct Table* t = (struct Table*)malloc(sizeof(struct Table));
@@ -101,4 +91,29 @@ int insert_float(struct Table *t, char* key, double value)
 
 	// IMPLEMENT DUPLICATES
 	return 1;
+}
+
+int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s))
+{
+	unsigned int loc = hash_str(key);
+
+	if (t->list[loc] != NULL)
+		return 0;
+
+	t->list[loc] = malloc(sizeof(struct Hash_Node));
+
+	// INIT
+	t->list[loc]->type = CFUNC;
+	t->list[loc]->func.cfn = fn;
+
+	return 1;
+}
+
+enum Types check_type(struct Table *t, char *key)
+{
+	unsigned int loc = hash_str(key);
+
+	if (t->list[loc] == NULL)
+		return ERROR;
+	return t->list[loc]->type;
 }
