@@ -61,6 +61,14 @@ bool keyword(struct Scan *s)
 {
 	if (!strcmp(s->lexeme, "func"))
 		{s->tok = TFUNC; return 1;}
+	else if (!strcmp(s->lexeme, "var"))
+		{s->tok = TVAR; return 1;}
+	else if (!strcmp(s->lexeme, "const"))
+		{s->tok = TCONST; return 1;}
+	else if (!strcmp(s->lexeme, "if"))
+		{s->tok = TIF; return 1;}
+	else if (!strcmp(s->lexeme, "while"))
+		{s->tok = TWHILE; return 1;}
 
 	return 0;
 }

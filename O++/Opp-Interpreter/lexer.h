@@ -8,8 +8,9 @@
 
 enum Token {
 	NIL=-1, INVALID, IDENT, NUM, TVAR,
-	TFUNC, TCFUNC, TIK, EQ, EQEQ, PLUS, MINUS,
-	DIVIDE, MULTI, TDECR, TINCR, LESSTHAN, MORETHAN, COLON, 
+	TFUNC, TCFUNC, TCONST, TIF, TWHILE, TIK, EQ, 
+	EQEQ, PLUS, MINUS, DIVIDE, MULTI, TDECR, 
+	TINCR, LESSTHAN, MORETHAN, COLON, 
 	SEMICOLON, FEND
 };
 
@@ -18,7 +19,6 @@ struct Scan {
 	char lexeme[99];
 	enum Token tok;
 	long line;
-	int paren_idx;
 	FILE* file;	
 };
 
