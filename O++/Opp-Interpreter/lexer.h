@@ -7,10 +7,10 @@
 #include <stdbool.h>
 
 enum Token {
-	NIL=-1, INVALID, IDENT, NUM, TVAR,
+	NIL=-1, INVALID, IDENT, NUM, TIMPORT, TVAR,
 	TFUNC, TCFUNC, TCONST, TIF, TWHILE, TIK, EQ, 
 	EQEQ, PLUS, MINUS, DIVIDE, MULTI, TDECR, 
-	TINCR, LESSTHAN, MORETHAN, COLON, 
+	TINCR, OPENP, CLOSEP, COMMA, OPENB, CLOSEB, LESSTHAN, MORETHAN, COLON, 
 	SEMICOLON, FEND
 };
 
@@ -28,6 +28,7 @@ static inline bool isnum(char i);
 
 void append(char *og, char c);
 void append_string(char *original, char *add);
+
 void preprocessor(struct Scan *s);
 bool keyword(struct Scan *s);
 enum Token singleChar(struct Scan *s);

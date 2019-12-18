@@ -67,14 +67,14 @@ struct Opp_Value opp_expr_two(struct Scan* s)
 	struct Opp_Value left  = {0};
 	int operator = 0;
 
-	left = opp_parse_num(s);
+	opp_parse_num(s, &left);
 	next(s);
 	operator = s->tok;
 
 	while (operator == DIVIDE || operator == MULTI)
 	{
 		next(s);
-		right = opp_parse_num(s);
+		opp_parse_num(s, &right);
 
 		if (operator == DIVIDE)
 			left.ival /= right.ival;
@@ -86,12 +86,12 @@ struct Opp_Value opp_expr_two(struct Scan* s)
 	return left;
 }
 
-struct Opp_Value opp_parse_num(struct Scan* s)
+void opp_parse_num(struct Scan* s, struct Opp_Value* value)
 {
-	struct Opp_Value value = {0};
+	// struct Opp_Value value = {0};
 
 	if (s->tok == NUM)
-		value.ival = atoi(s->lexeme);
+		value->ival = atoi(s->lexeme);
 	else if (s->tok == IDENT)
 	{
 		unsigned int loc = hash_str(s->lexeme);
@@ -100,9 +100,9 @@ struct Opp_Value opp_parse_num(struct Scan* s)
 			printf("[%ld] Undeclared identifier '%s'\n", s->line, s->lexeme), exit(1);
 		if (map->list[loc]->type != INT)
 			printf("[%ld] Variable '%s' must be a number\n", s->line, s->lexeme), exit(1);
-		value.ival = map->list[loc]->v1;
+		value->ival = map->list[loc]->v1;
 	}
-	return value;
+	// return value;
 }
 
 struct Opp_Value opp_parse_varstr(struct Scan* s)
@@ -151,7 +151,9 @@ void opp_parse_var(struct Scan* s)
 	if (s->tok != IDENT)
 		printf("[%ld] Expected identifier after 'var'\n", s->line), exit(1);
 	strcpy(varname, s->lexeme);
-
+	unsigned int loc = hash_str(s->lexeme);
+	if (map->list[loc] != NULL)
+		printf("[%ld] Variable '%s' alread defined\n", s->line, s->lexeme), exit(1);
 	next(s);
 
 	if (s->tok != EQ)
@@ -176,6 +178,84 @@ void opp_parse_var(struct Scan* s)
 		break;
 	}
 	expect_semi(s);
+}
+
+void opp_ignore(struct Scan* s)
+{
+	next(s);
+	int loop = 1;
+
+	while (loop > 0)
+	{
+		if (s->tok == FEND) printf("[%ld] Missing terminating '}'\n", s->line), exit(1);
+		else if (s->tok == OPENB) loop++;
+		else if (s->tok == CLOSEB) loop--;
+		if (loop == 0) break;
+
+		next(s);
+	}
+}
+
+// ADD FUNCTION PAREMETERS
+void opp_parse_param(struct Scan* s, unsigned int loc)
+{
+	int amount = 0;
+	if (s->tok != OPENP)
+		printf("[%ld] Expected '[' in function declaration\n", s->line), exit(1);
+	do {
+		next(s);
+	} while (s->tok != CLOSEP);
+}
+
+void opp_parse_func(struct Scan* s)
+{
+	next(s);
+	if (s->tok != IDENT)
+		printf("[%ld] Expected Identifier after 'func'\n", s->line), exit(1);
+	
+	unsigned int loc = hash_str(s->lexeme);
+
+	if (!insert_func(map, loc))
+		printf("[%ld] Function '%s' already defined\n", s->line, s->lexeme);
+
+	next(s);
+	// === TEMP ==============
+	if (s->tok != OPENP)
+		printf("TEMP ERROR1 [%ld]\n", s->line), exit(1);
+	next(s);
+	if (s->tok != CLOSEP)
+		printf("TEMP ERROR2 [%ld]\n", s->line), exit(1);
+	// opp_parse_param(s, loc);
+	// =======================
+
+	next(s);
+	if (s->tok != OPENB)
+		printf("[%ld] Expected '{' at function declaration\n", s->line), exit(1);
+	map->list[loc]->func.loc = s->src;
+	opp_ignore(s);
+}
+
+void opp_parse_fncall(struct Scan* s)
+{
+	unsigned int loc = hash_str(s->lexeme);
+
+	if (map->list[loc] == NULL)
+		printf("[%ld] '%s' Not a defined 'func'\n", s->line, s->lexeme), exit(1);
+	if (map->list[loc]->type != FUNC)
+		printf("[%ld] '%s' Not of type function\n", s->line, s->lexeme), exit(1);
+	// TEMP ====
+	next(s);
+	if (s->tok != OPENP) printf("TEMP3\n"), exit(1);
+	next(s);
+	if (s->tok != CLOSEP) printf("TEMP4\n"), exit(1);
+	// =========
+
+	next(s);
+	expect_semi(s);
+	char* temp = s->src;
+	s->src = map->list[loc]->func.loc;
+	opp_parser(s, 1);
+	s->src = temp;
 }
 
 void opp_std_print(struct Scan* s)
@@ -211,10 +291,10 @@ void opp_init_stdlib()
 void opp_init_parser(struct Scan* s)
 {
 	opp_init_stdlib();
-	opp_parser(s);
+	opp_parser(s, 0);
 }
 
-void opp_parser(struct Scan* s)
+void opp_parser(struct Scan* s, int block)
 {
 	for (;;)
 	{
@@ -226,6 +306,12 @@ void opp_parser(struct Scan* s)
 				return;
 			break;
 
+			case CLOSEB:
+			 if (block != 1)
+			 	printf("[%ld] Unexpected '}'\n", s->line), exit(1);
+			 return;
+			break;
+
 			case TVAR:
 				opp_parse_var(s);
 			break;
@@ -234,16 +320,23 @@ void opp_parser(struct Scan* s)
 			
 			break;
 
+			case TFUNC:
+				opp_parse_func(s);
+			break;
+
 			default:
 			{
 				int ident_type = check_type(map, s->lexeme);
 
 				if (ident_type == ERROR)
-					printf("[%ld] Unknow Identifier '%s'\n", s->line, s->lexeme), exit(1);
-				else if (ident_type == FUNC)
 				{
-					
+					if (strlen(s->lexeme) == 0)
+						printf("[%ld] Unexpected TK:%d\n", s->line, s->tok), exit(s->tok);
+					else printf("[%ld] Unknow Identifier '%s'\n", s->line, s->lexeme), exit(1);
 				}
+				else if (ident_type == FUNC)
+					opp_parse_fncall(s);
+
 				else if (ident_type == CFUNC)
 				{
 					unsigned int loc = hash_str(s->lexeme);

@@ -75,7 +75,6 @@ void init_opp(const char* fname)
 	// oppTree.tree = opp_parser_init(&data);
 	else opp_init_parser(&data);
 	
-
 	free(content);
 }
 

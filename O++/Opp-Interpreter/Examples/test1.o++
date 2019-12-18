@@ -1,0 +1,5 @@
+print 10 + 2 / 2; # 11
+
+print 10 + 8 * 2 / 3; # 15
+
+print 'Hello O++';

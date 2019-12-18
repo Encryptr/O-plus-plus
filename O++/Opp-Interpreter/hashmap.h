@@ -17,6 +17,7 @@ struct Opp_Func {
 	char* loc;
 	void (*cfn)(struct Scan* s);
 	struct Opp_Value ret_val;
+	int exp_param;
 };
 
 struct Hash_Node {
@@ -28,7 +29,7 @@ struct Hash_Node {
 		char* v3;
 		struct Opp_Func func;
 	};
-	struct Hash_Node *next;
+	// struct Hash_Node *next;
 };
 
 struct Table {
@@ -47,6 +48,8 @@ int insert_str(struct Table *t, char* key, char* value);
 int insert_int(struct Table *t, char* key, int value);
 int insert_float(struct Table *t, char* key, double value);
 int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s));
+int insert_func(struct Table *t, unsigned int element);
+
 
 enum Types check_type(struct Table *t, char *key);
 

@@ -109,6 +109,17 @@ int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s))
 	return 1;
 }
 
+int insert_func(struct Table *t, unsigned int element)
+{
+	if (t->list[element] != NULL)
+		return 0;
+
+	t->list[element] = malloc(sizeof(struct Hash_Node));
+	t->list[element]->type = FUNC;
+
+	return 1;
+}
+
 enum Types check_type(struct Table *t, char *key)
 {
 	unsigned int loc = hash_str(key);

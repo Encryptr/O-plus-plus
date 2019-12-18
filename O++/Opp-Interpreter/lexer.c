@@ -69,6 +69,8 @@ bool keyword(struct Scan *s)
 		{s->tok = TIF; return 1;}
 	else if (!strcmp(s->lexeme, "while"))
 		{s->tok = TWHILE; return 1;}
+	else if (!strcmp(s->lexeme, "import"))
+		{s->tok = TIMPORT; return 1;}
 
 	return 0;
 }
@@ -107,7 +109,12 @@ enum Token singleChar(struct Scan *s)
 		case '=': return EQ; break;
 		case '>': return MORETHAN; break;
 		case '<': return LESSTHAN; break;
-
+		case '[': return OPENP; break;
+		case ']': return CLOSEP; break;
+		case ',': return COMMA; break;
+		case '{': return OPENB; break;
+		case '}': return CLOSEB;
+ 
 		default:
 			printf("[%ld] Invalid Token\n", s->line);
 			printf("==>%c\n", *s->src); exit(1);
