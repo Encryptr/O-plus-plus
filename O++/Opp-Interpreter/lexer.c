@@ -85,7 +85,7 @@ enum Token singleChar(struct Scan *s)
 		case '+': 
 			s->src++;
 			if (*s->src == '+')
-				return TDECR;
+				return TINCR;
 			s->src--;
 			return PLUS; 
 		break;

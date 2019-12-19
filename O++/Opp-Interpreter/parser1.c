@@ -200,11 +200,50 @@ void opp_ignore(struct Scan* s)
 void opp_parse_param(struct Scan* s, unsigned int loc)
 {
 	int amount = 0;
+
+	char temp_ident[10][11];
+	temp_ident[0][0] = '\0';
+
 	if (s->tok != OPENP)
 		printf("[%ld] Expected '[' in function declaration\n", s->line), exit(1);
-	do {
+	next(s);
+
+	while (s->tok != CLOSEP) 
+	{
+		if (s->tok == IDENT)
+		{
+			strcpy(temp_ident[amount], s->lexeme);
+			amount++;
+		}	
+		else
+		{
+			if (strlen(s->lexeme) == 0)
+				printf("[%ld] Unexpected symbol in parameter declaration\n", s->line), exit(1);
+			else printf("[%ld] Unexpected symbol '%s' in parameter declaration\n", s->line, s->lexeme), exit(1);
+		}
 		next(s);
-	} while (s->tok != CLOSEP);
+
+		if (s->tok == CLOSEP) break;
+		else if (s->tok != COMMA)
+		{
+			if (strlen(s->lexeme) == 0)
+				printf("[%ld] Expected ',' in parameter declaration\n", s->line), exit(1);
+			else printf("[%ld] Expected ',' in parameter declaration not '%s'\n", s->line, s->lexeme), exit(1);
+		}
+		next(s);
+	}
+	map->list[loc]->func.exp_param = amount;
+	if (amount != 0)
+	{
+		map->list[loc]->func.param_ident = malloc(sizeof(char*)*amount);
+		for (int i=0;i<amount;i++)
+		{
+			map->list[loc]->func.param_ident[i] = malloc(11);
+			strcpy(map->list[loc]->func.param_ident[i], temp_ident[i]);
+		}
+	}
+	if (s->tok != CLOSEP)
+		printf("[%ld] Expected ']' to close parameter declaration\n", s->line), exit(1);
 }
 
 void opp_parse_func(struct Scan* s)
@@ -215,22 +254,15 @@ void opp_parse_func(struct Scan* s)
 	
 	unsigned int loc = hash_str(s->lexeme);
 
-	if (!insert_func(map, loc))
+	if (!insert_func(map, loc, s->lexeme))
 		printf("[%ld] Function '%s' already defined\n", s->line, s->lexeme);
 
 	next(s);
-	// === TEMP ==============
-	if (s->tok != OPENP)
-		printf("TEMP ERROR1 [%ld]\n", s->line), exit(1);
-	next(s);
-	if (s->tok != CLOSEP)
-		printf("TEMP ERROR2 [%ld]\n", s->line), exit(1);
-	// opp_parse_param(s, loc);
-	// =======================
+	opp_parse_param(s, loc);
 
 	next(s);
 	if (s->tok != OPENB)
-		printf("[%ld] Expected '{' at function declaration\n", s->line), exit(1);
+		printf("[%ld] Expected '{' at function declaration '%s'\n", s->line, map->list[loc]->key), exit(1);
 	map->list[loc]->func.loc = s->src;
 	opp_ignore(s);
 }
@@ -243,19 +275,128 @@ void opp_parse_fncall(struct Scan* s)
 		printf("[%ld] '%s' Not a defined 'func'\n", s->line, s->lexeme), exit(1);
 	if (map->list[loc]->type != FUNC)
 		printf("[%ld] '%s' Not of type function\n", s->line, s->lexeme), exit(1);
-	// TEMP ====
-	next(s);
-	if (s->tok != OPENP) printf("TEMP3\n"), exit(1);
-	next(s);
-	if (s->tok != CLOSEP) printf("TEMP4\n"), exit(1);
-	// =========
+
+	next(s);	
+
+	if (s->tok != OPENP)
+		printf("[%ld] Expected '[' when calling function '%s'\n", s->line, map->list[loc]->key), exit(1);
+
+	if (map->list[loc]->func.exp_param == 0)
+	{
+		next(s);
+		if (s->tok != CLOSEP)
+			printf("[%ld] Expected ']' when calling function '%s'\n", s->line, map->list[loc]->key), exit(1);
+	}
+	else 
+	{
+		int expected = 0;
+
+		map->list[loc]->func.param_val = (struct Opp_Value*)
+		malloc(sizeof(struct Opp_Value)*map->list[loc]->func.exp_param);
+
+		next(s);
+		if (s->tok == CLOSEP)
+			printf("[%ld] Expected %d arguments for function '%s'\n", s->line, map->list[loc]->func.exp_param, map->list[loc]->key), exit(1);
+
+		while (s->tok != CLOSEP)
+		{
+			if (s->tok == IDENT || s->tok == NUM)
+			{
+				map->list[loc]->func.param_val[expected] = opp_parse_type(s);
+				expected++;
+			}
+			if (s->tok == CLOSEP && expected == map->list[loc]->func.exp_param)
+				break;
+			else
+			{
+				if (s->tok != COMMA)
+					printf("[%ld] Expected ',' in function call '%s'\n", s->line, map->list[loc]->key), exit(1);
+			}
+			next(s);
+		}
+		if (expected != map->list[loc]->func.exp_param)
+			printf("[%ld] Expected %d arguments for function '%s'\n", s->line, map->list[loc]->func.exp_param, map->list[loc]->key), exit(1);
+	}
 
 	next(s);
 	expect_semi(s);
 	char* temp = s->src;
+	long temp_line = s->line;
+
 	s->src = map->list[loc]->func.loc;
 	opp_parser(s, 1);
+
 	s->src = temp;
+	s->line = temp_line;
+}
+
+void opp_parse_assign(struct Scan* s)
+{
+	unsigned int loc = hash_str(s->lexeme);
+	if (map->list[loc] == NULL)
+		printf("[%ld] Undeclared identifier '%s'\n", s->line, s->lexeme), exit(1);
+	next(s);
+
+	switch (s->tok)
+	{
+		case EQ:
+			next(s);
+			struct Opp_Value val = opp_parse_type(s);
+
+			if (val.val_type == T_INVALID)
+				printf("[%ld] Invalid assigment to '%s'\n", s->line, map->list[loc]->key), exit(1);
+			else if (val.val_type == T_INTEGER && map->list[loc]->type == INT)
+				map->list[loc]->v1 = val.ival;
+			else if (val.val_type == T_STRING && map->list[loc]->type == STRING)
+				strcpy(map->list[loc]->v3, val.strval);
+			else
+				printf("[%ld] Invalid variable type switch '%s'\n", s->line, map->list[loc]->key), exit(1);
+		break;
+
+		case TDECR:
+			if (map->list[loc]->type == INT)
+				map->list[loc]->v1--;
+			else 	
+				printf("[%ld] Invalid variable type switch '%s'\n", s->line, map->list[loc]->key), exit(1);
+			next(s);
+		break;
+
+		case TINCR:
+			if (map->list[loc]->type == INT)
+				map->list[loc]->v1++;
+			else 	
+				printf("[%ld] Invalid variable type switch '%s'\n", s->line, map->list[loc]->key), exit(1);
+			next(s);
+		break;
+	}
+	expect_semi(s);
+}
+
+void opp_analize_ident(struct Scan* s, int block)
+{
+	// ADD LOCAL FUNCTION ARGUMENETS
+
+	opp_parse_assign(s);
+	// else if (block == 1)
+	// {
+	// 	int i=0;
+	// 	int found = 0;
+	// 	unsigned int loc = hash_str(s->lexeme);
+	// 	if (map->list[loc]->func.exp_param == 0)
+	// 		printf("[%ld] Unexpected variable '%s' in function '%s'\n", s->line, s->lexeme, map->list[loc]->key), exit(1);
+
+	// 	for (i=0;i<map->list[loc]->func.exp_param;i++)
+	// 	{
+	// 		if (!strcmp(s->lexeme, map->list[loc]->func.param_ident[i])) {
+	// 			found = 1;
+	// 			break;
+	// 		}
+	// 	}
+	// 	if (found != 1)
+	// 		printf("[%ld] Variable '%s' in function '%s' is not a declared variable\n", s->line, s->lexeme, map->list[loc]->key), exit(1);
+
+	// }
+
 }
 
 void opp_std_print(struct Scan* s)
@@ -294,6 +435,7 @@ void opp_init_parser(struct Scan* s)
 	opp_parser(s, 0);
 }
 
+// MOVE BLOCK TO SCAN
 void opp_parser(struct Scan* s, int block)
 {
 	for (;;)
@@ -316,9 +458,9 @@ void opp_parser(struct Scan* s, int block)
 				opp_parse_var(s);
 			break;
 
-			case TCONST:
-			
-			break;
+			// case TIF:
+			// 	opp_parse_ifstmt(s);
+			// break;
 
 			case TFUNC:
 				opp_parse_func(s);
@@ -331,17 +473,18 @@ void opp_parser(struct Scan* s, int block)
 				if (ident_type == ERROR)
 				{
 					if (strlen(s->lexeme) == 0)
-						printf("[%ld] Unexpected TK:%d\n", s->line, s->tok), exit(s->tok);
+						printf("[%ld] Unexpected Token:%d\n", s->line, s->tok), exit(s->tok);
 					else printf("[%ld] Unknow Identifier '%s'\n", s->line, s->lexeme), exit(1);
 				}
 				else if (ident_type == FUNC)
 					opp_parse_fncall(s);
-
 				else if (ident_type == CFUNC)
 				{
 					unsigned int loc = hash_str(s->lexeme);
 					(*map->list[loc]->func.cfn)(s);
 				}
+				else 
+					opp_analize_ident(s, block);
 			}
 		}
 	}

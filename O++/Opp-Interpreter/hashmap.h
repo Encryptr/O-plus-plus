@@ -18,6 +18,8 @@ struct Opp_Func {
 	void (*cfn)(struct Scan* s);
 	struct Opp_Value ret_val;
 	int exp_param;
+	char** param_ident;
+	struct Opp_Value* param_val;
 };
 
 struct Hash_Node {
@@ -48,7 +50,7 @@ int insert_str(struct Table *t, char* key, char* value);
 int insert_int(struct Table *t, char* key, int value);
 int insert_float(struct Table *t, char* key, double value);
 int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s));
-int insert_func(struct Table *t, unsigned int element);
+int insert_func(struct Table *t, unsigned int element, char* key);
 
 
 enum Types check_type(struct Table *t, char *key);

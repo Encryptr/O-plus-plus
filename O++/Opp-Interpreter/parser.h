@@ -40,5 +40,8 @@ void opp_parse_var(struct Scan* s);
 void opp_parse_func(struct Scan* s);
 void opp_parse_param(struct Scan* s, unsigned int loc);
 void opp_parse_fncall(struct Scan* s);
+void opp_parse_ifstmt(struct Scan* s);
+void opp_analize_ident(struct Scan* s, int block);
+void opp_parse_assign(struct Scan* s);
 
 #endif

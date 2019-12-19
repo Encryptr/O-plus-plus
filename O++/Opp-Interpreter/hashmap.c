@@ -109,13 +109,14 @@ int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s))
 	return 1;
 }
 
-int insert_func(struct Table *t, unsigned int element)
+int insert_func(struct Table *t, unsigned int element, char* key)
 {
 	if (t->list[element] != NULL)
 		return 0;
 
 	t->list[element] = malloc(sizeof(struct Hash_Node));
 	t->list[element]->type = FUNC;
+	strcpy(t->list[element]->key, key);
 
 	return 1;
 }
