@@ -1,9 +1,6 @@
-# Announcement
-NEW UPDATE!! O++ is finally evolving into its new syntax. For now I am working on creating the O++ interpreter however I'm Deciding on whether to keep O++ as an interpreter or have a portable VM for it 
-
-- Maks S
 
 # O++ Language
+![O++](cover.png)
 By: Maks Sawoniewicz
 
 # Purpose
