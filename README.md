@@ -1,6 +1,6 @@
 
 # O++ Language
-![O++](cover.png)
+![O++](default.png)
 By: Maks Sawoniewicz
 
 # Purpose
