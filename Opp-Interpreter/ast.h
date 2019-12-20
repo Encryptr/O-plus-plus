@@ -40,6 +40,8 @@ struct Opp_Ast {
 	struct Opp_Node* tree;
 };
 
+/*
+UNUSED CURRENTLY
 struct Opp_Node* opp_make(enum Ast_Type type, struct Opp_Value value);
 
 struct Opp_Node* opp_new_node(enum Ast_Type type, struct Opp_Node* op1, 
@@ -48,5 +50,6 @@ struct Opp_Node* opp_new_node(enum Ast_Type type, struct Opp_Node* op1,
 struct Opp_Value null_opp_value();
 
 void opp_debug_tree(struct Opp_Ast* oppTree);
+*/
 
 #endif

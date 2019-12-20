@@ -1,5 +1,6 @@
 #include "ast.h"
 
+/*
 struct Opp_Node* opp_make(enum Ast_Type type, struct Opp_Value value)
 {
 	struct Opp_Node* node;
@@ -36,7 +37,7 @@ struct Opp_Value null_opp_value()
 	return val;
 }
 
-/*
+
 
 void opp_debug_tree(struct Opp_Ast* oppTree)
 {

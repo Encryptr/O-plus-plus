@@ -446,9 +446,8 @@ void opp_parse_assign(struct Scan* s, struct Table* local)
 
 void opp_analize_ident(struct Scan* s, struct Table* local)
 {
-	// ADD LOCAL FUNCTION ARGUMENETS
-
 	opp_parse_assign(s, local);
+
 	// else if (block == 1)
 	// {
 	// 	int i=0;
