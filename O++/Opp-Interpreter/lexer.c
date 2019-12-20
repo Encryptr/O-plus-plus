@@ -195,6 +195,19 @@ void next(struct Scan *s)
 	s->tok = FEND;
 }
 
+void ignore_str(struct Scan* s)
+{
+	s->lexeme[0] = '\0';
+	while (*s->src)
+	{
+		if (*s->src == '\n') s->line++;
+
+		else if (*s->src == '{') {s->tok = OPENB; return;}
+		else if (*s->src == '}') {s->tok = CLOSEB; return;} 
+		s->src++;
+	}
+}
+
 char* type_to_str(const int type)
 {
 	switch (type)

@@ -10,13 +10,13 @@ unsigned long hash_str(char *string)
 	return h;
 }
 
-struct Table* createMap()
+struct Table* createMap(int size)
 {
 	struct Table* t = (struct Table*)malloc(sizeof(struct Table));
 
-	t->list = (struct Hash_Node**)malloc(sizeof(struct Hash_Node*)*__HASH_SIZE__);
+	t->list = (struct Hash_Node**)malloc(sizeof(struct Hash_Node*)*size);
 	
-	for (int i=0;i<__HASH_SIZE__;++i) {
+	for (int i=0;i<size;++i) {
 		t->list[i] = NULL;
 	}
 	return t;
@@ -93,7 +93,7 @@ int insert_float(struct Table *t, char* key, double value)
 	return 1;
 }
 
-int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s))
+int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s, struct Table* local))
 {
 	unsigned int loc = hash_str(key);
 

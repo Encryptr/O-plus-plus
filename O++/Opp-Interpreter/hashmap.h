@@ -15,7 +15,7 @@ enum Types {
 
 struct Opp_Func {
 	char* loc;
-	void (*cfn)(struct Scan* s);
+	void (*cfn)(struct Scan* s, struct Table* local);
 	struct Opp_Value ret_val;
 	int exp_param;
 	char** param_ident;
@@ -42,14 +42,14 @@ struct Table {
 struct Table* map;
 
 unsigned long hash_str(char *string);
-struct Table* createMap();
+struct Table* createMap(int size);
 void free_table(struct Table* t);
 void delete_node(struct Table* t, char* key);
 
 int insert_str(struct Table *t, char* key, char* value);
 int insert_int(struct Table *t, char* key, int value);
 int insert_float(struct Table *t, char* key, double value);
-int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s));
+int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s, struct Table* local));
 int insert_func(struct Table *t, unsigned int element, char* key);
 
 

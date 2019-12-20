@@ -20,6 +20,7 @@ struct Scan {
 	enum Token tok;
 	long line;
 	FILE* file;	
+	int block;
 };
 
 static inline bool ignore(char i);
@@ -41,5 +42,6 @@ void dump_tokens(struct Scan *s);
 
 void init_lex(struct Scan *s, char* source);
 void next(struct Scan *d);
+void ignore_str(struct Scan* s);
 
 #endif

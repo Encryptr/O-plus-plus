@@ -1,0 +1,40 @@
+## LOCAL VAR TEST O++ ##
+
+var a = 99;
+var outcome = 'bye see ya';
+
+func test[] {
+	print a;
+
+	a = 3;
+	a++;
+
+	print a+1;
+	a--;
+	print a;
+
+	var c = 3;
+	c = 10;
+	print c;
+
+	func try[] {
+		print 'here';
+		a++;
+		print 'print a again';
+		print a;
+	}
+	try[];
+
+	c = 4;
+
+	print 'okok';
+	print c;
+
+	print outcome;
+}
+
+test[];
+try[];
+
+print outcome;
+

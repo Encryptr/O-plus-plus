@@ -1,0 +1,26 @@
+
+func test[] {
+
+	print 'gfjdkgnjdf{}}';
+	print 'second|';
+	#var a = 39;
+	#a++;
+
+	func in[] {
+		print 'inside';
+		print ')(*&(^*&%RR^&';
+
+		func lll[] {
+			print '========';
+		}
+	}
+}
+
+test[];
+
+in[];
+lll[];
+
+print 'ok';
+
+

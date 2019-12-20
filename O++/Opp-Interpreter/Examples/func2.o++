@@ -5,7 +5,7 @@ var cnt = 0;
 func add [a,b] {
 	print 'here';
 
-	print 10*2 - 10 + 2;
+	print 10*2- 10+2;
 
 	print 'out of func';
 
@@ -17,7 +17,7 @@ func add [a,b] {
 	inside[];
 }
 
-add[1,2];
+add[1,1];
 inside[];
 
 ## VAR ASSIGN TESTS ##
@@ -36,7 +36,4 @@ print c;
 c = 'new';
 
 print c;
-
-
-
 

@@ -80,7 +80,7 @@ void init_opp(const char* fname)
 
 int main(int argc, char** argv)
 {
-	map = createMap();
+	map = createMap(__HASH_SIZE__);
 
 	if (argc==2)
 		init_opp(argv[1]);
