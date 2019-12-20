@@ -1,5 +1,5 @@
 
-# O++ Language
+# O++ Programming Language
 ![O++](cover.png)
 By: Maks Sawoniewicz
 
