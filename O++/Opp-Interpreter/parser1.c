@@ -494,11 +494,54 @@ void opp_std_print(struct Scan* s, struct Table* local)
 	expect_semi(s);
 }
 
+void opp_std_input(struct Scan* s, struct Table* local)
+{
+	// CHANGE FOR HIGHER LIMIT
+	char imput_limit[100];
+	imput_limit[0] = '\0';
+	next(s);
+
+	if (s->tok != IDENT)
+		printf("[%ld] Expected variable as argument in '%s'\n", s->line, __FUNCTION__), exit(1);
+	unsigned int loc = hash_str(s->lexeme);
+	if (map->list[loc] == NULL && local->list[loc] == NULL)
+		printf("[%ld] Undeclared variable '%s' as argument in '%s'\n", s->line, s->lexeme, __FUNCTION__), exit(1);
+	fgets(imput_limit, 100, stdin);
+
+	// ADD CONVERT TO NUMBER LATER
+	if (s->block == 1 && local->list[loc] != NULL)
+	{
+		if (local->list[loc]->type == STRING)
+		{
+			local->list[loc]->v3 = malloc(sizeof(char)*strlen(imput_limit));
+			strcpy(local->list[loc]->v3, imput_limit);
+		}
+		else 
+			printf("[%ld] Invalid attempt to change variables '%s' type '%s'\n", s->line, s->lexeme, __FUNCTION__), exit(1);
+	}
+	else 
+	{
+		if (map->list[loc]->type == STRING)
+		{
+			//if (map->list[loc]->v3 == NULL)
+			map->list[loc]->v3 = malloc(sizeof(char)*strlen(imput_limit));
+			strcpy( map->list[loc]->v3, imput_limit);
+		}
+		else 
+			printf("[%ld] Invalid attempt to change variables '%s' type '%s'\n", s->line, s->lexeme, __FUNCTION__), exit(1);
+	}
+	next(s);
+	expect_semi(s);
+}
+
 void opp_init_stdlib()
 {
 	// Init STD Library
 	if (!insert_Cfunc(map, "print", opp_std_print))
 		printf("INTERNAL ERROR [%s]\n", __FUNCTION__), exit(1);
+	if (!insert_Cfunc(map, "input", opp_std_input))
+		printf("INTERNAL ERROR [%s]\n", __FUNCTION__), exit(1);
+
 }
 
 void opp_init_parser(struct Scan* s)

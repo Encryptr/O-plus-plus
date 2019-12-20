@@ -100,7 +100,7 @@ func add[a,b] {
 	ret a+b;
 }
 
-add[10,10] # Syntax for calling a function
+add[10,10]; # Syntax for calling a function
 
 ############# Type Saftey #############
 

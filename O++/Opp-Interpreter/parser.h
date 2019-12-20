@@ -35,6 +35,7 @@ struct Opp_Value opp_parse_type(struct Scan* s, struct Table* local);
 
 void opp_init_stdlib();
 void opp_std_print(struct Scan* s, struct Table* local);
+void opp_std_input(struct Scan* s, struct Table* local);
 
 void opp_ignore(struct Scan* s);
 void opp_parse_var(struct Scan* s, struct Table* local);
