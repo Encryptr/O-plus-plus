@@ -93,7 +93,7 @@ void opp_parse_num(struct Scan* s, struct Opp_Value* value, struct Table* local)
 	{
 		unsigned int loc = hash_str(s->lexeme);
 
-		if (s->block == 1 && local->list[loc] != NULL)
+		if (s->block > 0 && local->list[loc] != NULL)
 		{
 			if (local->list[loc]->type != INT)
 				printf("[%ld] Local variable '%s' must be a number\n", s->line, s->lexeme), exit(1);
@@ -115,7 +115,7 @@ struct Opp_Value opp_parse_varstr(struct Scan* s, struct Table* local)
 	struct Opp_Value value = {0};
 	unsigned int loc = hash_str(s->lexeme);
 
-	if (s->block == 1 && local->list[loc] != NULL)
+	if (s->block > 0 && local->list[loc] != NULL)
 	{
 		if (local->list[loc]->type != STRING)
 			{value.val_type = T_INTEGER; return value;}
@@ -171,14 +171,13 @@ void opp_parse_var(struct Scan* s, struct Table* local)
 	strcpy(varname, s->lexeme);
 	unsigned int loc = hash_str(s->lexeme);
 
-
-	if (s->block == 1) {
+	if (s->block > 0) {
 		if (map->list[loc] != NULL || local->list[loc] != NULL)
-			printf("[%ld] Variable '%s' alread defined\n", s->line, s->lexeme), exit(1);
+			printf("[%ld] Variable '%s' already defined\n", s->line, s->lexeme), exit(1);
 	}
 	else {
 		if (map->list[loc] != NULL)
-			printf("[%ld] Variable '%s' alread defined\n", s->line, s->lexeme), exit(1);
+			printf("[%ld] Variable '%s' already defined\n", s->line, s->lexeme), exit(1);
 	}
 	next(s);
 
@@ -196,12 +195,12 @@ void opp_parse_var(struct Scan* s, struct Table* local)
 		break;
 
 		case T_INTEGER:
-			if (s->block == 1) insert_int(local, varname, val.ival);
+			if (s->block > 0) insert_int(local, varname, val.ival);
 			else insert_int(map, varname, val.ival);
 		break;
 
 		case T_STRING:
-			if (s->block == 1) insert_str(local, varname, val.strval);
+			if (s->block > 0) insert_str(local, varname, val.strval);
 			else insert_str(map, varname, val.strval);
 		break;
 	}
@@ -359,9 +358,8 @@ void opp_parse_fncall(struct Scan* s, struct Table* local)
 	long temp_line = s->line;
 
 	s->src = map->list[loc]->func.loc;
-	s->block = 1;
-	opp_parser(s);
-
+	s->block++; // TEMP solution
+	opp_parser(s,0);
 	s->src = temp;
 	s->line = temp_line;
 }
@@ -380,7 +378,7 @@ void opp_parse_assign(struct Scan* s, struct Table* local)
 			next(s);
 			struct Opp_Value val = opp_parse_type(s, local);
 
-			if (s->block == 1 && local->list[loc] != NULL)
+			if (s->block > 0 && local->list[loc] != NULL)
 			{
 				if (val.val_type == T_INVALID)
 					printf("[%ld] Invalid assigment to '%s'\n", s->line, local->list[loc]->key), exit(1);
@@ -406,7 +404,7 @@ void opp_parse_assign(struct Scan* s, struct Table* local)
 
 		case TDECR:
 
-			if (s->block == 1 && local->list[loc] != NULL)
+			if (s->block > 0 && local->list[loc] != NULL)
 			{
 				if (local->list[loc]->type == INT)
 					local->list[loc]->v1--;
@@ -424,7 +422,7 @@ void opp_parse_assign(struct Scan* s, struct Table* local)
 
 		case TINCR:
 
-			if (s->block == 1 && local->list[loc] != NULL)
+			if (s->block > 0 && local->list[loc] != NULL)
 			{
 				if (local->list[loc]->type == INT)
 					local->list[loc]->v1++;
@@ -442,6 +440,92 @@ void opp_parse_assign(struct Scan* s, struct Table* local)
 	}
 	
 	expect_semi(s);
+}
+
+void opp_parse_ifstmt(struct Scan* s, struct Table* local)
+{
+	int operator = 0;
+
+	next(s);
+	struct Opp_Value left = opp_parse_type(s, local);
+	operator = s->tok;
+	next(s);
+	struct Opp_Value right = opp_parse_type(s, local);
+
+	if (left.val_type != right.val_type)
+		printf("[%ld] Cannot process 'if' on two different types\n", s->line), exit(1);
+
+	switch (operator)
+	{
+		case EQEQ:
+			if (left.val_type == T_INTEGER)
+			{
+				if (left.ival != right.ival)
+					opp_ignore(s);
+				else {
+					if (s->tok != OPENB)
+						printf("[%ld] Expected '{' after 'if' statment\n", s->line), exit(1);
+					s->block++;
+					s->local = local;
+
+					opp_parser(s, 1);
+					s->local = NULL;
+				}
+			}
+			else if (left.val_type == T_STRING)
+			{
+				if (strcmp(left.strval, right.strval))
+					opp_ignore(s);
+				else {
+					if (s->tok != OPENB)
+						printf("[%ld] Expected '{' after 'if' statment\n", s->line), exit(1);
+					s->block++;
+					s->local = local;
+
+					opp_parser(s, 1);
+				}
+			}
+		break;
+
+		case MORETHAN:
+			if (left.val_type == T_INTEGER)
+			{
+				if (left.ival < right.ival)
+					opp_ignore(s);
+				else {
+					if (s->tok != OPENB)
+						printf("[%ld] Expected '{' after 'if' statment\n", s->line), exit(1);
+					s->block++;
+					s->local = local;
+
+					opp_parser(s, 1);
+				}
+			}
+			else 
+				printf("[%ld] Invalid operation '>' on strings\n", s->line), exit(1);
+
+		break;
+
+		case LESSTHAN:
+
+			if (left.val_type == T_INTEGER)
+			{
+				if (left.ival > right.ival)
+					opp_ignore(s);
+				else {
+					if (s->tok != OPENB)
+						printf("[%ld] Expected '{' after 'if' statment\n", s->line), exit(1);
+					s->block++;
+					s->local = local;
+
+					opp_parser(s, 1);
+				}
+			}
+			else 
+				printf("[%ld] Invalid operation '<' on strings\n", s->line), exit(1);
+
+		break;
+	}
 }
 
 void opp_analize_ident(struct Scan* s, struct Table* local)
@@ -508,7 +592,7 @@ void opp_std_input(struct Scan* s, struct Table* local)
 	fgets(imput_limit, 100, stdin);
 
 	// ADD CONVERT TO NUMBER LATER
-	if (s->block == 1 && local->list[loc] != NULL)
+	if (s->block > 0 && local->list[loc] != NULL)
 	{
 		if (local->list[loc]->type == STRING)
 		{
@@ -546,12 +630,12 @@ void opp_init_stdlib()
 void opp_init_parser(struct Scan* s)
 {
 	opp_init_stdlib();
-	opp_parser(s);
+	opp_parser(s, 0);
 }
 
-void opp_parser(struct Scan* s)
+void opp_parser(struct Scan* s, int use_scan)
 {
-	struct Table* local = createMap(100);
+	struct Table* local = createMap(SMALLER_HASH);
 
 	for (;;)
 	{
@@ -566,28 +650,39 @@ void opp_parser(struct Scan* s)
 			case CLOSEB:
 				if (s->block == 0)
 					printf("[%ld] Unexpected '}'\n", s->line), exit(1);
-				else return;
+				else 
+				{
+					s->block--;
+					return;
+				}
 			break;
 
 			case TVAR:
-				opp_parse_var(s, local);
+				if (use_scan == 1)
+					opp_parse_var(s, s->local);
+				else opp_parse_var(s, local);
 			break;
 
-			// case TIF:
-			// 	opp_parse_ifstmt(s);
-			// break;
+			case TIF:
+				if (use_scan == 1)
+					opp_parse_ifstmt(s, s->local);
+				else opp_parse_ifstmt(s, local);
+			break;
 
 			case TFUNC:
-				opp_parse_func(s);
+				opp_parse_func(s); // decide on making func local??
 			break;
 
 			default:
 			{
 				int ident_type = 0;
 
-				if (s->block == 1)
+				if (s->block > 0)
 				{
-					ident_type = check_type(local, s->lexeme);
+					if (use_scan == 1)
+						ident_type = check_type(s->local, s->lexeme);
+					else ident_type = check_type(local, s->lexeme);
+
 					if (ident_type == ERROR)
 						ident_type = check_type(map, s->lexeme);
 				}
@@ -600,14 +695,23 @@ void opp_parser(struct Scan* s)
 					else printf("[%ld] Unknown Identifier '%s'\n", s->line, s->lexeme), exit(1);
 				}
 				else if (ident_type == FUNC)
+				{
 					opp_parse_fncall(s, local);
+				}
 				else if (ident_type == CFUNC)
 				{
 					unsigned int loc = hash_str(s->lexeme);
-					(*map->list[loc]->func.cfn)(s, local);
+
+					if (use_scan == 1)
+						(*map->list[loc]->func.cfn)(s, s->local);
+					else (*map->list[loc]->func.cfn)(s, local);
 				}
-				else 
-					opp_analize_ident(s, local);
+				else
+				{
+					if (use_scan == 1)
+						opp_analize_ident(s, s->local);
+					else opp_analize_ident(s, local);
+				}
 			}
 		}
 	}

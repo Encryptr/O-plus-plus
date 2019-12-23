@@ -1,0 +1,45 @@
+## O++ IF STATMENT TESTING ##
+
+var a = 0;
+var b = 3;
+
+if a+3 == b {
+	print 'inside if';
+}
+
+if a == b {
+	print 'nonon';
+}
+
+print 'good';
+
+print 'here';
+
+print a + 10;
+
+func iftest[] {
+	var h = 32;
+
+	if h == 30+2 {
+		var here = -2;
+		print 'Im inside';
+		print 'FIx h not declared';
+		print here;
+	}
+}
+
+iftest[];
+print '';
+
+if 10 == 10 {
+	print 'here nice';
+
+	if a == b {
+		print 'no';
+	}
+
+	if a+3 == b {
+		print 'out nice';
+	}
+	print 'leaviing';
+}

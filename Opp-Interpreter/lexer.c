@@ -106,7 +106,13 @@ enum Token singleChar(struct Scan *s)
 
 		case '*': return MULTI; break;
 		case '/': return DIVIDE; break;
-		case '=': return EQ; break;
+		case '=':
+			s->src++;
+			if (*s->src == '=')
+				return EQEQ;
+			s->src--;
+			return EQ; 
+		break;
 		case '>': return MORETHAN; break;
 		case '<': return LESSTHAN; break;
 		case '[': return OPENP; break;

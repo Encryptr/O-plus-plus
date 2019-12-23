@@ -3,8 +3,8 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "lexer.h"
 #include "hashmap.h"
+#include "lexer.h"
 #include "opp-script.h"
 #include "ast.h"
 #include "parser.h"
@@ -94,6 +94,7 @@ int main(int argc, char** argv)
 	}
 	else
 		help_menu();
+
 
 	free_table(map);
 

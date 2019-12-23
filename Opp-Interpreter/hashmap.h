@@ -2,6 +2,7 @@
 #define OPP_HASH
 
 #define __HASH_SIZE__ 10000
+#define SMALLER_HASH 1000
 
 #include <stdio.h>
 #include <string.h>
@@ -51,7 +52,7 @@ int insert_int(struct Table *t, char* key, int value);
 int insert_float(struct Table *t, char* key, double value);
 int insert_Cfunc(struct Table *t, char* key, void (*fn)(struct Scan* s, struct Table* local));
 int insert_func(struct Table *t, unsigned int element, char* key);
-
+// void combine_maps(struct Talbe* map1, struct Table* map2);
 
 enum Types check_type(struct Table *t, char *key);
 

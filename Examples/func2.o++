@@ -6,6 +6,7 @@ func add [a,b] {
 	print 'here';
 
 	print 10*2- 10+2;
+	var atme = 0;
 
 	print 'out of func';
 
@@ -13,6 +14,13 @@ func add [a,b] {
 		print 'inside the inside ';
 		cnt++;
 		print cnt;
+	}
+
+	func test [] {
+		func embed [] {
+			print 'we out here';
+		}
+		print 'pllllllllsssss broooooo!';
 	}
 	inside[];
 }
@@ -36,4 +44,6 @@ print c;
 c = 'new';
 
 print c;
+
+
 

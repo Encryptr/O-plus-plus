@@ -19,10 +19,10 @@ All statments end with a semicolon ';'
 Types:
 2 -> Integer
 10.2 -> Double
--23 & -2.2 -> Negative Real
+-23 and -2.2 -> Negative 
 true / false -> Boolean
 '...' -> String
-{...} -> Array
+(...) -> Array
 
 import ...
 Keyword used for importing other o++ files
@@ -142,6 +142,9 @@ tan ...
 Function returning the tan of input s
 
 ############# AST Function #############
+
+
+
 
 
 

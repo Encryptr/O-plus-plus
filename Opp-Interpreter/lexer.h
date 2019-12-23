@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+// #include "hashmap.h"
 
 enum Token {
 	NIL=-1, INVALID, IDENT, NUM, TIMPORT, TVAR,
@@ -21,6 +22,7 @@ struct Scan {
 	long line;
 	FILE* file;	
 	int block;
+	struct Table* local;
 };
 
 static inline bool ignore(char i);
