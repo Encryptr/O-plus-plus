@@ -442,6 +442,65 @@ void opp_parse_assign(struct Scan* s, struct Table* local)
 	expect_semi(s);
 }
 
+int opp_parse_exp(struct Scan* s, struct Table* local)
+{
+	int operator = 0;
+
+	next(s);
+	struct Opp_Value left = opp_parse_type(s, local);
+	operator = s->tok;
+	next(s);
+	struct Opp_Value right = opp_parse_type(s, local);
+
+	if (left.val_type == T_INVALID || right.val_type == T_INVALID)
+		printf("[%ld] Invalid type in expression\n", s->line), exit(1);
+
+	switch (operator)
+	{
+		case EQEQ:
+			if (left.val_type != right.val_type)
+				printf("[%ld] Cannot process '==' on different types\n", s->line),exit(1);
+			if (left.val_type == T_INTEGER)
+			{
+				if (left.ival != right.ival)
+					return 0;
+			}
+			else if (left.val_type == T_STRING)
+			{
+				if (strcmp(left.strval, right.strval))
+					return 0;
+			}
+		break;
+
+		case MORETHAN:
+			if (left.val_type != right.val_type)
+				printf("[%ld] Cannot process '>' on different types\n", s->line),exit(1);
+			if (left.val_type == T_INTEGER)
+			{
+				if (left.ival <= right.ival)
+					return 0;
+			}
+			else 
+				printf("[%ld] Invalid operation '>' on strings\n", s->line), exit(1);
+
+		break;
+
+		case LESSTHAN:
+			if (left.val_type != right.val_type)
+				printf("[%ld] Cannot process '<' on different types\n", s->line),exit(1);
+
+			if (left.val_type == T_INTEGER)
+			{
+				if (left.ival >= right.ival)
+					return 0;
+			}
+			else 
+				printf("[%ld] Invalid operation '<' on strings\n", s->line), exit(1);
+		break;
+	}
+	return 1;
+}
+
 void opp_parse_ifstmt(struct Scan* s, struct Table* local)
 {
 	int operator = 0;
@@ -469,7 +528,6 @@ void opp_parse_ifstmt(struct Scan* s, struct Table* local)
 					s->local = local;
 
 					opp_parser(s, 1);
-					s->local = NULL;
 				}
 			}
 			else if (left.val_type == T_STRING)
@@ -526,6 +584,31 @@ void opp_parse_ifstmt(struct Scan* s, struct Table* local)
 
 		break;
 	}
+}
+
+void opp_parse_while(struct Scan* s, struct Table* local)
+{
+	char* start = s->src;
+
+	if (opp_parse_exp(s, local) == 1)
+	{
+		if (s->tok != OPENB)
+			printf("[%ld] Expected '{' after 'while' statment\n", s->line), exit(1);
+		s->block++;
+		s->local = local;
+		opp_parser(s, 1);
+
+		char* end = s->src;
+		s->src = start;
+
+		while (opp_parse_exp(s, local) == 1) {
+			s->block++;
+			opp_parser(s, 1);
+			s->src = start;
+		}
+		s->src = end;
+	}
+	else opp_ignore(s);
 }
 
 void opp_analize_ident(struct Scan* s, struct Table* local)
@@ -667,6 +750,12 @@ void opp_parser(struct Scan* s, int use_scan)
 				if (use_scan == 1)
 					opp_parse_ifstmt(s, s->local);
 				else opp_parse_ifstmt(s, local);
+			break;
+
+			case TWHILE:
+				if (use_scan == 1)
+					opp_parse_while(s, s->local);
+				else opp_parse_while(s, local);
 			break;
 
 			case TFUNC:

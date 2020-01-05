@@ -12,7 +12,7 @@
 
 !#
 
-Identifier = A-Za-z_
+Identifier = A-Z a-z
 
 All statments end with a semicolon ';'
 

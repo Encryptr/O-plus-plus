@@ -1,61 +1,24 @@
 
-print 10 + 2 / 2; # 11
+var a = 0;
 
-print 10 + 8 * 2 / 3; # 15
+while a < 10 {
+	print 'err';
+	if a == 5 {
+		var b = 3;
+		print 'ok';
+	}
+	a++;
+}
 
-print 'Hello O++';
+print '-----';
 
-func testf[] {
+func test[] {
+	var dd = 10;
 
-	var this = 3;
-
-	print this+3;
-
-	if this == 3 {
-		print 'good';
-		this = 10;
-
-		if this == 10 {
-			print 'here';
-			print this;
-		}
+	while dd > 0 {
+		print dd; # FIX THIS
+		dd--;
 	}
 }
 
-func testtwo [] {
-	var a = 'hello';
-	var b = 'ok';
-
-	if a == b {
-		print 'not here';
-	}
-	a = 'ok';
-
-	if a == b {
-		print 'good';
-	}
-
-	var c = 3;
-	var d = 5;
-
-	if c > d {
-		print 'nooo';
-	}
-
-	c = 7;
-
-	if c < d {
-		print 'not good';
-	}
-
-	d = 10;
-
-	if c < d {
-		print 'good2';
-		print b;
-	}
-}
-
-testf[];
-print '--- NEXT ---';
-testtwo[];
+# test[];
