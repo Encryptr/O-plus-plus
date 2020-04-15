@@ -3,6 +3,9 @@
 ![O++](cover.png)
 By: Maks Sawoniewicz
 
+# Update
+Currently a new O++ interpreter is being made. Expect way faster speeds and more portable embedding. Also the interpreter has changed some syntax (more info soon) and uses more effiecient compiler mechanics.
+
 # Purpose
 O++ is a small scritping language similar to Lua, which is great for small tasks and embedding in C. O++ is being worked on towards providing a friendy syntax while also providing max portability and efficiency. 
 
