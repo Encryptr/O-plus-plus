@@ -5,14 +5,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-// #include "hashmap.h"
 
 enum Token {
-	NIL=-1, INVALID, IDENT, NUM, TIMPORT, TVAR,
+	INVALID, IDENT, NUM, TIMPORT, TVAR,
 	TFUNC, TCFUNC, TCONST, TIF, TWHILE, TIK, EQ, 
 	EQEQ, PLUS, MINUS, DIVIDE, MULTI, TDECR, 
-	TINCR, OPENP, CLOSEP, COMMA, OPENB, CLOSEB, LESSTHAN, MORETHAN, 
-	SEMICOLON, COLON, FEND
+	TINCR, OPENP, CLOSEP, COMMA, OPENB, CLOSEB, 
+	LESSTHAN, MORETHAN, COLON, SEMICOLON, TRET, FEND
 };
 
 struct Scan {
@@ -21,8 +20,6 @@ struct Scan {
 	enum Token tok;
 	long line;
 	FILE* file;	
-	int block;
-	struct Table* local;
 };
 
 static inline bool ignore(char i);

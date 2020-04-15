@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "hashmap.c"
-#include "lexer.c"
-#include "error.h"
-#include "parser.c"
-#include "ast.c"
+
+#include "object.h"
+#include "hashmap.h"
+#include "lexer.h"
+#include "o++.h"
+#include "parser.h"
 
 enum Flags {
-	NONE, NO_WARNING, DUMP_TOKS
+	NONE, NO_WARNING, DUMP_TOKS,
+	AST_PRINT
 };
 
 enum Flags flags = NONE;
@@ -18,7 +20,7 @@ void help_menu()
 {
 	system("clear");
 	printf("\n\x1b[32mO++ Programming Language\x1b[0m\n");
-	printf("Written by Maks S\n");
+	printf("Written by Maksymilian Sawoniewicz\n");
 	printf("\n\x1b[31mFormat: o++ [flag] [file]\x1b[0m\n");
 	printf("\n-h    | For help menu\n");
 	printf("-dump | For dumping file tokens\n\n\n");
@@ -30,80 +32,66 @@ void inter_options(char** option, int amount)
 	for (int i=1;i<amount;i++)
 	{
 		if (!strcmp(option[i], "-nowarn"))
-		{
 			flags = NO_WARNING;
-		}
 		else if (!strcmp(option[i], "-dump"))
-		{
 			flags = DUMP_TOKS;
-		}
-		else {
+		else if (!strcmp(option[i], "-ast"))
+			flags = AST_PRINT;
+		else 
 			printf("Not a O++ flag... [%s]\n", option[i]);
-		}
 	}
 }
 
-void init_file(const char* fname, struct Scan *d, char* content)
+void init_file(const char* fname, struct Scan *s, char* content)
 {
 	long size;
-	FILE *file;
 
-	file = fopen(fname, "r");
-	if (!file)
+	s->file = fopen(fname, "r");
+	if (!s->file)
 		printf("[%s] Is not a file...\n", fname),exit(1);
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	rewind(file);
+	fseek(s->file, 0, SEEK_END);
+	size = ftell(s->file);
+	rewind(s->file);
 	content = calloc(1, size + 1);
 
-	fread(content, size, 1, file);
-	fclose(file);
+	fread(content, size, 1, s->file);
+	fclose(s->file);
 
-	init_lex(d, content);
+	init_lex(s, content);
 }
 
-void init_opp(const char* fname, struct Obj* root)
+void init_opp(const char* fname)
 {
 	struct Scan data = {0};
+
 	char* content = NULL;
 
 	init_file(fname, &data, content);
 	preprocessor(&data);
+		
+	if (flags == DUMP_TOKS)
+		dump_tokens(&data);
 
-	root = analize(&data);
-
-	while (root->type != NIL)
-	{
-		eval(root);
-		root = root->cdr;
-	}
-
-	if (flags != NO_WARNING)
-		warning_dump(&data);
-
+	else opp_init_parser(&data);
+	
 	free(content);
 }
 
 int main(int argc, char** argv)
 {
-	struct Obj* cell;
-
-	map = createMap();
 
 	if (argc==2)
-		init_opp(argv[1], cell);
+		init_opp(argv[1]);
 	else if (argc > 2)
 	{
 		int len = 0;
 		while (argv[len] != NULL)
 			len++;
 		inter_options(argv, len-1);
-		init_opp(argv[len-1], cell);
+		init_opp(argv[len-1]);
 	}
 	else
 		help_menu();
-
-	free_table(map);
 
 	return 0;
 } 

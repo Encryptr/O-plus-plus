@@ -1,6 +1,10 @@
 (var b -4)
 
-(print (b))
+(print (if (= b -2) 
+	'Yest' 'No')
+)
 
+(print (list b (+ 1 2)))
 
+print b
 

@@ -22,7 +22,7 @@ Types:
 -23 and -2.2 -> Negative 
 true / false -> Boolean
 '...' -> String
-(...) -> Array
+[...] -> Array
 
 import ...
 Keyword used for importing other o++ files
@@ -88,19 +88,15 @@ ret
 Keyword for returning value from
 a function
 
-Grammer: func <identifier> [<params>]
+Grammer: func <identifier> (<params>)
 
 Example:
 
-func add[a,b] {
-	
-	if a == b {
-		print 'oh no';
-	}
+func add(a,b) {
 	ret a+b;
 }
 
-add[10,10]; # Syntax for calling a function
+add(10,10); # Syntax for calling a function
 
 ############# Type Saftey #############
 
@@ -113,7 +109,7 @@ and not allow a change into a different type
 This function declaration will specify type 
 of input expected when calling the func
 
-func add_integers[a:Int,b:Int] 
+func add_integers(a:Int,b:Int)
 
 ############# STDIO Library #############
 
@@ -140,15 +136,3 @@ Function returning the sin of input
 
 tan ...
 Function returning the tan of input s
-
-############# AST Function #############
-
-
-
-
-
-
-
-
-
-

@@ -114,7 +114,7 @@ struct Opp_Value opp_parse_varstr(struct Scan* s, struct Table* local)
 {
 	struct Opp_Value value = {0};
 	unsigned int loc = hash_str(s->lexeme);
-
+	
 	if (s->block > 0 && local->list[loc] != NULL)
 	{
 		if (local->list[loc]->type != STRING)

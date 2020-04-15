@@ -120,7 +120,7 @@ enum Token singleChar(struct Scan *s)
 		case ',': return COMMA; break;
 		case '{': return OPENB; break;
 		case '}': return CLOSEB; break;
- 		case ':': return COLON; break;
+ 
 		default:
 			printf("[%ld] Invalid Token\n", s->line);
 			printf("==>%c\n", *s->src); exit(1);
