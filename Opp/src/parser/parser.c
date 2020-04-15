@@ -95,14 +95,14 @@ struct Opp_Expr* opp_parse_allign(struct Opp_Scan* s)
 		opp_next(s);
 		right = opp_parse_or(s);
 
-		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
+		struct Opp_Expr_Assign* temp = (struct Opp_Expr_Assign*)malloc(sizeof(struct Opp_Expr_Assign));
 		if (!temp)
 			internal_error("Malloc Fail", 1);
-		temp->right = right;
-		temp->left = left;
-		temp->tok = operator;
+		temp->ident = right;
+		temp->val = left;
+		temp->op = operator;
 
-		left = opp_new_expr(EBIN, &temp);
+		left = opp_new_expr(EASSIGN, &temp);
 
 		operator = s->tok;
 	}
@@ -120,14 +120,14 @@ struct Opp_Expr* opp_parse_or(struct Opp_Scan* s)
 		opp_next(s);
 		right = opp_parse_and(s);
 
-		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
+		struct Opp_Expr_Logic* temp = (struct Opp_Expr_Logic*)malloc(sizeof(struct Opp_Expr_Logic));
 		if (!temp)
 			internal_error("Malloc Fail", 1);
 		temp->right = right;
 		temp->left = left;
 		temp->tok = TOR;
 
-		left = opp_new_expr(EBIN, temp);
+		left = opp_new_expr(ELOGIC, temp);
 
 		operator = s->tok;
 	}
@@ -145,14 +145,14 @@ struct Opp_Expr* opp_parse_and(struct Opp_Scan* s)
 		opp_next(s);
 		right = opp_parse_relation(s);
 
-		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
+		struct Opp_Expr_Logic* temp = (struct Opp_Expr_Logic*)malloc(sizeof(struct Opp_Expr_Logic));
 		if (!temp)
 			internal_error("Malloc Fail", 1);
 		temp->right = right;
 		temp->left = left;
 		temp->tok = TAND;
 
-		left = opp_new_expr(EBIN, temp);
+		left = opp_new_expr(ELOGIC, temp);
 
 		operator = s->tok;
 	}
@@ -170,13 +170,13 @@ struct Opp_Expr* opp_parse_relation(struct Opp_Scan* s)
 		opp_next(s);
 		right = opp_parse_relation2(s);
 
-		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
+		struct Opp_Expr_Logic* temp = (struct Opp_Expr_Logic*)malloc(sizeof(struct Opp_Expr_Logic));
 		if (!temp)
 			internal_error("Malloc Fail", 1);
 		temp->right = right;
 		temp->left = left;
 		temp->tok = operator;
-		left = opp_new_expr(EBIN, temp);
+		left = opp_new_expr(ELOGIC, temp);
 
 		operator = s->tok;
 	}
@@ -195,13 +195,13 @@ struct Opp_Expr* opp_parse_relation2(struct Opp_Scan* s)
 		opp_next(s);
 		right = opp_parse_expr(s);
 
-		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
+		struct Opp_Expr_Logic* temp = (struct Opp_Expr_Logic*)malloc(sizeof(struct Opp_Expr_Logic));
 		if (!temp)
 			internal_error("Malloc Fail", 1);
 		temp->right = right;
 		temp->left = left;
 		temp->tok = operator;
-		left = opp_new_expr(EBIN, temp);
+		left = opp_new_expr(ELOGIC, temp);
 
 		operator = s->tok;
 	}
@@ -234,15 +234,14 @@ struct Opp_Expr* opp_parse_expr(struct Opp_Scan* s)
 
 struct Opp_Expr* opp_parse_expr2(struct Opp_Scan* s)
 {
-	struct Opp_Expr* left = opp_parse_unary(s);
+	struct Opp_Expr* left = opp_parse_prefix(s);
 	struct Opp_Expr* right = NULL;
 
-	opp_next(s);
 	int operator = s->tok;
 	while (operator == TDIV || operator == TMUL || operator == TMOD)
 	{
 		opp_next(s);
-		right = opp_parse_unary(s);
+		right = opp_parse_prefix(s);
 
 		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
 		if (!temp)
@@ -252,10 +251,57 @@ struct Opp_Expr* opp_parse_expr2(struct Opp_Scan* s)
 		temp->tok = operator;
 		left = opp_new_expr(EBIN, temp);
 
-		opp_next(s);
 		operator = s->tok;
 	}
 	return left;
+}
+
+struct Opp_Expr* opp_parse_prefix(struct Opp_Scan* s)
+{
+	struct Opp_Expr* left = opp_parse_unary(s);
+
+	opp_next(s);
+	int operator = s->tok;
+	while (operator == TOPENP)
+	{
+		// opp_next(s);
+		struct Opp_Expr_Call* call = (struct Opp_Expr_Call*)malloc(sizeof(struct Opp_Expr_Call));
+		call->callee = left;
+		call->args = opp_parse_args(s);
+		left = opp_new_expr(ECALL, call);
+
+		opp_next(s);
+		operator = s->tok;
+	}
+
+	return left;
+}
+
+struct Opp_List* opp_parse_args(struct Opp_Scan* s)
+{
+	struct Opp_List* args = (struct Opp_List*)malloc(sizeof(struct Opp_List));
+	args->list = (struct Opp_Expr**)malloc(sizeof(struct Opp_Expr*)*10);
+
+	int i = 0;
+
+	do {
+		opp_next(s);
+		if (i==0 && s->tok == TCLOSEP) break;
+
+		args->list[i] = opp_parse_allign(s);
+
+		if (i == 10)
+			opp_error(s, "No more than 10 args to func");
+		i++;
+		if (s->tok == TCLOSEP) break;
+	} while (s->tok == TCOMMA);
+
+	end:
+	args->size = i;
+	if (s->tok != TCLOSEP)
+		opp_error(s, "Missing terminating ')' in func call");
+
+	return args;
 }
 
 struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s)
@@ -268,7 +314,7 @@ struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s)
 		case IDENT:
 			unary->type = IDENT;
 			unary->val.strval = (char*)malloc(sizeof(char)*strlen(s->lexeme));
-			strcpy(s->lexeme, unary->val.strval);
+			strcpy(unary->val.strval, s->lexeme);
 			break;
 
 		case INTEGER:
@@ -284,7 +330,7 @@ struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s)
 		case STR:
 			unary->type = STR;
 			unary->val.strval = (char*)malloc(sizeof(char)*strlen(s->lexeme));
-			strcpy(s->lexeme, unary->val.strval);
+			strcpy(unary->val.strval, s->lexeme);
 			break;
 
 		case TTRUE: 
@@ -306,7 +352,7 @@ struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s)
 		}
 
 		default:
-			opp_error(s, "Invalid type used in expression");
+			opp_error(s, "Invalid type used in expression / missing type");
 	}
 	expr = opp_new_expr(EUNARY, unary);
 

@@ -4,6 +4,7 @@
 #include "./parser/parser.h"
 #include "./env/enviroment.h"
 #include "./interpreter/interpreter.h"
+#include "./parser/ostdlib.h"
 
 static void help_menu()
 {
@@ -46,6 +47,10 @@ void init_opp(const char* fname)
 	init_file(fname, &data);
 	parser = opp_parse_init(&data);
 	opp_init_environment();
+
+	env_new_int(global_ns->inside, "abc", 10);
+	env_new_cfn(global_ns->inside, "echo", echo);
+
 	opp_eval_init(parser);
 }
 
@@ -55,6 +60,7 @@ int main(int argc, char** argv)
 		init_opp(argv[1]);
 	else 
 		help_menu();
+
 	
 	return 0;
 } 

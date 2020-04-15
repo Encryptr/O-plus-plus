@@ -148,6 +148,65 @@ char* env_get_str(struct Table *t, char* key)
 	return NULL;
 }
 
+void* env_get_cfn(struct Table *t, char* key)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+
+	if (t->list[loc] == NULL)
+		return NULL;
+	else {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				if (pos->type == VCFUNC)
+					return pos->func->cfn;
+				else return NULL;
+			}
+			if (pos->next != NULL)
+				pos = pos->next;
+			else 
+				return NULL; 
+		}
+	}
+	return NULL;
+}
+
+bool env_new_cfn(struct Table *t, char* key, void (*fn)(struct Opp_List* args))
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+
+	if (t->list[loc] != NULL) {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				pos->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
+				pos->func->cfn = fn;
+				return true;
+			}
+			if (pos->next == NULL) {
+				pos->next = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+				pos->next->type = VCFUNC;
+				strcpy(pos->next->key, key);
+				pos->next->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
+				pos->next->func->cfn = fn;
+				return true;
+			}
+			else
+				pos = pos->next;
+		}
+	}
+	else {
+		new_node->type = VCFUNC;
+		strcpy(new_node->key, key);
+		new_node->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
+		new_node->func->cfn = fn;
+		t->list[loc] = new_node;
+	}
+
+	return true;
+}
+
 bool env_new_str(struct Table *t, char* key, char* value)
 {
 	unsigned int loc = hash_str(key, t);

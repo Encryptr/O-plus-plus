@@ -31,7 +31,8 @@ void opp_eval_init(struct Opp_Parser* parser);
 struct Opp_Obj* opp_eval(struct Opp_Stmt* stmt);
 struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr);
 struct Opp_Obj* opp_eval_bin(struct Opp_Expr_Bin* expr);
-
+struct Opp_Obj* opp_eval_logic(struct Opp_Expr_Logic* expr);
+struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr);
 
 
 

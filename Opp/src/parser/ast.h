@@ -17,17 +17,12 @@ struct Opp_Value {
 		double dval;
 		char* strval;
 		_Bool bval;
-		struct Opp_List* array;
 	};
 };
 
-struct Opp_List {
-	unsigned int size;
-	struct Opp_Value* list;
-};
-
 enum Opp_Expr_Type {
-	EBIN, EUNARY
+	EBIN, ELOGIC, ECALL,
+	EASSIGN, EUNARY
 };
 
 enum Opp_Stmt_Type {
@@ -37,6 +32,11 @@ enum Opp_Stmt_Type {
 struct Opp_Expr {
 	enum Opp_Expr_Type type;
 	void* expr;
+};
+
+struct Opp_List {
+	int size;
+	struct Opp_Expr** list;
 };
 
 struct Opp_Stmt {
@@ -53,6 +53,23 @@ struct Opp_Expr_Bin {
 struct Opp_Expr_Unary {
 	enum Opp_Token type;
 	struct Opp_Value val;
+};
+
+struct Opp_Expr_Assign {
+	enum Opp_Token op;
+	struct Opp_Expr* val;
+	struct Opp_Expr* ident;
+};
+
+struct Opp_Expr_Call {
+	struct Opp_Expr* callee;
+	struct Opp_List* args;
+};
+
+struct Opp_Expr_Logic {
+	enum Opp_Token tok;
+	struct Opp_Expr* right;
+	struct Opp_Expr* left;
 };
 
 struct Opp_Stmt_Expr {

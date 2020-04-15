@@ -22,5 +22,6 @@ void opp_error(struct Opp_Scan* s, const char* str, ...);
 2 - Fatal Error
 */
 void internal_error(const char* str, int code);
+void opp_warning(struct Opp_Scan* s, const char* str, ...);
 
 #endif
