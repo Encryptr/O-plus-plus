@@ -33,4 +33,9 @@ struct Opp_Expr* opp_parse_prefix(struct Opp_Scan* s);
 struct Opp_List* opp_parse_args(struct Opp_Scan* s);
 struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s);
 
+// Statements
+struct Opp_Stmt* opp_parse_ifstmt(struct Opp_Scan* s);
+struct Opp_Stmt* opp_parse_block(struct Opp_Scan* s);
+struct Opp_Stmt* opp_parse_var(struct Opp_Scan* s);
+
 #endif

@@ -62,9 +62,86 @@ struct Opp_Stmt* opp_parse_statment(struct Opp_Scan* s)
 {
 	switch (s->tok)
 	{
+		case TIF:
+			return opp_parse_ifstmt(s);
+
+		case TOPENC:
+			return opp_parse_block(s);
+
+		case TVAR:
+			return opp_parse_var(s);
+
 		default:
 			return opp_parse_expression(s);
 	}
+}
+
+struct Opp_Stmt* opp_parse_var(struct Opp_Scan* s)
+{
+	struct Opp_Stmt_Var* var = NULL;
+	struct Opp_Expr* ident = NULL;
+
+	opp_next(s);
+	ident = opp_parse_allign(s);
+
+	var = (struct Opp_Stmt_Var*)malloc(sizeof(struct Opp_Stmt_Var));
+	var->ident = ident;
+
+	return opp_new_stmt(STMT_VAR, var);
+}
+
+struct Opp_Stmt* opp_parse_ifstmt(struct Opp_Scan* s)
+{
+	struct Opp_Expr* cond = NULL;
+	struct Opp_Stmt* then = NULL;
+	struct Opp_Stmt_If* ifstmt = NULL;
+	struct Opp_Stmt* elsestmt = NULL;
+
+	opp_next(s);
+	cond = opp_parse_allign(s);
+	then = opp_parse_statment(s);
+	opp_next(s);
+
+	if (s->tok == TELSE) {
+		opp_next(s);
+		elsestmt = opp_parse_statment(s);
+	}
+
+	ifstmt = (struct Opp_Stmt_If*)malloc(sizeof(struct Opp_Stmt_If));
+	ifstmt->cond = cond;
+	ifstmt->then = then;
+	ifstmt->other = elsestmt;
+
+	return opp_new_stmt(STMT_IF, ifstmt);
+}
+
+struct Opp_Stmt* opp_parse_block(struct Opp_Scan* s)
+{
+	struct Opp_Stmt_Block* block = (struct Opp_Stmt_Block*)malloc(sizeof(struct Opp_Stmt_Block));
+	block->stmts = (struct Opp_Stmt**)malloc(sizeof(struct Opp_Stmt*)*100);
+	if (block == NULL)
+		internal_error("Malloc Fail", 1);
+
+	opp_next(s);
+	int i = 0;
+	int max = 100;
+	while (s->tok != TCLOSEC && s->tok != FEND) {
+		if (i == max) {
+			struct Opp_Stmt** temp = NULL;
+			temp = realloc(block, 100 * sizeof(struct Opp_Stmt*));
+			if (temp == NULL)
+				internal_error("Malloc Fail", 1);
+			else block->stmts = temp;
+			max = max + 100;
+		}
+		block->stmts[i] = opp_parse_statment(s);
+		i++;
+		opp_next(s);
+	}
+	if (s->tok != TCLOSEC)
+		opp_error(s, "Expected terminating '}' in stmt");
+
+	return opp_new_stmt(STMT_BLOCK, block);
 }
 
 struct Opp_Stmt* opp_parse_expression(struct Opp_Scan* s)
@@ -98,11 +175,11 @@ struct Opp_Expr* opp_parse_allign(struct Opp_Scan* s)
 		struct Opp_Expr_Assign* temp = (struct Opp_Expr_Assign*)malloc(sizeof(struct Opp_Expr_Assign));
 		if (!temp)
 			internal_error("Malloc Fail", 1);
-		temp->ident = right;
-		temp->val = left;
+		temp->ident = left;
+		temp->val = right;
 		temp->op = operator;
 
-		left = opp_new_expr(EASSIGN, &temp);
+		left = opp_new_expr(EASSIGN, temp);
 
 		operator = s->tok;
 	}

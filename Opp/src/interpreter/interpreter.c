@@ -20,6 +20,12 @@ void opp_eval_init(struct Opp_Parser* parser)
 
 				case OBJ_BOOL:
 					printf("BOOL: %d\n", ret_val->obool);
+					break;
+
+				case OBJ_NONE:
+					printf("NONE\n");
+					break;
+
 			}
 		#endif
 	}
@@ -42,6 +48,21 @@ struct Opp_Obj* opp_eval(struct Opp_Stmt* stmt)
 			struct Opp_Stmt_Expr* temp = (struct Opp_Stmt_Expr*)(stmt->stmt);
 			struct Opp_Expr* expr = (struct Opp_Expr*)(temp->expr);
 			return opp_eval_expr(expr);
+		}
+
+		case STMT_IF: {
+			struct Opp_Stmt_If* temp = (struct Opp_Stmt_If*)(stmt->stmt);
+			return opp_eval_ifstmt(temp);
+		}
+
+		case STMT_BLOCK: {
+			struct Opp_Stmt_Block* temp = (struct Opp_Stmt_Block*)(stmt->stmt);
+			return opp_eval_block(temp);
+		}
+
+		case STMT_VAR: {
+			struct Opp_Stmt_Var* temp = (struct Opp_Stmt_Var*)(stmt->stmt);
+			return opp_eval_var(temp);
 		}
 	}
 	return NULL;
@@ -122,6 +143,12 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 		case ECALL: {
 			struct Opp_Expr_Call* temp = (struct Opp_Expr_Call*)(expr->expr);
 			return opp_eval_call(temp);
+		}
+
+
+		case EASSIGN: {
+			struct Opp_Expr_Assign* temp = (struct Opp_Expr_Assign*)(expr->expr);
+			return opp_eval_assign(temp);
 		}
 	}
 
@@ -357,4 +384,113 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 	obj->obool = 1;
 
 	return obj;
+}
+
+struct Opp_Obj* opp_eval_ifstmt(struct Opp_Stmt_If* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Opp_Obj* result = opp_eval_expr(expr->cond);
+
+	if (result->obj_type != OBJ_BOOL)
+		opp_error(NULL, "Expected expression in if statement");
+
+	if (result->obool == 1)
+		opp_eval(expr->then);
+	else if (result->obool == 0 && expr->other != NULL)
+		opp_eval(expr->other);
+
+	return none;
+}
+
+struct Opp_Obj* opp_eval_block(struct Opp_Stmt_Block* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Namespace* temp = current_ns;
+	struct Namespace* new_ns = init_namespace("block", temp);
+	current_ns = new_ns;
+
+	int i = 0;
+	while (expr->stmts[i] != NULL)
+	{
+		opp_eval(expr->stmts[i]);
+		i++;
+	}
+
+	for (int a=0; a<new_ns->inside->size; a++)
+		free(new_ns->inside->list[a]);
+	free(new_ns->inside);
+	free(new_ns);
+
+	current_ns = temp;
+	
+	return none;
+}
+
+struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Opp_Expr* a = (struct Opp_Expr*)(expr->ident);
+	struct Opp_Expr* value = (struct Opp_Expr*)(expr->val);
+
+	if (a->type != EUNARY)
+		opp_error(NULL, "Expected identifier in assigment");
+
+	struct Opp_Expr_Unary* b = (struct Opp_Expr_Unary*)(a->expr);
+	struct Opp_Obj* final_val = opp_eval_expr(value);
+
+	if (b->type != IDENT)
+		opp_error(NULL, "Expected identifier in assigment");
+
+	unsigned int loc = hash_str(b->val.strval, current_ns->inside);
+	struct Namespace* search = current_ns;
+
+	while (search != NULL)
+	{
+		if (search->inside->list[loc] != NULL) break;
+		search = search->parent;
+	}
+
+	int type = env_get_type(search->inside, b->val.strval);
+	if (type == -1)
+		opp_error(NULL, "Undefined identifier in assign '%s'", b->val.strval);
+
+
+	switch (expr->op)
+	{
+		case TEQ: {
+			if (type == VINT && final_val->obj_type == OBJ_INT)
+				env_new_int(search->inside, b->val.strval, final_val->oint);
+			else if (type == VDOUBLE && final_val->obj_type == OBJ_FLOAT)
+				env_new_dbl(search->inside, b->val.strval, final_val->ofloat);
+			else 
+				opp_error(NULL, "Error assigning value to var '%s'", b->val.strval);
+		}
+	}
+
+	return none;
+}
+
+struct Opp_Obj* opp_eval_var(struct Opp_Stmt_Var* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Opp_Expr* a = (struct Opp_Expr*)(expr->ident);
+
+	if (a->type != EASSIGN)
+		opp_error(NULL, "Expected expression to assign a variable var <ident> '=' <expr>");
+
+	struct Opp_Expr_Assign* b = (struct Opp_Expr_Assign*)(a->expr);
+	struct Opp_Expr* c = (struct Opp_Expr*)(b->val);
+	struct Opp_Expr* d = (struct Opp_Expr*)(b->ident);
+	struct Opp_Expr_Unary* e = (struct Opp_Expr_Unary*)(d->expr);
+	struct Opp_Obj* new_val = opp_eval_expr(c);
+
+	switch (new_val->obj_type)
+	{
+		case OBJ_INT:
+			env_new_int(current_ns->inside, e->val.strval, new_val->oint);
+			break;
+
+	}
+	
+	return none;
 }

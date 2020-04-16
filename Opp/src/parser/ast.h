@@ -26,7 +26,8 @@ enum Opp_Expr_Type {
 };
 
 enum Opp_Stmt_Type {
-	STMT_EXPR, 
+	STMT_EXPR, STMT_IF,
+	STMT_BLOCK, STMT_VAR
 };
 
 struct Opp_Expr {
@@ -74,6 +75,20 @@ struct Opp_Expr_Logic {
 
 struct Opp_Stmt_Expr {
 	struct Opp_Expr* expr;
+};
+
+struct Opp_Stmt_If {
+	struct Opp_Expr* cond;
+	struct Opp_Stmt* then;
+	struct Opp_Stmt* other;
+};
+
+struct Opp_Stmt_Block {
+	struct Opp_Stmt** stmts;
+};
+
+struct Opp_Stmt_Var {
+	struct Opp_Expr* ident;
 };
 
 #endif
