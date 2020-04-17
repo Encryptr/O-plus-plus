@@ -16,7 +16,7 @@ static inline bool isnum(char i) {
 const char* opp_keys[] = {
 	"const", "if", "while",
 	"true", "false", "func", 
-	"else", "var"
+	"else", "var", "import"
 };
 
 void append(char *og, char c)
@@ -183,38 +183,43 @@ static bool opp_keyword(struct Opp_Scan *s)
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[1])) {
+	else if (!strcmp(s->lexeme, opp_keys[1])) {
 		s->tok = TIF;
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[2])) {
+	else if (!strcmp(s->lexeme, opp_keys[2])) {
 		s->tok = TWHILE;
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[3])) {
+	else if (!strcmp(s->lexeme, opp_keys[3])) {
 		s->tok = TTRUE;
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[4])) {
+	else if (!strcmp(s->lexeme, opp_keys[4])) {
 		s->tok = TFALSE;
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[5])) {
+	else if (!strcmp(s->lexeme, opp_keys[5])) {
 		s->tok = TFUNC;
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[6])) {
+	else if (!strcmp(s->lexeme, opp_keys[6])) {
 		s->tok = TELSE;
 		return true;
 	}
 
-	if (!strcmp(s->lexeme, opp_keys[7])) {
+	else if (!strcmp(s->lexeme, opp_keys[7])) {
 		s->tok = TVAR;
+		return true;
+	}
+
+	else if (!strcmp(s->lexeme, opp_keys[8])) {
+		s->tok = TIMPORT;
 		return true;
 	}
 

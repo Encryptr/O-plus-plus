@@ -1,5 +1,12 @@
 #include "ostdlib.h"
 
+void opp_init_std()
+{
+	env_new_int(global_ns->inside, "abc", 10);
+	if (!env_new_cfn(global_ns->inside, "echo", echo))
+		internal_error("STD Fail", 2);
+}
+
 void echo(struct Opp_List* args)
 {
 	for (int i=0; i<args->size; i++)
@@ -26,4 +33,30 @@ void echo(struct Opp_List* args)
 		}
 	}
 	printf("\n");
+}
+
+void opp_print(struct Opp_List* args)
+{
+	for (int i=0; i<args->size; i++)
+	{
+		struct Opp_Obj* res = opp_eval_expr(args->list[i]);
+		switch (res->obj_type)
+		{
+			case OBJ_INT:
+				printf("%d\n", res->oint);
+				break;
+
+			case OBJ_FLOAT:
+				printf("%.1lf\n", res->ofloat);
+				break;
+
+			case OBJ_STR:
+				printf("%s\n", res->ostr);
+				break;
+
+			case OBJ_BOOL:
+				printf("%d\n", res->obool);
+				break;
+		}
+	}
 }

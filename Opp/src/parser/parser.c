@@ -71,9 +71,46 @@ struct Opp_Stmt* opp_parse_statment(struct Opp_Scan* s)
 		case TVAR:
 			return opp_parse_var(s);
 
+		case TIMPORT:
+			return opp_parse_import(s);
+
+		case TWHILE:
+			return opp_parse_while(s);
+
 		default:
 			return opp_parse_expression(s);
 	}
+}
+
+struct Opp_Stmt* opp_parse_while(struct Opp_Scan* s)
+{
+	struct Opp_Stmt_While* loop = NULL;
+	struct Opp_Expr* cond = NULL;
+	struct Opp_Stmt* stmt = NULL;
+
+	opp_next(s);
+	cond = opp_parse_allign(s);
+	stmt = opp_parse_statment(s);
+
+	loop = (struct Opp_Stmt_While*)malloc(sizeof(struct Opp_Stmt_While));
+	loop->cond = cond;
+	loop->then = stmt;
+
+	return opp_new_stmt(STMT_WHILE, loop);
+}
+
+struct Opp_Stmt* opp_parse_import(struct Opp_Scan* s)
+{
+	struct Opp_Stmt_Import* import = NULL;
+	struct Opp_Expr* ident = NULL;
+
+	opp_next(s);
+	ident = opp_parse_allign(s);
+
+	import = (struct Opp_Stmt_Import*)malloc(sizeof(struct Opp_Stmt_Import));
+	import->ident = ident;
+
+	return opp_new_stmt(STMT_IMPORT, import);
 }
 
 struct Opp_Stmt* opp_parse_var(struct Opp_Scan* s)
@@ -100,7 +137,7 @@ struct Opp_Stmt* opp_parse_ifstmt(struct Opp_Scan* s)
 	opp_next(s);
 	cond = opp_parse_allign(s);
 	then = opp_parse_statment(s);
-	opp_next(s);
+	// opp_next(s);
 
 	if (s->tok == TELSE) {
 		opp_next(s);
@@ -136,8 +173,10 @@ struct Opp_Stmt* opp_parse_block(struct Opp_Scan* s)
 		}
 		block->stmts[i] = opp_parse_statment(s);
 		i++;
+		// if (s->tok == TCLOSEC) break;
 		opp_next(s);
 	}
+
 	if (s->tok != TCLOSEC)
 		opp_error(s, "Expected terminating '}' in stmt");
 

@@ -37,5 +37,7 @@ struct Opp_Obj* opp_eval_ifstmt(struct Opp_Stmt_If* expr);
 struct Opp_Obj* opp_eval_block(struct Opp_Stmt_Block* expr);
 struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr);
 struct Opp_Obj* opp_eval_var(struct Opp_Stmt_Var* expr);
+struct Opp_Obj* opp_eval_import(struct Opp_Stmt_Import* expr);
+struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr);
 
 #endif

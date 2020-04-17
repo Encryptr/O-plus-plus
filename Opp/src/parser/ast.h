@@ -3,8 +3,6 @@
 
 #include "../lexer/lexer.h"
 
-struct Opp_Node;
-
 enum Value_Type {
 	VBOOL, VINT, VDOUBLE, VSTR,
 	VCFUNC, VLIST, VFUNC
@@ -27,7 +25,8 @@ enum Opp_Expr_Type {
 
 enum Opp_Stmt_Type {
 	STMT_EXPR, STMT_IF,
-	STMT_BLOCK, STMT_VAR
+	STMT_BLOCK, STMT_VAR,
+	STMT_IMPORT, STMT_WHILE
 };
 
 struct Opp_Expr {
@@ -89,6 +88,15 @@ struct Opp_Stmt_Block {
 
 struct Opp_Stmt_Var {
 	struct Opp_Expr* ident;
+};
+
+struct Opp_Stmt_Import {
+	struct Opp_Expr* ident;
+};
+
+struct Opp_Stmt_While {
+	struct Opp_Expr* cond;
+	struct Opp_Stmt* then;
 };
 
 #endif

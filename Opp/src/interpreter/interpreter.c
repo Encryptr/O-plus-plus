@@ -22,10 +22,9 @@ void opp_eval_init(struct Opp_Parser* parser)
 					printf("BOOL: %d\n", ret_val->obool);
 					break;
 
-				case OBJ_NONE:
-					printf("NONE\n");
-					break;
-
+				// case OBJ_NONE:
+				// 	printf("NONE\n");
+				// 	break;
 			}
 		#endif
 	}
@@ -63,6 +62,16 @@ struct Opp_Obj* opp_eval(struct Opp_Stmt* stmt)
 		case STMT_VAR: {
 			struct Opp_Stmt_Var* temp = (struct Opp_Stmt_Var*)(stmt->stmt);
 			return opp_eval_var(temp);
+		}
+
+		case STMT_IMPORT: {
+			struct Opp_Stmt_Import* temp = (struct Opp_Stmt_Import*)(stmt->stmt);
+			return opp_eval_import(temp);
+		}
+
+		case STMT_WHILE: {
+			struct Opp_Stmt_While* temp = (struct Opp_Stmt_While*)(stmt->stmt);
+			return opp_eval_while(temp);
 		}
 	}
 	return NULL;
@@ -125,7 +134,10 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 				}
 
 				case STR:
-
+					literal = obj_make(OBJ_STR);
+					literal->ostr = (char*)malloc(strlen(temp->val.strval));
+					strcpy(literal->ostr, temp->val.strval);
+					return literal;
 				break;
 
 				case TTRUE:
@@ -369,19 +381,29 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 	if (unary->val.strval == NULL)
 		opp_error(NULL, "Expected identifier for func call");
 	
-	int func_type = env_get_type(current_ns->inside, unary->val.strval);
+	int func_type = -1;
+	unsigned int loc = hash_str(unary->val.strval, current_ns->inside);
+	struct Namespace* search = current_ns;
+	while (search != NULL)
+	{
+		if (search->inside->list[loc] != NULL) {
+			func_type = env_get_type(search->inside, unary->val.strval);
+			break;
+		}
+		search = search->parent;
+	}
 
 	if (func_type == -1)
 		opp_error(NULL, "Undefined func call '%s'", unary->val.strval);
 
 	if (func_type == VCFUNC)
 	{
-		void (*func)(struct Opp_List* args) = env_get_cfn(current_ns->inside, unary->val.strval);
+		void (*func)(struct Opp_List* args) = env_get_cfn(search->inside, unary->val.strval);
 		func(expr->args);
 	}
 
-	obj = obj_make(OBJ_BOOL);
-	obj->obool = 1;
+	obj = obj_make(OBJ_NONE);
+	// obj->obool = 1;
 
 	return obj;
 }
@@ -444,16 +466,18 @@ struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr)
 	unsigned int loc = hash_str(b->val.strval, current_ns->inside);
 	struct Namespace* search = current_ns;
 
+	int type = -1;
 	while (search != NULL)
 	{
-		if (search->inside->list[loc] != NULL) break;
+		if (search->inside->list[loc] != NULL) {
+			type = env_get_type(search->inside, b->val.strval);
+			break;
+		}
 		search = search->parent;
 	}
 
-	int type = env_get_type(search->inside, b->val.strval);
 	if (type == -1)
 		opp_error(NULL, "Undefined identifier in assign '%s'", b->val.strval);
-
 
 	switch (expr->op)
 	{
@@ -463,7 +487,7 @@ struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr)
 			else if (type == VDOUBLE && final_val->obj_type == OBJ_FLOAT)
 				env_new_dbl(search->inside, b->val.strval, final_val->ofloat);
 			else 
-				opp_error(NULL, "Error assigning value to var '%s'", b->val.strval);
+				opp_error(NULL, "Attempt to switch var type in assign '%s'", b->val.strval);
 		}
 	}
 
@@ -490,7 +514,82 @@ struct Opp_Obj* opp_eval_var(struct Opp_Stmt_Var* expr)
 			env_new_int(current_ns->inside, e->val.strval, new_val->oint);
 			break;
 
+		case OBJ_STR:
+			env_new_str(current_ns->inside, e->val.strval, new_val->ostr);
+			break;
+
+		case OBJ_FLOAT:
+			env_new_dbl(current_ns->inside, e->val.strval, new_val->ofloat);
+			break;
+
+		default:
+			opp_error(NULL, "Error to assign a value to '%s'", e->val.strval);
+
 	}
 	
+	return none;
+}
+
+struct Opp_Obj* opp_eval_import(struct Opp_Stmt_Import* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Opp_Expr* a = (struct Opp_Expr*)(expr->ident);
+
+	if (a->type != EUNARY)
+		opp_error(NULL, "Expected string after import statement");
+
+	struct Opp_Obj* str = opp_eval_expr(a);
+
+	if (str->obj_type != OBJ_STR && str->ostr != NULL)
+		opp_error(NULL, "Expected string after import statement");
+
+	// struct Namespace* new_file = init_namespace(str->ostr, NULL);
+	// struct Namespace* temp = current_ns;
+	// current_ns = new_file;
+
+	init_opp(str->ostr);
+
+	// current_ns = temp;
+
+	return none;
+}
+
+struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Opp_Expr* a = (struct Opp_Expr*)(expr->cond);
+	struct Opp_Obj* res = opp_eval_expr(a);
+	struct Opp_Stmt* b = (struct Opp_Stmt*)(expr->then);
+	struct Opp_Stmt_Block* block = NULL;
+
+	if (res->obj_type != OBJ_BOOL)
+		opp_error(NULL, "Expected a condition statement in while loop");
+
+	if (b->type != STMT_BLOCK)
+		opp_error(NULL, "Expected block after while loop");
+	block = (struct Opp_Stmt_Block*)(b->stmt);
+
+	struct Namespace* temp = current_ns;
+	struct Namespace* new_ns = init_namespace("block", temp);
+	current_ns = new_ns;
+
+	int i = 0;
+	while (res->obool == 1)
+	{
+		while (block->stmts[i] != NULL) {
+			opp_eval(block->stmts[i]);
+			i++;
+		}
+		i = 0;
+		res = opp_eval_expr(a);
+	}
+
+	current_ns = temp;
+	for (int a=0; a<new_ns->inside->size; a++)
+		free(new_ns->inside->list[a]);
+	free(new_ns->inside);
+	free(new_ns);
+
+
 	return none;
 }

@@ -1,8 +1,9 @@
 #ifndef OLISP_ENV
 #define OLISP_ENV
 
+/*   CHANGE IF NEEDED   */
 #define __HASH_SIZE__ 1000
-#define SMALLER_HASH 1000
+/************************/
 
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +18,7 @@ struct Namespace;
 struct Opp_Func {
 	int line;
 	void (*cfn)(struct Opp_List* args);
+	struct Opp_Value ret_val;
 	struct Namespace* local;
 };
 

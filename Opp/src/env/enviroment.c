@@ -44,8 +44,7 @@ struct Namespace* init_namespace(char* name, struct Namespace* parent)
 
 	ns->name = name;
 	ns->parent = parent;
-
-	ns->inside = createMap(1000); // CHANGE
+	ns->inside = createMap(__HASH_SIZE__); 
 
 	return ns;
 }
@@ -311,22 +310,6 @@ bool env_new_dbl(struct Table *t, char* key, double value)
 }
 
 /*
-int env_new_cfn(struct Namespace* ns, char* key, void (*fn)(struct Occ_Scan* s))
-{
-	unsigned int loc = hash_str(key, ns->inside);
-
-	if (ns->inside->list[loc] != NULL)
-		return 0;
-
-	ns->inside->list[loc] = malloc(sizeof(struct Hash_Node));
-
-	ns->inside->list[loc]->type = VCFUNC;
-	ns->inside->list[loc]->func = (struct Occ_Func*)malloc(sizeof(struct Occ_Func));
-	ns->inside->list[loc]->func->cfn = fn;
-
-	return 1;
-}
-
 int env_new_fn(struct Table *t, unsigned int element, char* key)
 {
 	if (t->list[element] != NULL)

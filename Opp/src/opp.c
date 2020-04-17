@@ -47,9 +47,7 @@ void init_opp(const char* fname)
 	init_file(fname, &data);
 	parser = opp_parse_init(&data);
 	opp_init_environment();
-
-	env_new_int(global_ns->inside, "abc", 10);
-	env_new_cfn(global_ns->inside, "echo", echo);
+	opp_init_std();
 
 	opp_eval_init(parser);
 }
@@ -61,6 +59,5 @@ int main(int argc, char** argv)
 	else 
 		help_menu();
 
-	
 	return 0;
 } 

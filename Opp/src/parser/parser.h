@@ -37,5 +37,7 @@ struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s);
 struct Opp_Stmt* opp_parse_ifstmt(struct Opp_Scan* s);
 struct Opp_Stmt* opp_parse_block(struct Opp_Scan* s);
 struct Opp_Stmt* opp_parse_var(struct Opp_Scan* s);
+struct Opp_Stmt* opp_parse_import(struct Opp_Scan* s);
+struct Opp_Stmt* opp_parse_while(struct Opp_Scan* s);
 
 #endif
