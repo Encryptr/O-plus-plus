@@ -1,9 +1,7 @@
 
 # O++ Programming Language
 ![O++](cover.png)
-By: Maks S
-
-![](opp_demo.gif)
+![Demo](opp_demo.gif)
 
 # Update
 Currently a new O++ interpreter is being made. Expect way faster speeds and more portable embedding. Also the interpreter has changed some syntax (more info soon) and uses more effiecient compiler mechanics.
@@ -23,5 +21,5 @@ Examples in example folder!
 ```ruby
 # Comment
 
-print 'Hello World';
+print ("Hello World");
 ```
