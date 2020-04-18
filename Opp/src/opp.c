@@ -13,12 +13,10 @@ static void help_menu()
 	#else
 		system("cls");
 	#endif
-	printf("\n\x1b[32mOLisp Programming Language\x1b[0m\n");
+	printf("\n\x1b[32mO++ Programming Language\x1b[0m\n");
 	printf("Written by Maks S\n");
 	printf("\n\x1b[31mFormat: o++ [flag] [file]\x1b[0m\n");
-	printf("\n-h    | For help menu\n");
 	printf("-dump | For dumping file tokens\n\n\n");
-	exit(1);
 }
 
 void init_file(const char* fname, struct Opp_Scan *s)
@@ -52,12 +50,52 @@ void init_opp(const char* fname)
 	opp_eval_init(parser);
 }
 
+static char* get_repl_line() 
+{
+	char* input = (char*)malloc(100);
+	char* s = input;
+	char c = 0;
+	int maxlen = 100;
+	int i = 0;
+
+	printf(">> ");
+	for (;;) {
+		c = fgetc(stdin);
+
+		if (c == EOF || c == '\n')
+			break;
+		if (i >= maxlen)
+			printf("Overflow of stdin\n"), exit(1);
+
+		input[i] = c;
+		i++;
+	}
+	return input;
+}
+
+static void opp_init_repl()
+{
+	opp_init_environment();
+	opp_init_std();
+
+	for (;;) {
+		struct Opp_Scan data = {0};
+		struct Opp_Parser* parser = NULL;
+		opp_init_lex(&data, get_repl_line());
+		parser = opp_parse_init(&data);
+		opp_eval_init(parser);
+	}
+
+}
+
 int main(int argc, char** argv)
 {
 	if (argc == 2)
 		init_opp(argv[1]);
-	else 
+	else {
 		help_menu();
+		opp_init_repl();
+	}
 
 	return 0;
 } 

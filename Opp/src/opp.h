@@ -25,7 +25,13 @@
 #include <time.h>
 #include "./lexer/lexer.h"
 
+// O++
 void init_file(const char* fname, struct Opp_Scan *s);
 void init_opp(const char* fname);
+
+// Repl
+static void opp_init_repl();
+static char* get_repl_line();
+
 
 #endif

@@ -3,7 +3,11 @@
 void opp_init_std()
 {
 	env_new_int(global_ns->inside, "abc", 10);
+
 	if (!env_new_cfn(global_ns->inside, "echo", echo))
+		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "print", echo))
 		internal_error("STD Fail", 2);
 }
 

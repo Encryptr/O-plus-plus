@@ -1,7 +1,9 @@
 
 # O++ Programming Language
 ![O++](cover.png)
-By: Maks Sawoniewicz
+By: Maks S
+
+![](opp_demo.gif)
 
 # Update
 Currently a new O++ interpreter is being made. Expect way faster speeds and more portable embedding. Also the interpreter has changed some syntax (more info soon) and uses more effiecient compiler mechanics.

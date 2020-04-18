@@ -22,6 +22,10 @@ void opp_eval_init(struct Opp_Parser* parser)
 					printf("BOOL: %d\n", ret_val->obool);
 					break;
 
+				case OBJ_STR:
+					printf("STR: %s\n", ret_val->ostr);
+					break;
+
 				// case OBJ_NONE:
 				// 	printf("NONE\n");
 				// 	break;
@@ -125,6 +129,14 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 									literal = obj_make(OBJ_INT);
 									literal->oint = search->inside->list[loc]->value.ival;
 									break;
+
+								case VSTR:
+									literal = obj_make(OBJ_STR);
+									literal->ostr = (char*)malloc(
+										sizeof(strlen(search->inside->list[loc]->value.strval)));
+									strcpy(literal->ostr, search->inside->list[loc]->value.strval);
+									break;
+
 							}
 							return literal;
 						}
@@ -364,6 +376,9 @@ struct Opp_Obj* opp_eval_logic(struct Opp_Expr_Logic* expr)
 			return left;
 		}
 
+		default:
+			opp_error(NULL, "Unknown logic operator");
+
 	}
 	return NULL;
 }
@@ -403,7 +418,6 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 	}
 
 	obj = obj_make(OBJ_NONE);
-	// obj->obool = 1;
 
 	return obj;
 }
@@ -486,6 +500,8 @@ struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr)
 				env_new_int(search->inside, b->val.strval, final_val->oint);
 			else if (type == VDOUBLE && final_val->obj_type == OBJ_FLOAT)
 				env_new_dbl(search->inside, b->val.strval, final_val->ofloat);
+			else if (type == VSTR && final_val->obj_type == OBJ_STR)
+				env_new_str(search->inside, b->val.strval, final_val->ostr);
 			else 
 				opp_error(NULL, "Attempt to switch var type in assign '%s'", b->val.strval);
 		}
@@ -567,10 +583,12 @@ struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr)
 
 	if (b->type != STMT_BLOCK)
 		opp_error(NULL, "Expected block after while loop");
+
 	block = (struct Opp_Stmt_Block*)(b->stmt);
 
 	struct Namespace* temp = current_ns;
 	struct Namespace* new_ns = init_namespace("block", temp);
+
 	current_ns = new_ns;
 
 	int i = 0;
@@ -585,8 +603,10 @@ struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr)
 	}
 
 	current_ns = temp;
+
 	for (int a=0; a<new_ns->inside->size; a++)
 		free(new_ns->inside->list[a]);
+
 	free(new_ns->inside);
 	free(new_ns);
 

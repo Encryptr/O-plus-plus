@@ -7,7 +7,7 @@ struct Opp_Parser* opp_parse_init(struct Opp_Scan* s)
 	struct Opp_Parser* parser = (struct Opp_Parser*)malloc(sizeof(struct Opp_Parser));
 
 	parser->nstmt = 0;
-	parser->statments = calloc(10, sizeof(*parser->statments));
+	parser->statments = calloc(50, sizeof(*parser->statments));
 
 	while (s->tok != FEND)
 	{
