@@ -1,0 +1,23 @@
+var a = 0;
+var b = 0;
+
+while a == 0 {
+	b = b + 1;
+	if b == 1000000 
+		a = 1;
+}
+
+echo(b);
+
+if 10 == 10 {
+	var c = 2;
+	if 2 == 2 {
+		var d = 2;
+		c = c + 3*3;
+	}
+	echo("OUt", c);
+}
+
+if (a=2) || 10 == 10 {
+	echo (a);
+} 

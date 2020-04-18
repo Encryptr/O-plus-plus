@@ -18,7 +18,7 @@ void help_menu()
 {
 	system("clear");
 	printf("\n\x1b[32mO++ Programming Language\x1b[0m\n");
-	printf("Written by Maksymilian Sawoniewicz\n");
+	printf("Written by Maks S\n");
 	printf("\n\x1b[31mFormat: o++ [flag] [file]\x1b[0m\n");
 	printf("\n-h    | For help menu\n");
 	printf("-dump | For dumping file tokens\n\n\n");

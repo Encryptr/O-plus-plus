@@ -55,7 +55,7 @@ Syntax Ideas:
 (++ a))
 
 # Structs #
-(def-struct (name) 
+(defstruct (name) 
 (var (list a b)))
 
 # Macros #
@@ -80,40 +80,9 @@ Defined Variable:
 (> a 20 (print 'no'))
 (print 'All false'))
 
-########################################
-var a = 10;
-var b = 'hello';
-const PI = 3.1415;
 
-
-
-func add[a,b] {
-	
-	if a == b {
-		print 'oh no';
-	}
-	ret a+b;
-}
-
-func minus[a,b]
-
-	if a == b
-		print "prob 0";
-	end
-
-	var result = a-b;
-	print "hello";
-
-	ret result;
-end
-
-
-
-b = add[10,20];
-########################################
-
-
-
+####################################################################################
+O++ New Syntax
 
 
 
