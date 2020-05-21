@@ -15,7 +15,7 @@ if 10 == 10 {
 		var d = 2;
 		c = c + 3*3;
 	}
-	echo("OUt", c);
+	echo("Out of if", c);
 }
 
 if (a=2) || 10 == 10 {

@@ -44,6 +44,7 @@ void init_opp(const char* fname)
 
 	init_file(fname, &data);
 	parser = opp_parse_init(&data);
+	parser->mode = IFILE;
 	opp_init_environment();
 	opp_init_std();
 
@@ -83,6 +84,7 @@ static void opp_init_repl()
 		struct Opp_Parser* parser = NULL;
 		opp_init_lex(&data, get_repl_line());
 		parser = opp_parse_init(&data);
+		parser->mode = IREPL;
 		opp_eval_init(parser);
 	}
 

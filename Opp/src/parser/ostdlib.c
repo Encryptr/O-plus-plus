@@ -2,12 +2,13 @@
 
 void opp_init_std()
 {
-	env_new_int(global_ns->inside, "abc", 10);
+	// NULL Value
+	env_new_int(global_ns->inside, "NULL", 0);
 
 	if (!env_new_cfn(global_ns->inside, "echo", echo))
 		internal_error("STD Fail", 2);
 
-	if (!env_new_cfn(global_ns->inside, "print", echo))
+	if (!env_new_cfn(global_ns->inside, "print", opp_print))
 		internal_error("STD Fail", 2);
 }
 

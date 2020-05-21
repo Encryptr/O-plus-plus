@@ -58,7 +58,7 @@ void delete_node(struct Table* t, char* key)
 	free(t->list[loc]);
 }
 
-enum Value_Type env_get_type(struct Table *t, char *key)
+int env_get_type(struct Table *t, char *key)
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
@@ -303,6 +303,39 @@ bool env_new_dbl(struct Table *t, char* key, double value)
 		new_node->type = VDOUBLE;
 		strcpy(new_node->key, key);
 		new_node->value.dval = value;
+		t->list[loc] = new_node;
+	}
+
+	return true;
+}
+
+bool env_new_bool(struct Table *t, char* key, int value)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+
+	if (t->list[loc] != NULL) {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				pos->value.bval = value;
+				return true;
+			}
+			if (pos->next == NULL) {
+				pos->next = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+				pos->next->type = VBOOL;
+				strcpy(pos->next->key, key);
+				pos->next->value.bval = value;
+				return true;
+			}
+			else
+				pos = pos->next;
+		}
+	}
+	else {
+		new_node->type = VBOOL;
+		strcpy(new_node->key, key);
+		new_node->value.bval = value;
 		t->list[loc] = new_node;
 	}
 

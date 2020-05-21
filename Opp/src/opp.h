@@ -33,5 +33,7 @@ void init_opp(const char* fname);
 static void opp_init_repl();
 static char* get_repl_line();
 
+enum Opp_Mode {IFILE, IREPL};
+
 
 #endif

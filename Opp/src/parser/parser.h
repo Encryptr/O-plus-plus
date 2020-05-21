@@ -11,6 +11,7 @@
 
 struct Opp_Parser {
 	struct Opp_Stmt** statments;
+	enum Opp_Mode mode;
 	int nstmt;
 };
 

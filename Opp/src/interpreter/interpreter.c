@@ -11,26 +11,32 @@ void opp_eval_init(struct Opp_Parser* parser)
 	{
 		struct Opp_Obj* ret_val = opp_eval(parser->statments[stmt]);
 
-		#ifdef DEBUG
-			switch (ret_val->obj_type)
-			{
-				case OBJ_INT: 
-					printf("INT: %d\n", ret_val->oint);
-					break;
+		if (parser->mode == IREPL)
+			opp_repl_ret(ret_val);
+	}
+}
 
-				case OBJ_BOOL:
-					printf("BOOL: %d\n", ret_val->obool);
-					break;
+void opp_repl_ret(struct Opp_Obj* val)
+{
+	if (val == NULL)
+		opp_error(NULL, "Error repl return");
+	switch (val->obj_type)
+	{
+		case OBJ_INT: 
+			printf("INT: %d\n", val->oint);
+			break;
 
-				case OBJ_STR:
-					printf("STR: %s\n", ret_val->ostr);
-					break;
+		case OBJ_BOOL:
+			printf("BOOL: %d\n", val->obool);
+			break;
 
-				// case OBJ_NONE:
-				// 	printf("NONE\n");
-				// 	break;
-			}
-		#endif
+		case OBJ_STR:
+			printf("STR: %s\n", val->ostr);
+			break;
+
+		case OBJ_FLOAT:
+			printf("REAL: %lf\n", val->ofloat);
+			break;
 	}
 }
 
@@ -128,6 +134,16 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 								case VINT:
 									literal = obj_make(OBJ_INT);
 									literal->oint = search->inside->list[loc]->value.ival;
+									break;
+
+								case VDOUBLE:
+									literal = obj_make(OBJ_FLOAT);
+									literal->ofloat = search->inside->list[loc]->value.dval;
+									break;
+
+								case VBOOL:
+									literal = obj_make(OBJ_BOOL);
+									literal->obool = search->inside->list[loc]->value.bval;
 									break;
 
 								case VSTR:
@@ -376,6 +392,59 @@ struct Opp_Obj* opp_eval_logic(struct Opp_Expr_Logic* expr)
 			return left;
 		}
 
+		case TGT: {
+			left = opp_eval_expr(expr->left);
+			right = opp_eval_expr(expr->right);
+
+			if (left->obj_type == OBJ_INT && right->obj_type == OBJ_INT)
+				left->obool = (left->oint > right->oint);
+
+			else if (left->obj_type == OBJ_FLOAT && right->obj_type == OBJ_FLOAT) {
+				if (left->ofloat > right->ofloat)
+					left->obool = 1;
+				else 
+					left->obool = 0; 
+			}
+
+			else if (left->obj_type == OBJ_BOOL && right->obj_type == OBJ_BOOL)
+				left->obool = (left->obool > right->obool);
+
+			else if (left->obj_type != right->obj_type) {
+				printf("Mixing types in '>' expression causing false\n");
+				left->obool = 0;
+			}
+			left->obj_type = OBJ_BOOL;
+
+			return left;
+		}
+
+		case TLT: {
+			left = opp_eval_expr(expr->left);
+			right = opp_eval_expr(expr->right);
+
+			if (left->obj_type == OBJ_INT && right->obj_type == OBJ_INT)
+				left->obool = (left->oint < right->oint);
+
+			else if (left->obj_type == OBJ_FLOAT && right->obj_type == OBJ_FLOAT) {
+				if (left->ofloat < right->ofloat)
+					left->obool = 1;
+				else 
+					left->obool = 0; 
+			}
+
+			else if (left->obj_type == OBJ_BOOL && right->obj_type == OBJ_BOOL)
+				left->obool = (left->obool < right->obool);
+
+			else if (left->obj_type != right->obj_type) {
+				printf("Mixing types in '<' expression causing false\n");
+				left->obool = 0;
+			}
+			left->obj_type = OBJ_BOOL;
+
+			return left;
+
+		}
+
 		default:
 			opp_error(NULL, "Unknown logic operator");
 
@@ -502,6 +571,8 @@ struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr)
 				env_new_dbl(search->inside, b->val.strval, final_val->ofloat);
 			else if (type == VSTR && final_val->obj_type == OBJ_STR)
 				env_new_str(search->inside, b->val.strval, final_val->ostr);
+			else if (type == VBOOL && final_val->obj_type == OBJ_BOOL)
+				env_new_bool(search->inside, b->val.strval, final_val->obool);
 			else 
 				opp_error(NULL, "Attempt to switch var type in assign '%s'", b->val.strval);
 		}
@@ -524,6 +595,16 @@ struct Opp_Obj* opp_eval_var(struct Opp_Stmt_Var* expr)
 	struct Opp_Expr_Unary* e = (struct Opp_Expr_Unary*)(d->expr);
 	struct Opp_Obj* new_val = opp_eval_expr(c);
 
+	int type = env_get_type(current_ns->inside, e->val.strval);
+	int new_type = new_val->obj_type;
+
+	if (
+	(type == VINT && new_type != OBJ_INT) ||
+	(type == VDOUBLE && new_type != OBJ_FLOAT) ||
+	(type == VBOOL && new_type != OBJ_BOOL) ||
+	(type == VSTR && new_type != OBJ_STR))
+		opp_error(NULL, "Attempt to redeclare value '%s'", e->val.strval);
+
 	switch (new_val->obj_type)
 	{
 		case OBJ_INT:
@@ -536,6 +617,10 @@ struct Opp_Obj* opp_eval_var(struct Opp_Stmt_Var* expr)
 
 		case OBJ_FLOAT:
 			env_new_dbl(current_ns->inside, e->val.strval, new_val->ofloat);
+			break;
+
+		case OBJ_BOOL:
+			env_new_bool(current_ns->inside, e->val.strval, new_val->obool);
 			break;
 
 		default:

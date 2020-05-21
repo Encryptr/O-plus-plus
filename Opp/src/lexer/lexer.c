@@ -66,7 +66,6 @@ static enum Opp_Token opp_singlechar(struct Opp_Scan *s)
 		case '{': return TOPENC;
 		case '}': return TCLOSEC;
 		case '.': return TDOT;
-		case '#': return THASH;
 
 		case '>': {
 			s->src++;
@@ -89,7 +88,7 @@ static enum Opp_Token opp_singlechar(struct Opp_Scan *s)
 			if (*s->src == '&')
 				return TAND;
 			s->src--;
-			return TADDR;
+			break;
 		}
 
 		case '|': {
@@ -131,8 +130,6 @@ static enum Opp_Token opp_singlechar(struct Opp_Scan *s)
 				return TDECR;
 			else if (*s->src == '=')
 				return TMINEQ;
-			else if (*s->src == '>')
-				return TARROW;
 			s->src--; 
 			return TMIN;
 		}
@@ -256,9 +253,11 @@ static void lex_num(struct Opp_Scan* s)
 		if (*s->src == '.') type = FLOAT;
 		else if (*s->src == 'x' || *s->src == 'X')
 			opp_error(s, "Hex not supported yet!!");
+
 		append(s->lexeme, *s->src);
 		s->src++;
 	}
+
 	if (type == 0) type = INTEGER;
 	s->src--;
 	s->tok = type;
@@ -286,6 +285,11 @@ void opp_next(struct Opp_Scan *s)
 	while (*s->src)
 	{
 		if (*s->src == '\n') s->line++;
+		else if (*s->src == '#') {
+			while (*s->src != '\n' && *s->src)
+				s->src++;
+			s->line++;
+		}
 		else if (ignore(*s->src)) {}
 		else if (isletter(*s->src))
 			{identifier(s); return;}

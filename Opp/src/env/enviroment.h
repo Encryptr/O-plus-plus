@@ -56,11 +56,12 @@ void opp_init_environment();
 
 bool env_new_str(struct Table *t, char* key, char* value);
 bool env_new_int(struct Table *t, char* key, int value);
+bool env_new_bool(struct Table *t, char* key, int value);
 bool env_new_dbl(struct Table *t, char* key, double value);
 bool env_new_cfn(struct Table *t, char* key, void (*fn)(struct Opp_List* args));
 // bool env_new_fn(struct Table *t, unsigned int element, char* key);
 bool env_lookup(struct Table* t, char* key);
-enum Value_Type env_get_type(struct Table *t, char *key);
+int env_get_type(struct Table *t, char *key);
 
 int env_get_int(struct Table *t, char* key);
 double env_get_dbl(struct Table *t, char* key);

@@ -1,1 +1,9 @@
-var a = "gll";
+var counter = NULL;
+
+while counter < 10 {
+	var i = counter * counter;
+
+	echo("Power of counter", i);
+
+	counter = counter + 1;
+}

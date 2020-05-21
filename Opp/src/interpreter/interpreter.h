@@ -10,8 +10,8 @@
 #include "../parser/ast.h"
 
 enum Opp_Obj_Type {
-	OBJ_NONE, OBJ_BOOL, OBJ_INT, OBJ_FLOAT,
-	OBJ_STR, OBJ_ARRAY,
+	OBJ_NONE, OBJ_BOOL, OBJ_INT, 
+	OBJ_FLOAT, OBJ_STR, OBJ_ARRAY,
 };
 
 struct Opp_Obj {
@@ -26,8 +26,9 @@ struct Opp_Obj {
 };
 
 struct Opp_Obj* obj_make(enum Opp_Obj_Type obj_type);
-
 void opp_eval_init(struct Opp_Parser* parser);
+void opp_repl_ret(struct Opp_Obj* val);
+
 struct Opp_Obj* opp_eval(struct Opp_Stmt* stmt);
 struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr);
 struct Opp_Obj* opp_eval_bin(struct Opp_Expr_Bin* expr);

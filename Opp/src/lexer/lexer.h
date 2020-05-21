@@ -25,10 +25,9 @@ enum Opp_Token {
 	// += -= /= *= %= 
 	TADDEQ, TMINEQ, TDIVEQ, TMULEQ, TMODEQ,
 
-	// ( ) , [ ] . -> & # ; 
+	// ( ) , [ ] . ; 
 	TOPENP, TCLOSEP, TCOMMA, TOPENB, TCLOSEB, 
-	TOPENC, TCLOSEC, TDOT, TARROW, TADDR, THASH,
-	TSEMICOLON,
+	TOPENC, TCLOSEC, TDOT, TSEMICOLON,
 	
 	TCONST, TIF, TELSE, TWHILE, TTRUE, TFALSE, TFUNC,
 	TVAR, TIMPORT,
@@ -41,7 +40,6 @@ struct Opp_Scan {
 	char lexeme[MAX_LEXEME_SIZE];
 	enum Opp_Token tok;
 	unsigned int line;
-	unsigned int colum;
 	FILE* file;
 };
 
