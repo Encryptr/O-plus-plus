@@ -273,6 +273,7 @@ int all_until(const char end, struct Opp_Scan *s)
 	{
 		if (*s->src == EOF) 
 			return 0;
+		if (*s->src == '\n') s->line++;
 		append(s->lexeme, *s->src);
 		++s->src;
 	}

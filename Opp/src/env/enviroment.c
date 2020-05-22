@@ -67,8 +67,9 @@ int env_get_type(struct Table *t, char *key)
 		return -1;
 	else {
 		while (pos) {
-			if (!strcmp(pos->key, key))
+			if (!strcmp(pos->key, key)) {
 				return pos->type;
+			}
 			if (pos->next != NULL)
 				pos = pos->next;
 			else 
@@ -159,6 +160,29 @@ void* env_get_cfn(struct Table *t, char* key)
 			if (!strcmp(pos->key, key)) {
 				if (pos->type == VCFUNC)
 					return pos->func->cfn;
+				else return NULL;
+			}
+			if (pos->next != NULL)
+				pos = pos->next;
+			else 
+				return NULL; 
+		}
+	}
+	return NULL;
+}
+
+struct Hash_Node* env_get_fn(struct Table *t, char* key)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+
+	if (t->list[loc] == NULL)
+		return NULL;
+	else {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				if (pos->type == VFUNC)
+					return pos;
 				else return NULL;
 			}
 			if (pos->next != NULL)
@@ -342,16 +366,61 @@ bool env_new_bool(struct Table *t, char* key, int value)
 	return true;
 }
 
-/*
-int env_new_fn(struct Table *t, unsigned int element, char* key)
+bool env_new_fn(struct Table *t, char* key, struct Opp_Stmt* stmts, struct Opp_List* args)
 {
-	if (t->list[element] != NULL)
-		return 0;
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
-	t->list[element] = malloc(sizeof(struct Hash_Node));
-	t->list[element]->type = FUNC;
-	strcpy(t->list[element]->key, key);
+	if (t->list[loc] != NULL) {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				pos->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
+				pos->func->stmts = stmts;
+				pos->func->arg_name = args;
+				return true;
+			}
+			if (pos->next == NULL) {
+				pos->next = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+				pos->next->type = VFUNC;
+				strcpy(pos->next->key, key);
+				pos->next->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
+				pos->next->func->stmts = stmts;
+				pos->next->func->arg_name = args;
+				return true;
+			}
+			else
+				pos = pos->next;
+		}
+	}
+	else {
+		new_node->type = VFUNC;
+		strcpy(new_node->key, key);
+		new_node->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
+		new_node->func->stmts = stmts;
+		new_node->func->arg_name = args;
+		t->list[loc] = new_node;
+	}
 
-	return 1;
+	return true;
 }
-*/
+
+void env_add_local(struct Table* t, char* key, struct Opp_List* args, struct Opp_List* name)
+{
+	if (args->size != name->size)
+		opp_error(NULL, "Invalid amount of args provided to function '%s'", key);
+
+	for (int i = 0; i < args->size; i++) {
+
+		struct Opp_Obj* res = opp_eval_expr(args->list[i]);
+		struct Opp_Expr* a = (struct Opp_Expr*)(name->list[i]);
+		struct Opp_Expr_Unary* id = (struct Opp_Expr_Unary*)(a->expr);
+
+		switch (res->obj_type)
+		{
+			case INTEGER: 
+				env_new_int(t, id->val.strval, res->oint);
+				break;
+		}
+	}
+}

@@ -62,6 +62,9 @@ struct Opp_Stmt* opp_parse_statment(struct Opp_Scan* s)
 {
 	switch (s->tok)
 	{
+		case TFUNC:
+			return opp_parse_func(s);
+
 		case TIF:
 			return opp_parse_ifstmt(s);
 
@@ -97,6 +100,33 @@ struct Opp_Stmt* opp_parse_while(struct Opp_Scan* s)
 	loop->then = stmt;
 
 	return opp_new_stmt(STMT_WHILE, loop);
+}
+
+struct Opp_Stmt* opp_parse_func(struct Opp_Scan* s)
+{
+	struct Opp_Stmt_Func* func = NULL;
+	struct Opp_Expr* name = NULL;
+	struct Opp_Stmt* body = NULL;
+	struct Opp_List* args = NULL;
+
+	opp_next(s);
+
+	if (s->tok != IDENT)
+		opp_error(s, "Expected name for function");
+
+	name = opp_parse_unary(s);
+	opp_next(s);
+
+	args = opp_parse_args(s);
+	opp_next(s);
+	body = opp_parse_statment(s);
+
+	func = (struct Opp_Stmt_Func*)malloc(sizeof(struct Opp_Stmt_Func));
+	func->name = name;
+	func->args = args;
+	func->body = body;
+
+	return opp_new_stmt(STMT_FUNC, func);
 }
 
 struct Opp_Stmt* opp_parse_import(struct Opp_Scan* s)
@@ -137,6 +167,7 @@ struct Opp_Stmt* opp_parse_ifstmt(struct Opp_Scan* s)
 	opp_next(s);
 	cond = opp_parse_allign(s);
 	then = opp_parse_statment(s);
+
 	// opp_next(s);
 
 	if (s->tok == TELSE) {
@@ -350,14 +381,16 @@ struct Opp_Expr* opp_parse_expr(struct Opp_Scan* s)
 
 struct Opp_Expr* opp_parse_expr2(struct Opp_Scan* s)
 {
-	struct Opp_Expr* left = opp_parse_prefix(s);
+	// struct Opp_Expr* left = opp_parse_prefix(s);
+	struct Opp_Expr* left = opp_parse_before(s);
 	struct Opp_Expr* right = NULL;
 
 	int operator = s->tok;
 	while (operator == TDIV || operator == TMUL || operator == TMOD)
 	{
 		opp_next(s);
-		right = opp_parse_prefix(s);
+		// right = opp_parse_prefix(s);
+		right = opp_parse_before(s);
 
 		struct Opp_Expr_Bin* temp = (struct Opp_Expr_Bin*)malloc(sizeof(struct Opp_Expr_Bin));
 		if (!temp)
@@ -370,6 +403,24 @@ struct Opp_Expr* opp_parse_expr2(struct Opp_Scan* s)
 		operator = s->tok;
 	}
 	return left;
+}
+
+struct Opp_Expr* opp_parse_before(struct Opp_Scan* s)
+{
+	struct Opp_Expr* value = NULL;
+	int operator = s->tok;
+	
+	if (operator == TMIN)
+	{
+		struct Opp_Expr_Sub* temp = (struct Opp_Expr_Sub*)malloc(sizeof(struct Opp_Expr_Sub));
+		opp_next(s);
+		temp->unary = opp_parse_expr2(s);
+		value = opp_new_expr(ESUB, temp);
+
+		return value;
+	}
+
+	return opp_parse_prefix(s);
 }
 
 struct Opp_Expr* opp_parse_prefix(struct Opp_Scan* s)

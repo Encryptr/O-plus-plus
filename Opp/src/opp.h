@@ -28,12 +28,14 @@
 // O++
 void init_file(const char* fname, struct Opp_Scan *s);
 void init_opp(const char* fname);
+static void opp_flag(char** args);
 
 // Repl
 static void opp_init_repl();
 static char* get_repl_line();
 
-enum Opp_Mode {IFILE, IREPL};
+enum Opp_Mode { IFILE, IREPL };
+enum Opp_Flag { NONE, DUMP } Flag;
 
 
 #endif

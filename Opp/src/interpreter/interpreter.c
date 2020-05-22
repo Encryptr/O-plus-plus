@@ -83,6 +83,11 @@ struct Opp_Obj* opp_eval(struct Opp_Stmt* stmt)
 			struct Opp_Stmt_While* temp = (struct Opp_Stmt_While*)(stmt->stmt);
 			return opp_eval_while(temp);
 		}
+
+		case STMT_FUNC: {
+			struct Opp_Stmt_Func* temp = (struct Opp_Stmt_Func*)(stmt->stmt);
+			return opp_eval_func(temp);
+		}
 	}
 	return NULL;
 }
@@ -180,6 +185,11 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 			}
 		}
 
+		case ESUB: {
+			struct Opp_Expr_Sub* temp = (struct Opp_Expr_Sub*)(expr->expr);
+			return opp_eval_sub(temp);
+		}
+
 		case ECALL: {
 			struct Opp_Expr_Call* temp = (struct Opp_Expr_Call*)(expr->expr);
 			return opp_eval_call(temp);
@@ -193,6 +203,22 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 	}
 
 	return NULL;
+}
+
+struct Opp_Obj* opp_eval_sub(struct Opp_Expr_Sub* expr)
+{
+	struct Opp_Obj* val = opp_eval_expr(expr->unary);
+
+	switch (val->obj_type) 
+	{
+		case OBJ_INT: val->oint *= -1; break;
+		case OBJ_FLOAT: val->ofloat *= -1.0; break;
+
+		default:
+			opp_error(NULL, "Error attempting to negate invalid type");
+	}
+
+	return val;
 }
 
 struct Opp_Obj* opp_eval_bin(struct Opp_Expr_Bin* expr)
@@ -485,6 +511,31 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 		void (*func)(struct Opp_List* args) = env_get_cfn(search->inside, unary->val.strval);
 		func(expr->args);
 	}
+	else if (func_type == VFUNC)
+	{
+		struct Hash_Node* fn = env_get_fn(search->inside, unary->val.strval);
+
+		fn->func->local = init_namespace(unary->val.strval, current_ns);
+
+		env_add_local(fn->func->local->inside, unary->val.strval, expr->args, fn->func->arg_name);
+
+		struct Opp_Stmt_Block* block = (struct Opp_Stmt_Block*)(fn->func->stmts->stmt); 
+		struct Namespace* temp = current_ns;
+		current_ns = fn->func->local;
+
+		int i = 0;
+		while (block->stmts[i] != NULL)
+		{
+			opp_eval(block->stmts[i]);
+			i++;
+		}
+		current_ns = temp;
+
+		for (int a=0; a<fn->func->local->inside->size; a++)
+			free(fn->func->local->inside->list[a]);
+		free(fn->func->local->inside);
+		free(fn->func->local);
+	}
 
 	obj = obj_make(OBJ_NONE);
 
@@ -695,6 +746,24 @@ struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr)
 	free(new_ns->inside);
 	free(new_ns);
 
+
+	return none;
+}
+
+struct Opp_Obj* opp_eval_func(struct Opp_Stmt_Func* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);
+	struct Opp_Expr* a = (struct Opp_Expr*)(expr->name);
+	struct Opp_Expr_Unary* b = (struct Opp_Expr_Unary*)(a->expr);
+
+	struct Opp_Stmt* body = (struct Opp_Stmt*)(expr->body);
+	struct Opp_List* args = (struct Opp_List*)(expr->args);
+
+
+	if (env_get_type(current_ns->inside, b->val.strval) != -1)
+		opp_error(NULL, "Function '%s' already has been defined", b->val.strval);
+
+	env_new_fn(current_ns->inside, b->val.strval, body, args);
 
 	return none;
 }

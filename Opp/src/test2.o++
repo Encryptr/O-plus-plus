@@ -1,9 +1,7 @@
-var counter = NULL;
-
-while counter < 10 {
-	var i = counter * counter;
-
-	echo("Power of counter", i);
-
-	counter = counter + 1;
+func hi(a, b, c) {
+	print("hi");
+	echo(b, a, c);
 }
+
+hi(1,2, -3);
+

@@ -40,5 +40,9 @@ struct Opp_Obj* opp_eval_assign(struct Opp_Expr_Assign* expr);
 struct Opp_Obj* opp_eval_var(struct Opp_Stmt_Var* expr);
 struct Opp_Obj* opp_eval_import(struct Opp_Stmt_Import* expr);
 struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr);
+struct Opp_Obj* opp_eval_func(struct Opp_Stmt_Func* expr);
+
+struct Opp_Obj* opp_eval_sub(struct Opp_Expr_Sub* expr);
+
 
 #endif
