@@ -80,6 +80,9 @@ struct Opp_Stmt* opp_parse_statment(struct Opp_Scan* s)
 		case TWHILE:
 			return opp_parse_while(s);
 
+		case TRET:
+			return opp_parse_return(s);
+
 		default:
 			return opp_parse_expression(s);
 	}
@@ -100,6 +103,23 @@ struct Opp_Stmt* opp_parse_while(struct Opp_Scan* s)
 	loop->then = stmt;
 
 	return opp_new_stmt(STMT_WHILE, loop);
+}
+
+struct Opp_Stmt* opp_parse_return(struct Opp_Scan* s)
+{
+	struct Opp_Stmt_Ret* ret = NULL;
+	struct Opp_Expr* val = NULL;
+
+	opp_next(s);
+	val = opp_parse_allign(s);
+
+	ret = (struct Opp_Stmt_Ret*)malloc(sizeof(struct Opp_Stmt_Ret));
+	ret->value = val;
+
+	if (s->tok != TSEMICOLON)
+		opp_error(s, "Expected ';' after return statement");
+
+	return opp_new_stmt(STMT_RET, ret);
 }
 
 struct Opp_Stmt* opp_parse_func(struct Opp_Scan* s)
@@ -140,6 +160,9 @@ struct Opp_Stmt* opp_parse_import(struct Opp_Scan* s)
 	import = (struct Opp_Stmt_Import*)malloc(sizeof(struct Opp_Stmt_Import));
 	import->ident = ident;
 
+	if (s->tok != TSEMICOLON)
+		opp_error(s, "Expected ';' after import");
+
 	return opp_new_stmt(STMT_IMPORT, import);
 }
 
@@ -153,6 +176,9 @@ struct Opp_Stmt* opp_parse_var(struct Opp_Scan* s)
 
 	var = (struct Opp_Stmt_Var*)malloc(sizeof(struct Opp_Stmt_Var));
 	var->ident = ident;
+
+	if (s->tok != TSEMICOLON)
+		opp_error(s, "Expected ';' after var decleration");
 
 	return opp_new_stmt(STMT_VAR, var);
 }

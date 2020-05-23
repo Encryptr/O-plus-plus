@@ -88,6 +88,11 @@ struct Opp_Obj* opp_eval(struct Opp_Stmt* stmt)
 			struct Opp_Stmt_Func* temp = (struct Opp_Stmt_Func*)(stmt->stmt);
 			return opp_eval_func(temp);
 		}
+
+		case STMT_RET: {
+			struct Opp_Stmt_Ret* temp = (struct Opp_Stmt_Ret*)(stmt->stmt);
+			return opp_eval_return(temp);
+		}
 	}
 	return NULL;
 }
@@ -524,7 +529,7 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 		current_ns = fn->func->local;
 
 		int i = 0;
-		while (block->stmts[i] != NULL)
+		while (block->stmts[i] != NULL && opp_state.trigger_ret == 0)
 		{
 			opp_eval(block->stmts[i]);
 			i++;
@@ -535,6 +540,26 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 			free(fn->func->local->inside->list[a]);
 		free(fn->func->local->inside);
 		free(fn->func->local);
+
+		if (opp_state.trigger_ret == 1)
+		{
+			obj = obj_make(opp_state.val->obj_type);
+
+			switch (opp_state.val->obj_type)
+			{
+				case OBJ_INT: obj->oint = opp_state.val->oint; break;
+
+				case OBJ_BOOL: obj->obool = opp_state.val->obool; break;
+
+				case OBJ_STR: obj->ostr = opp_state.val->ostr; break;
+
+				case OBJ_FLOAT: obj->ofloat = opp_state.val->ofloat; break;
+			}
+			opp_state.trigger_ret = 0;
+			opp_state.val = NULL;
+
+			return obj;
+		}
 	}
 
 	obj = obj_make(OBJ_NONE);
@@ -759,11 +784,20 @@ struct Opp_Obj* opp_eval_func(struct Opp_Stmt_Func* expr)
 	struct Opp_Stmt* body = (struct Opp_Stmt*)(expr->body);
 	struct Opp_List* args = (struct Opp_List*)(expr->args);
 
-
 	if (env_get_type(current_ns->inside, b->val.strval) != -1)
 		opp_error(NULL, "Function '%s' already has been defined", b->val.strval);
 
 	env_new_fn(current_ns->inside, b->val.strval, body, args);
+
+	return none;
+}
+
+struct Opp_Obj* opp_eval_return(struct Opp_Stmt_Ret* expr)
+{
+	struct Opp_Obj* none = obj_make(OBJ_NONE);	
+
+	opp_state.val = opp_eval_expr(expr->value);
+	opp_state.trigger_ret = 1;
 
 	return none;
 }

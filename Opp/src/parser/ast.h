@@ -27,7 +27,7 @@ enum Opp_Stmt_Type {
 	STMT_EXPR, STMT_IF,
 	STMT_BLOCK, STMT_VAR,
 	STMT_IMPORT, STMT_WHILE,
-	STMT_FUNC
+	STMT_FUNC, STMT_RET
 };
 
 struct Opp_Expr {
@@ -108,6 +108,10 @@ struct Opp_Stmt_Func {
 	struct Opp_Expr* name;
 	struct Opp_Stmt* body;
 	struct Opp_List* args;
+};
+
+struct Opp_Stmt_Ret {
+	struct Opp_Expr* value;
 };
 
 #endif

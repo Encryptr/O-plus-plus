@@ -1,0 +1,13 @@
+func hi(a, b, c, d, e) {
+	print("hi");
+	echo(a, b, c, d, e);
+
+	var test = 0;
+
+	while test < 10 {
+		print(test);
+		test = test + 1;
+	}
+}
+
+hi(1,2.2, "hello", true, false);

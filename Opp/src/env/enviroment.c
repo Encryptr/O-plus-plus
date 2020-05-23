@@ -418,8 +418,20 @@ void env_add_local(struct Table* t, char* key, struct Opp_List* args, struct Opp
 
 		switch (res->obj_type)
 		{
-			case INTEGER: 
+			case OBJ_INT: 
 				env_new_int(t, id->val.strval, res->oint);
+				break;
+
+			case OBJ_FLOAT:
+				env_new_dbl(t, id->val.strval, res->ofloat);
+				break;
+
+			case OBJ_STR:
+				env_new_str(t, id->val.strval, res->ostr);
+				break;
+
+			case OBJ_BOOL:
+				env_new_bool(t, id->val.strval, res->obool);
 				break;
 		}
 	}

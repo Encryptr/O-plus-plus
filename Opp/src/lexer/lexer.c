@@ -16,7 +16,8 @@ static inline bool isnum(char i) {
 const char* opp_keys[] = {
 	"const", "if", "while",
 	"true", "false", "func", 
-	"else", "var", "import"
+	"else", "var", "import",
+	"return"
 };
 
 void append(char *og, char c)
@@ -217,6 +218,11 @@ static bool opp_keyword(struct Opp_Scan *s)
 
 	else if (!strcmp(s->lexeme, opp_keys[8])) {
 		s->tok = TIMPORT;
+		return true;
+	}
+
+	else if (!strcmp(s->lexeme, opp_keys[9])) {
+		s->tok = TRET;
 		return true;
 	}
 
