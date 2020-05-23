@@ -19,5 +19,4 @@ void echo(struct Opp_List* args);
 // Basic print function
 void opp_print(struct Opp_List* args);
 
-
 #endif

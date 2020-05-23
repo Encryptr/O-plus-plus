@@ -18,7 +18,3 @@ print (add(1,2));
 print (ok (1.1, 2.2, 3.3));
 
 print(bye());
-
-var a = ok(1,2,3);
-
-

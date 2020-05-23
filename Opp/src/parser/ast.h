@@ -20,13 +20,14 @@ struct Opp_Value {
 
 enum Opp_Expr_Type {
 	EBIN, ELOGIC, ECALL,
-	EASSIGN, EUNARY
+	EASSIGN, EUNARY, ESUB
 };
 
 enum Opp_Stmt_Type {
 	STMT_EXPR, STMT_IF,
 	STMT_BLOCK, STMT_VAR,
-	STMT_IMPORT, STMT_WHILE
+	STMT_IMPORT, STMT_WHILE,
+	STMT_FUNC, STMT_RET
 };
 
 struct Opp_Expr {
@@ -72,6 +73,10 @@ struct Opp_Expr_Logic {
 	struct Opp_Expr* left;
 };
 
+struct Opp_Expr_Sub {
+	struct Opp_Expr* unary;
+};
+
 struct Opp_Stmt_Expr {
 	struct Opp_Expr* expr;
 };
@@ -97,6 +102,16 @@ struct Opp_Stmt_Import {
 struct Opp_Stmt_While {
 	struct Opp_Expr* cond;
 	struct Opp_Stmt* then;
+};
+
+struct Opp_Stmt_Func {
+	struct Opp_Expr* name;
+	struct Opp_Stmt* body;
+	struct Opp_List* args;
+};
+
+struct Opp_Stmt_Ret {
+	struct Opp_Expr* value;
 };
 
 #endif

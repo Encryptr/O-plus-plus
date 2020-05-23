@@ -16,7 +16,7 @@ static void help_menu()
 	printf("\n\x1b[32mO++ Programming Language\x1b[0m\n");
 	printf("Written by Maks S\n");
 	printf("\n\x1b[31mFormat: o++ [flag] [file]\x1b[0m\n");
-	printf("-dump | For dumping file tokens\n\n\n");
+	printf("-d | For dumping file tokens\n\n\n");
 }
 
 void init_file(const char* fname, struct Opp_Scan *s)
@@ -43,11 +43,28 @@ void init_opp(const char* fname)
 	struct Opp_Parser* parser;
 
 	init_file(fname, &data);
+
+	if (Flag == DUMP) {
+		dump_tokens(&data);
+		return;
+	}
+
 	parser = opp_parse_init(&data);
+	parser->mode = IFILE;
 	opp_init_environment();
 	opp_init_std();
 
 	opp_eval_init(parser);
+}
+
+static void opp_flag(char** args)
+{
+	if (args == NULL) return;
+	if (!strcmp(args[1], "-d")) {
+		Flag = DUMP;
+		init_opp(args[2]);
+	}
+	else help_menu();
 }
 
 static char* get_repl_line() 
@@ -83,6 +100,7 @@ static void opp_init_repl()
 		struct Opp_Parser* parser = NULL;
 		opp_init_lex(&data, get_repl_line());
 		parser = opp_parse_init(&data);
+		parser->mode = IREPL;
 		opp_eval_init(parser);
 	}
 
@@ -90,8 +108,12 @@ static void opp_init_repl()
 
 int main(int argc, char** argv)
 {
-	if (argc == 2)
+	if (argc == 2) {
+		Flag = NONE;
 		init_opp(argv[1]);
+	}
+	else if (argc == 3)
+		opp_flag(argv);
 	else {
 		help_menu();
 		opp_init_repl();

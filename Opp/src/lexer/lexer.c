@@ -16,7 +16,8 @@ static inline bool isnum(char i) {
 const char* opp_keys[] = {
 	"const", "if", "while",
 	"true", "false", "func", 
-	"else", "var", "import"
+	"else", "var", "import",
+	"return"
 };
 
 void append(char *og, char c)
@@ -66,7 +67,6 @@ static enum Opp_Token opp_singlechar(struct Opp_Scan *s)
 		case '{': return TOPENC;
 		case '}': return TCLOSEC;
 		case '.': return TDOT;
-		case '#': return THASH;
 
 		case '>': {
 			s->src++;
@@ -89,7 +89,7 @@ static enum Opp_Token opp_singlechar(struct Opp_Scan *s)
 			if (*s->src == '&')
 				return TAND;
 			s->src--;
-			return TADDR;
+			break;
 		}
 
 		case '|': {
@@ -131,8 +131,6 @@ static enum Opp_Token opp_singlechar(struct Opp_Scan *s)
 				return TDECR;
 			else if (*s->src == '=')
 				return TMINEQ;
-			else if (*s->src == '>')
-				return TARROW;
 			s->src--; 
 			return TMIN;
 		}
@@ -223,6 +221,11 @@ static bool opp_keyword(struct Opp_Scan *s)
 		return true;
 	}
 
+	else if (!strcmp(s->lexeme, opp_keys[9])) {
+		s->tok = TRET;
+		return true;
+	}
+
 	return false;
 }
 
@@ -256,9 +259,11 @@ static void lex_num(struct Opp_Scan* s)
 		if (*s->src == '.') type = FLOAT;
 		else if (*s->src == 'x' || *s->src == 'X')
 			opp_error(s, "Hex not supported yet!!");
+
 		append(s->lexeme, *s->src);
 		s->src++;
 	}
+
 	if (type == 0) type = INTEGER;
 	s->src--;
 	s->tok = type;
@@ -274,6 +279,7 @@ int all_until(const char end, struct Opp_Scan *s)
 	{
 		if (*s->src == EOF) 
 			return 0;
+		if (*s->src == '\n') s->line++;
 		append(s->lexeme, *s->src);
 		++s->src;
 	}
@@ -286,6 +292,11 @@ void opp_next(struct Opp_Scan *s)
 	while (*s->src)
 	{
 		if (*s->src == '\n') s->line++;
+		else if (*s->src == '#') {
+			while (*s->src != '\n' && *s->src)
+				s->src++;
+			s->line++;
+		}
 		else if (ignore(*s->src)) {}
 		else if (isletter(*s->src))
 			{identifier(s); return;}

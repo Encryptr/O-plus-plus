@@ -2,8 +2,6 @@
 #include <time.h>
 #include "enviroment.h"
 
-// Test OLisp enviroment
-
 /* Collision example
 Two same hashing str:
 ytqzgysahb
