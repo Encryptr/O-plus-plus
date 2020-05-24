@@ -10,10 +10,14 @@ void opp_init_std()
 
 	if (!env_new_cfn(global_ns->inside, "print", opp_print))
 		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "input", opp_input))
+		internal_error("STD Fail", 2);
 }
 
-void echo(struct Opp_List* args)
+struct Opp_Obj* echo(struct Opp_List* args)
 {
+	struct Opp_Obj* obj = obj_make(OBJ_NONE);
 	for (int i=0; i<args->size; i++)
 	{
 		struct Opp_Obj* res = opp_eval_expr(args->list[i]);
@@ -38,10 +42,13 @@ void echo(struct Opp_List* args)
 		}
 	}
 	printf("\n");
+
+	return obj;
 }
 
-void opp_print(struct Opp_List* args)
+struct Opp_Obj* opp_print(struct Opp_List* args)
 {
+	struct Opp_Obj* obj = obj_make(OBJ_NONE);
 	for (int i=0; i<args->size; i++)
 	{
 		struct Opp_Obj* res = opp_eval_expr(args->list[i]);
@@ -52,7 +59,7 @@ void opp_print(struct Opp_List* args)
 				break;
 
 			case OBJ_FLOAT:
-				printf("%.1lf\n", res->ofloat);
+				printf("%.3lf\n", res->ofloat);
 				break;
 
 			case OBJ_STR:
@@ -64,4 +71,26 @@ void opp_print(struct Opp_List* args)
 				break;
 		}
 	}
+	return obj;
 }
+
+struct Opp_Obj* opp_input(struct Opp_List* args)
+{
+	struct Opp_Obj* obj = NULL;
+
+	expect_args(0);
+
+	char input[255] = {0};
+	scanf("%s", input);
+
+	obj = obj_make(OBJ_STR);
+	obj->ostr = (char*)malloc(sizeof(input)+1);
+	strcpy(obj->ostr, input);
+
+	return obj;
+}
+
+
+
+
+

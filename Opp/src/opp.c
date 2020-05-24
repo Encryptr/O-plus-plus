@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include "opp.h"
-#include "./lexer/lexer.h"
 #include "./parser/parser.h"
 #include "./env/enviroment.h"
 #include "./interpreter/interpreter.h"
 #include "./parser/ostdlib.h"
+
+enum Opp_Flag { NONE, DUMP } Flag;
 
 static void help_menu()
 {

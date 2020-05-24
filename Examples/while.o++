@@ -9,3 +9,17 @@ while counter < 10 {
 
 	counter = counter + 1;
 }
+
+# Future?
+var a = Vector{10,20};
+a.dostuff();
+
+Object Human {
+	var name;
+	var age;
+
+	func dostuff() {
+		age = age*age;
+	}
+};
+

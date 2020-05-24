@@ -34,8 +34,6 @@ static void opp_flag(char** args);
 static void opp_init_repl();
 static char* get_repl_line();
 
-enum Opp_Mode { IFILE, IREPL };
-enum Opp_Flag { NONE, DUMP } Flag;
 
 
 #endif

@@ -7,7 +7,7 @@ struct Opp_Parser* opp_parse_init(struct Opp_Scan* s)
 	struct Opp_Parser* parser = (struct Opp_Parser*)malloc(sizeof(struct Opp_Parser));
 
 	parser->nstmt = 0;
-	parser->statments = calloc(50, sizeof(*parser->statments));
+	parser->statments = calloc(100, sizeof(*parser->statments));
 
 	while (s->tok != FEND)
 	{
@@ -19,14 +19,6 @@ struct Opp_Parser* opp_parse_init(struct Opp_Scan* s)
 
 		parser->statments[parser->nstmt] = stmt;
 		parser->nstmt++;
-
-		#ifdef DEBUG
-			// struct Opp_Stmt_Expr* a = (struct Opp_Stmt_Expr*)(parser->statments[0]->stmt);
-			// struct Opp_Expr* b = (struct Opp_Expr*)(a->expr);
-			// struct Opp_Expr_Bin* c = (struct Opp_Expr_Bin*)(b->expr);
-
-			// printf("==>%d\n", c->tok);
-		#endif
 	}
 
 	return parser;
@@ -506,7 +498,7 @@ struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s)
 	{
 		case IDENT:
 			unary->type = IDENT;
-			unary->val.strval = (char*)malloc(sizeof(char)*strlen(s->lexeme));
+			unary->val.strval = (char*)malloc(sizeof(char)*strlen(s->lexeme)+1);
 			strcpy(unary->val.strval, s->lexeme);
 			break;
 

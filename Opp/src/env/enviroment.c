@@ -194,7 +194,7 @@ struct Hash_Node* env_get_fn(struct Table *t, char* key)
 	return NULL;
 }
 
-bool env_new_cfn(struct Table *t, char* key, void (*fn)(struct Opp_List* args))
+bool env_new_cfn(struct Table *t, char* key, struct Opp_Obj* (*fn)(struct Opp_List* args))
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
@@ -240,7 +240,8 @@ bool env_new_str(struct Table *t, char* key, char* value)
 	if (t->list[loc] != NULL) {
 		while (pos) {
 			if (!strcmp(pos->key, key)) {
-				pos->value.strval = malloc(sizeof(char)*len);
+				free(pos->value.strval); // TEMP SOLUTION
+				pos->value.strval = (char*)malloc(strlen(value)+1);
 				strcpy(pos->value.strval, value);
 				return true;
 			}

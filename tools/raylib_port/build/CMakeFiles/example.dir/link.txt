@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/cc  -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/example.dir/test.c.o  -o example /usr/local/Cellar/raylib/3.0.0/lib/libraylib.dylib -L/usr/local/Cellar/raylib/3.0.0/lib -lraylib 

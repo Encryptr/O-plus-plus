@@ -20,5 +20,21 @@ print (ok (1.1, 2.2, 3.3));
 print(bye());
 
 var a = ok(1,2,3);
+print(a);
 
 
+func test(a,b) {
+	if a == b 
+		return true;
+}
+
+var pls = "hello";
+
+print(test(pls, "hello"));
+
+var in = input();
+
+echo("hello", in);
+
+if in == "cool" 
+	print("Good");

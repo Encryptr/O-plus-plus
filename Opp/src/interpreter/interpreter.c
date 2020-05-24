@@ -1,6 +1,6 @@
 #include "interpreter.h"
 
-#define DEBUG
+// #define DEBUG
 
 void opp_eval_init(struct Opp_Parser* parser)
 {
@@ -158,8 +158,7 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 
 								case VSTR:
 									literal = obj_make(OBJ_STR);
-									literal->ostr = (char*)malloc(
-										sizeof(strlen(search->inside->list[loc]->value.strval)));
+									literal->ostr = (char*)malloc(strlen(search->inside->list[loc]->value.strval)+1);
 									strcpy(literal->ostr, search->inside->list[loc]->value.strval);
 									break;
 
@@ -173,7 +172,7 @@ struct Opp_Obj* opp_eval_expr(struct Opp_Expr* expr)
 
 				case STR:
 					literal = obj_make(OBJ_STR);
-					literal->ostr = (char*)malloc(strlen(temp->val.strval));
+					literal->ostr = (char*)malloc(strlen(temp->val.strval)+1);
 					strcpy(literal->ostr, temp->val.strval);
 					return literal;
 				break;
@@ -414,6 +413,9 @@ struct Opp_Obj* opp_eval_logic(struct Opp_Expr_Logic* expr)
 			else if (left->obj_type == OBJ_BOOL && right->obj_type == OBJ_BOOL)
 				left->obool = (left->obool == right->obool);
 
+			else if (left->obj_type == OBJ_STR && right->obj_type == OBJ_STR)
+				left->obool = !strcmp(left->ostr, right->ostr);
+
 			else if (left->obj_type != right->obj_type) {
 				printf("Mixing types in '==' expression causing false\n");
 				left->obool = 0;
@@ -499,6 +501,7 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 	int func_type = -1;
 	unsigned int loc = hash_str(unary->val.strval, current_ns->inside);
 	struct Namespace* search = current_ns;
+
 	while (search != NULL)
 	{
 		if (search->inside->list[loc] != NULL) {
@@ -513,8 +516,9 @@ struct Opp_Obj* opp_eval_call(struct Opp_Expr_Call* expr)
 
 	if (func_type == VCFUNC)
 	{
-		void (*func)(struct Opp_List* args) = env_get_cfn(search->inside, unary->val.strval);
-		func(expr->args);
+		struct Opp_Obj* (*func)(struct Opp_List* args) = env_get_cfn(search->inside, unary->val.strval);
+		obj = func(expr->args);
+		return obj;
 	}
 	else if (func_type == VFUNC)
 	{
@@ -720,13 +724,10 @@ struct Opp_Obj* opp_eval_import(struct Opp_Stmt_Import* expr)
 	if (str->obj_type != OBJ_STR && str->ostr != NULL)
 		opp_error(NULL, "Expected string after import statement");
 
-	// struct Namespace* new_file = init_namespace(str->ostr, NULL);
-	// struct Namespace* temp = current_ns;
-	// current_ns = new_file;
+	// Init Modules
+	if (!strcmp(str->ostr, "raylib")) init_raylib();
 
-	init_opp(str->ostr);
-
-	// current_ns = temp;
+	else init_opp(str->ostr);
 
 	return none;
 }
@@ -747,8 +748,8 @@ struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr)
 
 	block = (struct Opp_Stmt_Block*)(b->stmt);
 
-	struct Namespace* temp = current_ns;
-	struct Namespace* new_ns = init_namespace("block", temp);
+	struct Namespace* temp = current_ns; // temp if problems
+	struct Namespace* new_ns = init_namespace("block", current_ns);
 
 	current_ns = new_ns;
 
@@ -770,7 +771,6 @@ struct Opp_Obj* opp_eval_while(struct Opp_Stmt_While* expr)
 
 	free(new_ns->inside);
 	free(new_ns);
-
 
 	return none;
 }

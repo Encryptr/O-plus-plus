@@ -1,0 +1,38 @@
+# Import raylib module
+import "raylib";
+
+var screenWidth = 800;
+var screenHeight = 450;
+
+var ball_x = 400.0;
+var ball_y = 250.0;
+
+func main () {
+	init_window(screenWidth, screenHeight, "O++ Raylib!!");
+
+	set_target_fps(60);
+
+	while window_should_close()
+	{
+		if is_key_down(68) ball_x = ball_x + 10.0;
+		if is_key_down(65) ball_x = ball_x - 10.0;
+		if is_key_down(87) ball_y = ball_y - 10.0;
+		if is_key_down(83) ball_y = ball_y + 10.0;
+
+		print(ball_x, ball_y);
+
+		begin_drawing();
+
+			clear_background();
+
+			draw_text("O++ = the best language", 190, 200, 20);
+
+			draw_circleV(ball_x, ball_y, 50);
+
+		end_drawing();
+	}
+
+	close_window();        
+}
+
+main();

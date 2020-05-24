@@ -4,7 +4,6 @@ var sum = 0.0;
 
 print("Day       Daily Amount     Total Amount");
 
-
 while sum < 1000000.0 {
     sum = sum + daily_amount;
     echo(day_number, "       ", daily_amount, "     ", sum);

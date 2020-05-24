@@ -9,6 +9,8 @@
 #include "../util/error.h"
 #include "ast.h"
 
+enum Opp_Mode { IFILE, IREPL };
+
 struct Opp_Parser {
 	struct Opp_Stmt** statments;
 	enum Opp_Mode mode;
