@@ -5,7 +5,7 @@
 
 enum Value_Type {
 	VBOOL, VINT, VDOUBLE, VSTR,
-	VCFUNC, VLIST, VFUNC
+	VCFUNC, VLIST, VFUNC, VNONE
 };
 
 struct Opp_Value {
@@ -16,6 +16,7 @@ struct Opp_Value {
 		char* strval;
 		_Bool bval;
 	};
+	struct Opp_Value* next;
 };
 
 enum Opp_Expr_Type {

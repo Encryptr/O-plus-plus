@@ -9,26 +9,25 @@
 
 /* All STDLIB O++ Functions */
 
-#define OPP_MODULE struct Opp_Obj* 
+#define OPP_MODULE void
 #define OPP_ARGS struct Opp_List* args
+#define OPP_RETURN struct Opp_Obj* obj
 #define LOCAL static 
-#define Arg_Val struct Opp_Obj*
-#define Opp_Return struct Opp_Obj*
-#define Return_Type(a) obj_make(a)
+#define Arg_Val struct Opp_Obj
 
 void opp_init_std();
 
 // echo 
 // Basic echo back func
-struct Opp_Obj* echo(struct Opp_List* args);
+void echo(struct Opp_List* args, struct Opp_Obj* obj);
 
 // print
 // Basic print function
-struct Opp_Obj* opp_print(struct Opp_List* args);
+void opp_print(struct Opp_List* args, struct Opp_Obj* obj);
 
 // input
 // Basic stdin input function
-struct Opp_Obj* opp_input(struct Opp_List* args);
+void opp_input(struct Opp_List* args, struct Opp_Obj* obj);
 
 #define expect_args(expected) { \
 	if (expected != args->size) \

@@ -14,12 +14,12 @@ func main () {
 
 	while window_should_close()
 	{
-		if is_key_down(68) ball_x = ball_x + 10.0;
+		if is_key_down(68) ball_x = ball_x + 10.0; 
 		if is_key_down(65) ball_x = ball_x - 10.0;
 		if is_key_down(87) ball_y = ball_y - 10.0;
 		if is_key_down(83) ball_y = ball_y + 10.0;
 
-		print(ball_x, ball_y);
+		echo(ball_x, ball_y);
 
 		begin_drawing();
 

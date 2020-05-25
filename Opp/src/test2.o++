@@ -22,7 +22,6 @@ print(bye());
 var a = ok(1,2,3);
 print(a);
 
-
 func test(a,b) {
 	if a == b 
 		return true;

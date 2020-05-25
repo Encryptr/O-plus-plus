@@ -68,9 +68,10 @@ int env_get_type(struct Table *t, char *key)
 	else {
 		while (pos) {
 			if (!strcmp(pos->key, key)) {
+				// printf("HERE %s\n", key);
 				return pos->type;
 			}
-			if (pos->next != NULL)
+			if (pos->next != NULL) 
 				pos = pos->next;
 			else 
 				return -1;
@@ -194,7 +195,7 @@ struct Hash_Node* env_get_fn(struct Table *t, char* key)
 	return NULL;
 }
 
-bool env_new_cfn(struct Table *t, char* key, struct Opp_Obj* (*fn)(struct Opp_List* args))
+bool env_new_cfn(struct Table *t, char* key, void (*fn)(struct Opp_List* args,struct Opp_Obj* obj))
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
@@ -262,6 +263,37 @@ bool env_new_str(struct Table *t, char* key, char* value)
 		strcpy(new_node->key, key);
 		new_node->value.strval = malloc(sizeof(char)*len);
 		strcpy(new_node->value.strval, value);
+		t->list[loc] = new_node;
+	}
+
+	return true;
+}
+
+bool env_new_none(struct Table *t, char* key)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+
+	if (t->list[loc] != NULL) {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				pos->type = VNONE;
+				return true;
+			}
+			if (pos->next == NULL) {
+				pos->next = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+				pos->next->type = VNONE;
+				strcpy(pos->next->key, key);
+				return true;
+			}
+			else
+				pos = pos->next;
+		}
+	}
+	else {
+		new_node->type = VNONE;
+		strcpy(new_node->key, key);
 		t->list[loc] = new_node;
 	}
 
@@ -413,26 +445,27 @@ void env_add_local(struct Table* t, char* key, struct Opp_List* args, struct Opp
 
 	for (int i = 0; i < args->size; i++) {
 
-		struct Opp_Obj* res = opp_eval_expr(args->list[i]);
+		struct Opp_Obj res;
+		opp_eval_expr(args->list[i], &res);
 		struct Opp_Expr* a = (struct Opp_Expr*)(name->list[i]);
 		struct Opp_Expr_Unary* id = (struct Opp_Expr_Unary*)(a->expr);
 
-		switch (res->obj_type)
+		switch (res.obj_type)
 		{
 			case OBJ_INT: 
-				env_new_int(t, id->val.strval, res->oint);
+				env_new_int(t, id->val.strval, res.oint);
 				break;
 
 			case OBJ_FLOAT:
-				env_new_dbl(t, id->val.strval, res->ofloat);
+				env_new_dbl(t, id->val.strval, res.ofloat);
 				break;
 
 			case OBJ_STR:
-				env_new_str(t, id->val.strval, res->ostr);
+				env_new_str(t, id->val.strval, res.ostr);
 				break;
 
 			case OBJ_BOOL:
-				env_new_bool(t, id->val.strval, res->obool);
+				env_new_bool(t, id->val.strval, res.obool);
 				break;
 		}
 	}

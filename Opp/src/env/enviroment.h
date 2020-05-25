@@ -15,10 +15,13 @@
 #include "../interpreter/interpreter.h"
 
 struct Namespace;
+struct Opp_Obj;
+
+typedef void (*Opp_CFunc)(struct Opp_List* args, struct Opp_Obj* obj);
 
 struct Opp_Func {
 	int line;
-	struct Opp_Obj* (*cfn)(struct Opp_List* args);
+	Opp_CFunc cfn;
 	struct Opp_Value ret_val;
 	struct Opp_Stmt* stmts;
 	struct Opp_List* arg_name;
@@ -47,6 +50,7 @@ struct Namespace {
 	struct Table* inside;
 };
 
+
 // Global table / current namespace
 struct Namespace* global_ns;
 struct Namespace* current_ns;
@@ -57,11 +61,12 @@ struct Table* createMap(unsigned int size);
 void delete_node(struct Table* t, char* key);
 void opp_init_environment();
 
+bool env_new_none(struct Table *t, char* key);
 bool env_new_str(struct Table *t, char* key, char* value);
 bool env_new_int(struct Table *t, char* key, int value);
 bool env_new_bool(struct Table *t, char* key, int value);
 bool env_new_dbl(struct Table *t, char* key, double value);
-bool env_new_cfn(struct Table *t, char* key, struct Opp_Obj* (*fn)(struct Opp_List* args));
+bool env_new_cfn(struct Table *t, char* key, Opp_CFunc fn);
 
 bool env_new_fn(struct Table *t, char* key, struct Opp_Stmt* stmts, struct Opp_List* args);
 bool env_lookup(struct Table* t, char* key);

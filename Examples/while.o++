@@ -14,7 +14,7 @@ while counter < 10 {
 var a = Vector{10,20};
 a.dostuff();
 
-Object Human {
+class Human {
 	var name;
 	var age;
 

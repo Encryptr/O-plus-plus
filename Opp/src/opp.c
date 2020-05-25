@@ -71,7 +71,6 @@ static void opp_flag(char** args)
 static char* get_repl_line() 
 {
 	char* input = (char*)malloc(100);
-	char* s = input;
 	char c = 0;
 	int maxlen = 100;
 	int i = 0;
@@ -88,6 +87,7 @@ static char* get_repl_line()
 		input[i] = c;
 		i++;
 	}
+	input[i] = '\0';
 	return input;
 }
 
