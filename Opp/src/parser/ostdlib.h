@@ -29,6 +29,10 @@ void opp_print(struct Opp_List* args, struct Opp_Obj* obj);
 // Basic stdin input function
 void opp_input(struct Opp_List* args, struct Opp_Obj* obj);
 
+// rand
+// Basic random number
+void opp_rand(struct Opp_List* args, struct Opp_Obj* obj);
+
 #define expect_args(expected) { \
 	if (expected != args->size) \
 		opp_error(NULL, "Expected '%d' arguments in function '%s'", expected, __FUNCTION__); \

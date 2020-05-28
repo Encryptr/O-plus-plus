@@ -13,6 +13,9 @@ void opp_init_std()
 
 	if (!env_new_cfn(global_ns->inside, "input", opp_input))
 		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "rand", opp_rand))
+		internal_error("STD Fail", 2);
 }
 
 void echo(struct Opp_List* args, struct Opp_Obj* obj)
@@ -81,11 +84,12 @@ void opp_input(struct Opp_List* args, struct Opp_Obj* obj)
 	scanf("%s", input);
 
 	obj->obj_type = OBJ_STR;
-	// obj->ostr = (char*)malloc(sizeof(input)+1);
 	strcpy(obj->ostr, input);
 }
 
-
-
-
-
+void opp_rand(struct Opp_List* args, struct Opp_Obj* obj)
+{
+	expect_args(0);
+	obj->obj_type = OBJ_INT;
+	obj->oint = rand();
+}

@@ -126,6 +126,54 @@ double env_get_dbl(struct Table *t, char* key)
 	return -1.0;
 }
 
+bool env_get_element(struct Table* t, char* key, int id, struct Opp_Obj* ret)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+
+	if (t->list[loc] == NULL)
+		return false;
+	else 
+	{
+		while (pos) {
+			if (!strcmp(pos->key, key)) 
+			{
+				if (pos->type == VLIST) 
+				{
+					int index = 0;
+					for (struct Opp_Value* val = pos->value.next; val != NULL; val = val->next)
+					{
+						if (id == index)
+						{
+							switch (val->vtype)
+							{
+								case VINT: 
+									ret->obj_type = OBJ_INT; 
+									ret->oint = val->ival;
+									break;
+							}
+							return true;
+						}
+						index++;
+					}
+					if (id >= index)
+						opp_error(NULL, "Error element value is larger then array size '%s'", key);
+
+					return false;
+				}
+				else 
+					return false;
+			}
+			if (pos->next != NULL)
+				pos = pos->next;
+			else 
+				return false; 
+		}
+	}
+
+	return true;
+}
+
 char* env_get_str(struct Table *t, char* key)
 {
 	unsigned int loc = hash_str(key, t);
@@ -199,7 +247,6 @@ bool env_new_cfn(struct Table *t, char* key, void (*fn)(struct Opp_List* args,st
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -221,6 +268,7 @@ bool env_new_cfn(struct Table *t, char* key, void (*fn)(struct Opp_List* args,st
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VCFUNC;
 		strcpy(new_node->key, key);
 		new_node->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
@@ -236,7 +284,6 @@ bool env_new_str(struct Table *t, char* key, char* value)
 	unsigned int loc = hash_str(key, t);
 	int len = strlen(value)+1;
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -259,6 +306,7 @@ bool env_new_str(struct Table *t, char* key, char* value)
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VSTR;
 		strcpy(new_node->key, key);
 		new_node->value.strval = malloc(sizeof(char)*len);
@@ -273,7 +321,6 @@ bool env_new_none(struct Table *t, char* key)
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -292,6 +339,7 @@ bool env_new_none(struct Table *t, char* key)
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VNONE;
 		strcpy(new_node->key, key);
 		t->list[loc] = new_node;
@@ -304,7 +352,6 @@ bool env_new_int(struct Table *t, char* key, int value)
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -324,6 +371,7 @@ bool env_new_int(struct Table *t, char* key, int value)
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VINT;
 		strcpy(new_node->key, key);
 		new_node->value.ival = value;
@@ -337,7 +385,6 @@ bool env_new_dbl(struct Table *t, char* key, double value)
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -357,6 +404,7 @@ bool env_new_dbl(struct Table *t, char* key, double value)
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VDOUBLE;
 		strcpy(new_node->key, key);
 		new_node->value.dval = value;
@@ -370,7 +418,6 @@ bool env_new_bool(struct Table *t, char* key, int value)
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -390,6 +437,7 @@ bool env_new_bool(struct Table *t, char* key, int value)
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VBOOL;
 		strcpy(new_node->key, key);
 		new_node->value.bval = value;
@@ -403,7 +451,6 @@ bool env_new_fn(struct Table *t, char* key, struct Opp_Stmt* stmts, struct Opp_L
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
-	struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 
 	if (t->list[loc] != NULL) {
 		while (pos) {
@@ -427,16 +474,63 @@ bool env_new_fn(struct Table *t, char* key, struct Opp_Stmt* stmts, struct Opp_L
 		}
 	}
 	else {
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
 		new_node->type = VFUNC;
 		strcpy(new_node->key, key);
 		new_node->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
 		new_node->func->stmts = stmts;
 		new_node->func->arg_name = args;
+		new_node->func->local = init_namespace(key, current_ns);
 		t->list[loc] = new_node;
 	}
 
 	return true;
 }
+
+// bool env_new_array(struct Table *t, char* key, struct Opp_Array* array)
+// {
+// 	unsigned int loc = hash_str(key, t);
+// 	struct Hash_Node* pos = t->list[loc];
+
+// 	if (t->list[loc] != NULL) {
+// 		while (pos) {
+// 			if (!strcmp(pos->key, key)) {
+// 				return true;
+// 			}
+// 			if (pos->next == NULL) {
+				
+// 				return true;
+// 			}
+// 			else
+// 				pos = pos->next;
+// 		}
+// 	}
+// 	else {
+// 		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+// 		struct Opp_Value* current = &new_node->value;
+// 		new_node->type = VLIST;
+// 		strcpy(new_node->key, key);
+
+// 		for (int i = 0; i < array->size; i++)
+// 		{
+// 			current->next = (struct Opp_Value*)malloc(sizeof(struct Opp_Value));
+
+// 			switch (array->array_type)
+// 			{
+// 				case OBJ_INT: 
+// 					current->next->vtype = VINT;
+// 					current->next->ival = array->iarr[i];
+// 					break;
+// 			}
+
+// 			current = current->next;
+// 		}
+		
+// 		t->list[loc] = new_node;
+// 	}
+
+// 	return true;
+// }
 
 void env_add_local(struct Table* t, char* key, struct Opp_List* args, struct Opp_List* name)
 {

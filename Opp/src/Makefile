@@ -1,5 +1,5 @@
 CC = gcc
-FLAG = -std=c11 -Wno-switch 
+FLAG = -std=c11 -Wno-switch -O2
 
 # Uncomment if want to init port
 RAYLIB = ./tools/raylib_port.c 

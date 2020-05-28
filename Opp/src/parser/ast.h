@@ -21,7 +21,8 @@ struct Opp_Value {
 
 enum Opp_Expr_Type {
 	EBIN, ELOGIC, ECALL,
-	EASSIGN, EUNARY, ESUB
+	EASSIGN, EUNARY, ESUB,
+	EARRAY, EELEMENT
 };
 
 enum Opp_Stmt_Type {
@@ -76,6 +77,16 @@ struct Opp_Expr_Logic {
 
 struct Opp_Expr_Sub {
 	struct Opp_Expr* unary;
+};
+
+struct Opp_Expr_Array {
+	int amount;
+	struct Opp_Expr** elements;
+};
+
+struct Opp_Expr_Element {
+	struct Opp_Expr* name;
+	struct Opp_Expr* loc;
 };
 
 struct Opp_Stmt_Expr {

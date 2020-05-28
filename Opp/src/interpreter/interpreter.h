@@ -1,6 +1,5 @@
 #ifndef OPP_INTER
 #define OPP_INTER
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "../opp.h"
@@ -16,6 +15,18 @@ enum Opp_Obj_Type {
 	OBJ_FLOAT, OBJ_STR, OBJ_ARRAY,
 };
 
+// struct Opp_Array {
+// 	enum Opp_Obj_Type array_type;
+// 	int size;
+
+// 	union {
+// 		char sarr[MAX_OSTR][MAX_OSTR];
+// 		int iarr[MAX_OSTR];
+// 		double darr[MAX_OSTR];
+// 		_Bool barr[MAX_OSTR];
+// 	};
+// };
+
 struct Opp_Obj {
 	enum Opp_Obj_Type obj_type;
 
@@ -23,8 +34,8 @@ struct Opp_Obj {
 		_Bool obool;
 		int oint;
 		double ofloat;
-		// char* ostr;
 		char ostr[MAX_OSTR];
+		// struct Opp_Array arr;
 	};
 };
 
@@ -53,6 +64,8 @@ void opp_eval_import(struct Opp_Stmt_Import* expr, struct Opp_Obj* obj);
 void opp_eval_while(struct Opp_Stmt_While* expr, struct Opp_Obj* obj);
 void opp_eval_func(struct Opp_Stmt_Func* expr, struct Opp_Obj* obj);
 void opp_eval_return(struct Opp_Stmt_Ret* expr, struct Opp_Obj* obj);
+void opp_eval_array(struct Opp_Expr_Array* expr, struct Opp_Obj* obj);
+void opp_eval_element(struct Opp_Expr_Element* expr, struct Opp_Obj* obj);
 
 void opp_eval_sub(struct Opp_Expr_Sub* expr, struct Opp_Obj* obj);
 
