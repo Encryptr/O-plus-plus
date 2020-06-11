@@ -1,0 +1,24 @@
+func flip_coin() {
+
+	var rolls = 0;
+
+	while rolls < 20 {
+		var a = rand() % 2;
+
+		if (a == 0)
+			print("Heads");
+		if (a == 1)
+			print("Tails");
+
+		if ((rolls+1) % 10 == 0)
+			print("");
+
+		rolls = rolls+1;
+	}
+}
+
+func main() {
+	flip_coin();	
+}
+
+main();

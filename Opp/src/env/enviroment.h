@@ -16,12 +16,10 @@
 
 struct Namespace;
 struct Opp_Obj;
-struct Opp_Array;
 
 typedef void (*Opp_CFunc)(struct Opp_List* args, struct Opp_Obj* obj);
 
 struct Opp_Func {
-	int line;
 	Opp_CFunc cfn;
 	struct Opp_Stmt* stmts;
 	struct Opp_List* arg_name;
@@ -65,9 +63,9 @@ bool env_new_int(struct Table *t, char* key, int value);
 bool env_new_bool(struct Table *t, char* key, int value);
 bool env_new_dbl(struct Table *t, char* key, double value);
 bool env_new_cfn(struct Table *t, char* key, Opp_CFunc fn);
-bool env_new_array(struct Table *t, char* key, struct Opp_Array* array);
-
-bool env_get_element(struct Table* t, char* key, int id, struct Opp_Obj* ret);
+bool env_change_element(struct Table *t, char* key, int id, struct Opp_Obj* obj);
+bool env_new_array(struct Table *t, char* key);
+bool env_new_element(struct Table *t, char* key, struct Opp_Obj* obj);
 
 bool env_new_fn(struct Table *t, char* key, struct Opp_Stmt* stmts, struct Opp_List* args);
 bool env_lookup(struct Table* t, char* key);
@@ -78,6 +76,8 @@ double env_get_dbl(struct Table *t, char* key);
 char* env_get_str(struct Table *t, char* key);
 void* env_get_cfn(struct Table *t, char* key);
 struct Hash_Node* env_get_fn(struct Table *t, char* key);
+void env_get_element(struct Table* t, char* key, int id, struct Opp_Obj* obj);
+int env_get_element_type(struct Table* t, char* key, int id);
 
 void env_add_local(struct Table* t, char* key, struct Opp_List* args, struct Opp_List* name);
 

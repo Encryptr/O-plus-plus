@@ -25,7 +25,7 @@ func main () {
 
 			clear_background();
 
-			draw_text("O++ = the best language", 190, 200, 20);
+			draw_text("O++ the best language", 190, 200, 20);
 
 			draw_circleV(ball_x, ball_y, 50);
 

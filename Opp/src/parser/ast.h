@@ -5,7 +5,7 @@
 
 enum Value_Type {
 	VBOOL, VINT, VDOUBLE, VSTR,
-	VCFUNC, VLIST, VFUNC, VNONE
+	VCFUNC, VLIST, VFUNC, VNONE, VLISTEND
 };
 
 struct Opp_Value {

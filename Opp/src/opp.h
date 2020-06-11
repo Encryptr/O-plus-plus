@@ -34,6 +34,4 @@ static void opp_flag(char** args);
 static void opp_init_repl();
 static char* get_repl_line();
 
-
-
 #endif

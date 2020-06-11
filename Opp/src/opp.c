@@ -40,9 +40,9 @@ void init_file(const char* fname, struct Opp_Scan *s)
 
 void init_opp(const char* fname)
 {
-	// clock_t start, end;
-	// double cpu_time_used;
-	// start = clock();
+	clock_t start, end;
+	double cpu_time_used;
+	start = clock();
      
 	struct Opp_Scan data = {0};
 	struct Opp_Parser* parser;
@@ -61,9 +61,9 @@ void init_opp(const char* fname)
 
 	opp_eval_init(parser);
 
-	// end = clock();
- //    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
- //    printf("==>%lf\n",cpu_time_used);
+	end = clock();
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("==>%lf\n",cpu_time_used);
 }
 
 static void opp_flag(char** args)

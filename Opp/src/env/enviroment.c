@@ -126,52 +126,109 @@ double env_get_dbl(struct Table *t, char* key)
 	return -1.0;
 }
 
-bool env_get_element(struct Table* t, char* key, int id, struct Opp_Obj* ret)
+int env_get_element_type(struct Table* t, char* key, int id)
 {
 	unsigned int loc = hash_str(key, t);
 	struct Hash_Node* pos = t->list[loc];
 
 	if (t->list[loc] == NULL)
-		return false;
-	else 
-	{
+		return -1;
+	else {
 		while (pos) {
-			if (!strcmp(pos->key, key)) 
-			{
-				if (pos->type == VLIST) 
+			if (!strcmp(pos->key, key)) {
+				if (pos->type == VLIST)
 				{
-					int index = 0;
-					for (struct Opp_Value* val = pos->value.next; val != NULL; val = val->next)
+					int counter = 0;
+					for (struct Opp_Value* i = &pos->value; i != NULL; i = i->next)
 					{
-						if (id == index)
-						{
-							switch (val->vtype)
-							{
-								case VINT: 
-									ret->obj_type = OBJ_INT; 
-									ret->oint = val->ival;
-									break;
-							}
-							return true;
-						}
-						index++;
+						if (counter == id)
+							return i->vtype;
+						counter++;
 					}
-					if (id >= index)
-						opp_error(NULL, "Error element value is larger then array size '%s'", key);
-
-					return false;
+					if (id >= counter)
+						opp_error(NULL, "Attempt to access element outside of array size '%s'", key);
 				}
-				else 
-					return false;
+				else return -1;
 			}
 			if (pos->next != NULL)
 				pos = pos->next;
 			else 
-				return false; 
+				return -1; 
 		}
 	}
+	return -1;
+}
 
-	return true;
+void env_get_element(struct Table* t, char* key, int id, struct Opp_Obj* obj)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+
+	if (t->list[loc] == NULL) {
+		obj->obj_type = OBJ_NONE;
+		return;
+	}
+	else {
+		while (pos) {
+			if (!strcmp(pos->key, key)) {
+				if (pos->type == VLIST) 
+				{
+					int counter = 0;
+					for (struct Opp_Value* i = &pos->value; i != NULL; i = i->next)
+					{
+						if (counter == id) {
+							switch (i->vtype)
+							{
+								case VINT: {
+									obj->obj_type = OBJ_INT;
+									obj->oint = i->ival;
+									break;
+								}
+
+								case VSTR: {
+									obj->obj_type = OBJ_STR;
+									strcpy(obj->ostr, i->strval);
+									break;
+								}
+
+								case VNONE:
+									obj->obj_type = OBJ_NONE;
+									break;
+							}
+							return;
+						}
+						counter++;
+					}
+					if (id >= counter)
+						opp_error(NULL, "Attempt to access element outside of array size '%s'", key);
+					obj->obj_type = OBJ_NONE;
+					return;
+				}
+				else if (pos->type == VSTR)
+				{
+					obj->obj_type = OBJ_STR;
+					char str[2] = {0};
+					if (id > strlen(pos->value.strval))
+						opp_error(NULL, "Attempt to access element ouside of string len '%s'", key);
+					str[0] = pos->value.strval[id];
+					str[1] = '\0';
+					strcpy(obj->ostr, str);
+					return;
+				}
+				else { 
+					obj->obj_type = OBJ_NONE;
+					return;
+				}
+			}
+			if (pos->next != NULL)
+				pos = pos->next;
+			else {
+				obj->obj_type = OBJ_NONE;
+				return;
+			}
+		}
+	}
+	obj->obj_type = OBJ_NONE;
 }
 
 char* env_get_str(struct Table *t, char* key)
@@ -480,57 +537,156 @@ bool env_new_fn(struct Table *t, char* key, struct Opp_Stmt* stmts, struct Opp_L
 		new_node->func = (struct Opp_Func*)malloc(sizeof(struct Opp_Func));
 		new_node->func->stmts = stmts;
 		new_node->func->arg_name = args;
-		new_node->func->local = init_namespace(key, current_ns);
+		// new_node->func->local = init_namespace(key, current_ns);
 		t->list[loc] = new_node;
 	}
 
 	return true;
 }
 
-// bool env_new_array(struct Table *t, char* key, struct Opp_Array* array)
-// {
-// 	unsigned int loc = hash_str(key, t);
-// 	struct Hash_Node* pos = t->list[loc];
+bool env_new_element(struct Table *t, char* key, struct Opp_Obj* obj)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
 
-// 	if (t->list[loc] != NULL) {
-// 		while (pos) {
-// 			if (!strcmp(pos->key, key)) {
-// 				return true;
-// 			}
-// 			if (pos->next == NULL) {
-				
-// 				return true;
-// 			}
-// 			else
-// 				pos = pos->next;
-// 		}
-// 	}
-// 	else {
-// 		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
-// 		struct Opp_Value* current = &new_node->value;
-// 		new_node->type = VLIST;
-// 		strcpy(new_node->key, key);
+	if (t->list[loc] == NULL) return false;
+	while (pos) 
+	{
+		if (!strcmp(pos->key, key)) 
+		{
+			if (pos->type == VLIST) 
+			{
+				for (struct Opp_Value* i = &pos->value; i != NULL; i = i->next)
+				{
+					if (i->next == NULL)
+					{
+						i->next = (struct Opp_Value*)malloc(sizeof(struct Opp_Value));
 
-// 		for (int i = 0; i < array->size; i++)
-// 		{
-// 			current->next = (struct Opp_Value*)malloc(sizeof(struct Opp_Value));
+						switch (obj->obj_type)
+						{
+							case OBJ_INT:
+								i->next->vtype = VINT;
+								i->next->ival = obj->oint;
+								break;
 
-// 			switch (array->array_type)
-// 			{
-// 				case OBJ_INT: 
-// 					current->next->vtype = VINT;
-// 					current->next->ival = array->iarr[i];
-// 					break;
-// 			}
+							case OBJ_STR:
+								i->next->vtype = VSTR;
+								i->next->strval = (char*)malloc(strlen(obj->ostr)+1);
+								strcpy(i->next->strval, obj->ostr);
+								break;
+						}
+						return true;
+					}
+				}
+			}
+			else 
+				return false;
+		}
+		if (pos->next != NULL)
+			pos = pos->next;
+	}
+	return false;
+}
 
-// 			current = current->next;
-// 		}
-		
-// 		t->list[loc] = new_node;
-// 	}
+bool env_change_element(struct Table *t, char* key, int id, struct Opp_Obj* obj)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
 
-// 	return true;
-// }
+	if (t->list[loc] == NULL) return false;
+	while (pos) 
+	{
+		if (!strcmp(pos->key, key)) 
+		{
+			if (pos->type == VLIST) {
+
+				if (pos->value.vtype == VNONE)
+				{
+					switch (obj->obj_type)
+					{
+						case OBJ_INT: pos->value.vtype = VINT; break;
+						case OBJ_STR: pos->value.vtype = VSTR; break;
+					}
+				}
+
+				int counter = 0;
+				for (struct Opp_Value* i = &pos->value; i != NULL; i = i->next)
+				{
+					if (counter == id) 
+					{
+						switch (i->vtype)
+						{
+							case VINT: i->ival = obj->oint; break;
+							case VSTR: 
+								if (strlen(i->strval) > strlen(obj->ostr))
+									strcpy(i->strval, obj->ostr);
+								else {
+									free(i->strval);
+									i->strval = (char*)malloc(strlen(obj->ostr)+1);
+									strcpy(i->strval, obj->ostr);
+								}
+								break;
+						}
+						return true;
+					}
+					counter++;
+				}
+				if (id >= counter)
+					opp_error(NULL, "Attempt to access element outside of array size '%s'", key);
+			}
+		}
+		if (pos->next != NULL)
+			pos = pos->next;
+	}
+	return false;
+}
+
+bool env_new_array(struct Table *t, char* key)
+{
+	unsigned int loc = hash_str(key, t);
+	struct Hash_Node* pos = t->list[loc];
+
+	if (t->list[loc] != NULL) {
+		opp_error(NULL, "LOL NOT A FEATURE");
+	}
+
+	{
+		struct Hash_Node* new_node = (struct Hash_Node*)malloc(sizeof(struct Hash_Node));
+		struct Opp_Value* value = &new_node->value;
+		new_node->type = VLIST;
+		strcpy(new_node->key, key);
+
+		for (struct Opp_Value* i = &opp_array.array; i != NULL; i = i->next)
+		{
+			switch (i->vtype)
+			{
+				case VINT:
+					value->vtype = VINT;
+					value->ival = i->ival;
+					break;
+
+				case VSTR:
+					value->vtype = VSTR;
+					value->strval = (char*)malloc(strlen(i->strval)+1);
+					strcpy(value->strval, i->strval);
+					break;
+
+				case VNONE: 
+					value->vtype = VNONE;
+					break;
+			}
+
+			if (i->next != NULL) {
+				value->next = (struct Opp_Value*)malloc(sizeof(struct Opp_Value));
+				value = value->next;
+			}
+		}
+
+		t->list[loc] = new_node;
+	}
+
+	return true;
+}
 
 void env_add_local(struct Table* t, char* key, struct Opp_List* args, struct Opp_List* name)
 {

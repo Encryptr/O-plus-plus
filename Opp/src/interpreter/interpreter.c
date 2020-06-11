@@ -1,7 +1,5 @@
 #include "interpreter.h"
 
-// #define ARRAY_TEST
-
 void opp_eval_init(struct Opp_Parser* parser)
 {
 	if (global_ns == NULL || parser == NULL)
@@ -38,18 +36,6 @@ void opp_repl_ret(struct Opp_Obj* val)
 
 		case OBJ_FLOAT:
 			printf("REAL: %lf\n", val->ofloat);
-			break;
-
-		// case OBJ_ARRAY:
-		// 	printf("[");
-		// 	for (int i = 0; i < val->arr.size; i++)
-		// 	{
-		// 		if (i == val->arr.size-1)
-		// 			printf("%d", val->arr.iarr[i]);
-		// 		else
-		// 			printf("%d ", val->arr.iarr[i]);
-		// 	}
-			// printf("]\n");
 			break;
 	}
 }
@@ -182,17 +168,9 @@ void opp_eval_expr(struct Opp_Expr* expr, struct Opp_Obj* literal)
 									strcpy(literal->ostr, search->inside->list[loc]->value.strval);
 									break;
 
-								// case VLIST:
-								// 	literal->obj_type = OBJ_ARRAY;
-								// 	literal->arr.array_type = OBJ_INT;
-								// 	int i = 0;
-								// 	for (struct Opp_Value* val = search->inside->list[loc]->value.next; val != NULL; val = val->next)
-								// 	{
-								// 		literal->arr.iarr[i] = val->ival;
-								// 		i++;
-								// 	}
-								// 	literal->arr.size = i;
-								// 	break;
+								case VLIST:
+									literal->obj_type = OBJ_ARRAY;
+									break;
 
 								case VNONE:
 									opp_error(NULL, "Attempting to evaluate a var '%s' of type none", 
@@ -241,17 +219,17 @@ void opp_eval_expr(struct Opp_Expr* expr, struct Opp_Obj* literal)
 			break;
 		}
 
-		// case EARRAY: {
-		// 	struct Opp_Expr_Array* temp = (struct Opp_Expr_Array*)(expr->expr);
-		// 	opp_eval_array(temp, literal);
-		// 	break;
-		// }
+		case EARRAY: {
+			struct Opp_Expr_Array* temp = (struct Opp_Expr_Array*)(expr->expr);
+			opp_eval_array(temp, literal);
+			break;
+		}
 
-		// case EELEMENT: {
-		// 	struct Opp_Expr_Element* temp = (struct Opp_Expr_Element*)(expr->expr);
-		// 	opp_eval_element(temp, literal);
-		// 	break;
-		// }
+		case EELEMENT: {
+			struct Opp_Expr_Element* temp = (struct Opp_Expr_Element*)(expr->expr);
+			opp_eval_element(temp, literal);
+			break;
+		}
 	}
 }
 
@@ -276,27 +254,77 @@ void opp_eval_sub(struct Opp_Expr_Sub* expr, struct Opp_Obj* obj)
 	}
 }
 
-// void opp_eval_element(struct Opp_Expr_Element* expr, struct Opp_Obj* obj)
-// {
-// 	struct Opp_Expr* a = (expr->loc);
-// 	struct Opp_Expr_Array* b = (a->expr);
+void opp_get_element(struct Opp_Obj* obj, char* name)
+{
+	unsigned int loc = hash_str(name, current_ns->inside);
+	struct Namespace* search = current_ns;
 
-// 	struct Opp_Expr* w = (expr->name);
-// 	struct Opp_Expr_Unary* u = (w->expr);
+	int type = -1;
+	while (search != NULL)
+	{
+		if (search->inside->list[loc] != NULL) {
+			
+			int id = obj->oint;
+			env_get_element(search->inside, name, obj->oint, obj);
 
-// 	struct Opp_Obj loc = {0};
+			if (obj->obj_type == OBJ_NONE)
+				opp_error(NULL, "Error getting element from %s[%d]", name, id);
 
-// 	opp_eval_expr(b->elements[0], &loc);
+			return;
+		}
+		search = search->parent;
+	}
+}
 
-// 	if (loc.obj_type != OBJ_INT)
-// 		opp_error(NULL, "Error only integers for element index '%s'", u->val.strval);
+void opp_eval_element(struct Opp_Expr_Element* expr, struct Opp_Obj* obj)
+{
+	switch (expr->name->type)
+	{
+		case EELEMENT: {
 
-// 	if (loc.oint < 0)
-// 		opp_error(NULL, "Error element value not allowed to less than 0 '%s'", u->val.strval);
+			// HANDLE MATRIX
+			struct Opp_Expr_Element* name = (struct Opp_Expr_Element*)(expr->name->expr);
 
-// 	if (!env_get_element(current_ns->inside, u->val.strval, loc.oint, obj))
-// 		opp_error(NULL, "Error getting element from array '%s'", u->val.strval);
-// }
+			struct Opp_Expr* a = (struct Opp_Expr*)(name->name);
+			printf("===>%d\n", a->type);
+
+			break;
+		}
+
+		case EUNARY: {
+			struct Opp_Expr_Unary* name = (struct Opp_Expr_Unary*)(expr->name->expr);
+			if (name->val.strval == NULL)
+				opp_error(NULL, "Error analizing identifier for array element");
+
+			struct Opp_Obj temp;
+			struct Opp_Expr_Array* arr = (struct Opp_Expr_Array*)(expr->loc->expr);
+
+			if (arr->amount > 1 && arr->elements[0] != NULL)
+				opp_error(NULL, "Error caught when providing more then one element to acess '%s'", name->val.strval);
+
+			opp_eval_expr(arr->elements[0], &temp);
+
+			if (temp.obj_type != OBJ_INT)
+				opp_error(NULL, "Error accesing element in array can only be done by an int '%s'", name->val.strval);
+
+			opp_get_element(&temp, name->val.strval);
+
+			switch (temp.obj_type)
+			{
+				case OBJ_INT:
+					obj->obj_type = OBJ_INT;
+					obj->oint = temp.oint;
+					break;
+
+				case OBJ_STR:
+					obj->obj_type = OBJ_STR;
+					strcpy(obj->ostr, temp.ostr);
+					break;
+			}
+			break; 
+		}
+	}
+}
 
 void opp_eval_bin(struct Opp_Expr_Bin* expr, struct Opp_Obj* obj)
 {
@@ -519,6 +547,34 @@ void opp_eval_logic(struct Opp_Expr_Logic* expr, struct Opp_Obj* obj)
 			break;
 		}
 
+		case TNOTEQ: {
+			opp_eval_expr(expr->left,&left);
+			opp_eval_expr(expr->right,&right);
+
+			if (left.obj_type == OBJ_INT && right.obj_type == OBJ_INT)
+				obj->obool = (left.oint != right.oint);
+
+			else if (left.obj_type == OBJ_FLOAT && right.obj_type == OBJ_FLOAT) {
+				if (left.ofloat != right.ofloat)
+					obj->obool = 1;
+				else 
+					obj->obool = 0; 
+			}
+
+			else if (left.obj_type == OBJ_BOOL && right.obj_type == OBJ_BOOL)
+				obj->obool = (left.obool != right.obool);
+
+			else if (left.obj_type == OBJ_STR && right.obj_type == OBJ_STR)
+				obj->obool = strcmp(left.ostr, right.ostr);
+
+			else if (left.obj_type != right.obj_type) {
+				printf("Mixing types in '==' expression causing false\n");
+				obj->obool = 0;
+			}
+			obj->obj_type = OBJ_BOOL;
+			break;
+		}
+
 		case TGT: {
 			opp_eval_expr(expr->left,&left);
 			opp_eval_expr(expr->right,&right);
@@ -575,35 +631,6 @@ void opp_eval_logic(struct Opp_Expr_Logic* expr, struct Opp_Obj* obj)
 	}
 }
 
-// void opp_eval_array(struct Opp_Expr_Array* expr, struct Opp_Obj* obj)
-// {
-// 	obj->obj_type = OBJ_ARRAY;
-// 	obj->arr.size = expr->amount;
-
-// 	struct Opp_Obj temp = {0};
-// 	opp_eval_expr(expr->elements[0], &temp);
-
-// 	obj->arr.array_type = temp.obj_type;
-
-// 	for (int i = 0; i < expr->amount; i++)
-// 	{
-// 		if (i > 0) {
-// 			opp_eval_expr(expr->elements[i], &temp);
-
-// 			if (temp.obj_type != obj->arr.array_type)
-// 				opp_error(NULL, "Attempt to mix types in array");
-// 		}
-
-// 		switch (obj->arr.array_type) 
-// 		{
-// 			case OBJ_INT: obj->arr.iarr[i] = temp.oint; break;
-// 			case OBJ_FLOAT: obj->arr.darr[i] = temp.ofloat; break;
-// 			case OBJ_BOOL: obj->arr.barr[i] = temp.obool; break;
-// 			case OBJ_STR: strcpy(obj->arr.sarr[i], temp.ostr); break;
-// 		}
-// 	}
-// }
-
 void opp_eval_call(struct Opp_Expr_Call* expr, struct Opp_Obj* obj)
 {
 	struct Opp_Expr* in = (struct Opp_Expr*)(expr->callee);
@@ -642,7 +669,7 @@ void opp_eval_call(struct Opp_Expr_Call* expr, struct Opp_Obj* obj)
 	{
 		struct Hash_Node* fn = env_get_fn(search->inside, unary->val.strval);
 
-		// fn->func->local = init_namespace(unary->val.strval, current_ns);
+		fn->func->local = init_namespace(unary->val.strval, current_ns);
 
 		env_add_local(fn->func->local->inside, unary->val.strval, expr->args, fn->func->arg_name);
 
@@ -659,14 +686,16 @@ void opp_eval_call(struct Opp_Expr_Call* expr, struct Opp_Obj* obj)
 		}
 		current_ns = temp;
 
-		for (int a = 0; a < fn->func->local->inside->size; a++)
-			fn->func->local->inside->list[a] = NULL;
-		memset(fn->func->local, sizeof(fn->func->local), 0);
-
-		// for (int a=0; a<fn->func->local->inside->size; a++)
-		// 	free(fn->func->local->inside->list[a]);
-		// free(fn->func->local->inside);
-		// free(fn->func->local);
+		// for (int a = 0; a < fn->func->local->inside->size; a++)
+		// 	fn->func->local->inside->list[a] = NULL;
+		// memset(fn->func->local, sizeof(fn->func->local), 0);
+	
+		for (int a=0; a<fn->func->local->inside->size; a++) {
+			free(fn->func->local->inside->list[a]);
+		}
+		free(fn->func->local->inside->list);
+		free(fn->func->local->inside);
+		free(fn->func->local);
 
 		if (opp_state.trigger_ret == 1)
 		{
@@ -726,8 +755,60 @@ void opp_eval_block(struct Opp_Stmt_Block* expr, struct Opp_Obj* obj)
 	free(new_ns->inside);
 	free(new_ns);
 
-	current_ns = temp;
-	
+	current_ns = temp;	
+}
+
+void opp_assign_element(struct Opp_Expr_Assign* expr, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_NONE;
+	struct Opp_Expr_Element* a = (struct Opp_Expr_Element*)(expr->ident->expr);
+	// TODO: ADD matrix
+	if (a->name->type != EUNARY)
+		opp_error(NULL, "Error getting name to assign array element");
+
+	struct Opp_Expr_Unary* name = (struct Opp_Expr_Unary*)(a->name->expr);
+	struct Opp_Expr_Array* arr = (struct Opp_Expr_Array*)(a->loc->expr);
+
+	if (arr->amount > 1)
+		opp_error(NULL, "Error not expected more than one value in element expression '%s'", name->val.strval);
+
+	struct Opp_Obj elem_val;
+	opp_eval_expr(arr->elements[0], &elem_val); 
+
+	if (elem_val.obj_type != OBJ_INT)
+		opp_error(NULL, "Error expected integer for elements location '%s'", name->val.strval);
+
+	struct Opp_Expr* value = (struct Opp_Expr*)(expr->val);
+	struct Opp_Obj final_val = {0};
+	opp_eval_expr(value, &final_val);
+
+	unsigned int loc = hash_str(name->val.strval, current_ns->inside);
+	struct Namespace* search = current_ns;
+
+	int type;
+	while (search != NULL)
+	{
+		if (search->inside->list[loc] != NULL) {
+			type = env_get_element_type(search->inside, name->val.strval, 
+				elem_val.oint);
+			break;
+		}
+		search = search->parent;
+	}
+
+	if (type == -1)
+		opp_error(NULL, "Error assigning array's element %s[%d]'", name->val.strval, elem_val.oint);
+
+	if (
+	(type == VINT && final_val.obj_type != OBJ_INT) ||
+	(type == VDOUBLE && final_val.obj_type != OBJ_FLOAT) ||
+	(type == VBOOL && final_val.obj_type != OBJ_BOOL) ||
+	(type == VSTR && final_val.obj_type != OBJ_STR))
+		opp_error(NULL, "Error assigning value to array element (type change) '%s'", name->val.strval);
+
+	if (!env_change_element(search->inside, name->val.strval, 
+		elem_val.oint, &final_val))
+		opp_error(NULL, "Error changing elements value %s[%d]", name->val.strval, elem_val.oint);
 }
 
 void opp_eval_assign(struct Opp_Expr_Assign* expr, struct Opp_Obj* obj)
@@ -735,6 +816,11 @@ void opp_eval_assign(struct Opp_Expr_Assign* expr, struct Opp_Obj* obj)
 	obj->obj_type = OBJ_NONE;
 	struct Opp_Expr* a = (struct Opp_Expr*)(expr->ident);
 	struct Opp_Expr* value = (struct Opp_Expr*)(expr->val);
+
+	if (a->type == EELEMENT) {
+		opp_assign_element(expr, obj);
+		return;
+	}
 
 	if (a->type != EUNARY)
 		opp_error(NULL, "Expected identifier in assigment");
@@ -856,9 +942,12 @@ void opp_eval_var(struct Opp_Stmt_Var* expr, struct Opp_Obj* obj)
 			env_new_bool(current_ns->inside, e->val.strval, new_val.obool);
 			break;
 
-		// case OBJ_ARRAY:
-		// 	env_new_array(current_ns->inside, e->val.strval, &new_val.arr);
-		// 	break;
+		case OBJ_ARRAY:
+			if (opp_array.used != 1)
+				opp_error(NULL, "Internal error 'OBJ_ARRAY'");
+			env_new_array(current_ns->inside, e->val.strval);
+			opp_array.used = 0;
+			break;
 
 		default:
 			opp_error(NULL, "Error to assign a value to '%s'", e->val.strval);
@@ -925,9 +1014,48 @@ void opp_eval_while(struct Opp_Stmt_While* expr, struct Opp_Obj* obj)
 	current_ns = temp;
 
 	for (int a=0; a<new_ns->inside->size; a++)
-		free(new_ns->inside->list[a]);	
+		free(new_ns->inside->list[a]);
+	free(new_ns->inside->list);
 	free(new_ns->inside);
 	free(new_ns);
+}
+
+void opp_eval_array(struct Opp_Expr_Array* expr, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_ARRAY;
+	struct Opp_Value* ptr = &opp_array.array;
+	opp_array.used = 1;
+
+	if (expr->amount == 0)
+		opp_array.array.vtype = VNONE;
+
+	for (int i = 0; i < expr->amount; i++)
+	{
+		struct Opp_Expr* a = (struct Opp_Expr*)(expr->elements[i]);
+		struct Opp_Obj ret;
+		opp_eval_expr(a, &ret);
+
+		switch (ret.obj_type)
+		{
+			case OBJ_INT:
+				ptr->vtype = VINT;
+				ptr->ival = ret.oint;
+				break;
+
+			case OBJ_STR:
+				ptr->vtype = VSTR;
+				ptr->strval = (char*)malloc(strlen(ret.ostr)+1);
+				strcpy(ptr->strval, ret.ostr);
+				break;
+
+		}
+		if (i != (expr->amount-1)) {
+			if (ptr->next == NULL)
+				ptr->next = (struct Opp_Value*)malloc(sizeof(struct Opp_Value));
+			ptr = ptr->next;
+		}
+	}
+	ptr->next = NULL;
 }
 
 void opp_eval_func(struct Opp_Stmt_Func* expr, struct Opp_Obj* obj)

@@ -447,19 +447,19 @@ struct Opp_Expr* opp_parse_prefix(struct Opp_Scan* s)
 
 	opp_next(s);
 	int operator = s->tok;
-	while (operator == TOPENP)
+	while (operator == TOPENP || operator == TOPENB)
 	{
-		// if (operator == TOPENB)
-		// {
-		// 	struct Opp_Expr_Element* get = (struct Opp_Expr_Element*)malloc(sizeof(struct Opp_Expr_Element));
-		// 	get->name = left;
-		// 	get->loc = opp_parse_array(s);
-		// 	left = opp_new_expr(EELEMENT, get);
+		if (operator == TOPENB)
+		{
+			struct Opp_Expr_Element* get = (struct Opp_Expr_Element*)malloc(sizeof(struct Opp_Expr_Element));
+			get->name = left;
+			get->loc = opp_parse_array(s);
+			left = opp_new_expr(EELEMENT, get);
 
-		// 	opp_next(s);
-		// 	operator = s->tok;
-		// }
-		// else 
+			opp_next(s);
+			operator = s->tok;
+		}
+		else 
 		{
 			struct Opp_Expr_Call* call = (struct Opp_Expr_Call*)malloc(sizeof(struct Opp_Expr_Call));
 			call->callee = left;
@@ -500,36 +500,36 @@ struct Opp_List* opp_parse_args(struct Opp_Scan* s)
 	return args;
 }
 
-// struct Opp_Expr* opp_parse_array(struct Opp_Scan* s)
-// {
-// 	struct Opp_Expr_Array* array = (struct Opp_Expr_Array*)malloc(sizeof(struct Opp_Expr_Array));
-// 	array->elements = (struct Opp_Expr**)malloc(sizeof(struct Opp_Expr*)*10);
-// 	struct Opp_Expr* expr = NULL;
+struct Opp_Expr* opp_parse_array(struct Opp_Scan* s)
+{
+	struct Opp_Expr_Array* array = (struct Opp_Expr_Array*)malloc(sizeof(struct Opp_Expr_Array));
+	array->elements = (struct Opp_Expr**)malloc(sizeof(struct Opp_Expr*)*10);
+	struct Opp_Expr* expr = NULL;
 
-// 	int i = 0;
+	int i = 0;
 
-// 	do {
-// 		opp_next(s);
-// 		if (i==0 && s->tok == TCLOSEB) break;
+	do {
+		opp_next(s);
+		if (i==0 && s->tok == TCLOSEB) break;
 
-// 		array->elements[i] = opp_parse_allign(s);
+		array->elements[i] = opp_parse_allign(s);
 
-// 		i++;
-// 		if (s->tok == TCLOSEB) break;
-// 	} while (s->tok == TCOMMA);
+		i++;
+		if (s->tok == TCLOSEB) break;
+	} while (s->tok == TCOMMA);
 
-// 	array->amount = i;
-// 	if (s->tok != TCLOSEB)
-// 		opp_error(s, "Missing terminating ']' in array");
+	array->amount = i;
+	if (s->tok != TCLOSEB)
+		opp_error(s, "Missing terminating ']' in array");
 
-// 	expr = opp_new_expr(EARRAY, array);
-// 	return expr;
-// }
+	expr = opp_new_expr(EARRAY, array);
+	return expr;
+}
 
 struct Opp_Expr* opp_parse_unary(struct Opp_Scan* s)
 {
-	// if (s->tok == TOPENB)
-	// 	return opp_parse_array(s);
+	if (s->tok == TOPENB)
+		return opp_parse_array(s);
 
 	struct Opp_Expr_Unary* unary = (struct Opp_Expr_Unary*)malloc(sizeof(struct Opp_Expr_Unary));
 	struct Opp_Expr* expr = NULL;

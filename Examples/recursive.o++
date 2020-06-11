@@ -1,0 +1,13 @@
+func recur(a) {
+	if (a < 50000)
+		recur(a + 1);
+	print(a);
+}
+
+func test() {
+	
+}
+
+while true {
+	test();
+}

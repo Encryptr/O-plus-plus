@@ -5,6 +5,12 @@ void opp_init_std()
 	// NULL Value
 	env_new_int(global_ns->inside, "NULL", 0);
 
+	// Std types
+	env_new_int(global_ns->inside, "INT", 1);
+	env_new_int(global_ns->inside, "REAL", 2);
+	env_new_int(global_ns->inside, "BOOL", 3);
+	env_new_int(global_ns->inside, "STRING", 4);
+
 	if (!env_new_cfn(global_ns->inside, "echo", echo))
 		internal_error("STD Fail", 2);
 
@@ -15,6 +21,15 @@ void opp_init_std()
 		internal_error("STD Fail", 2);
 
 	if (!env_new_cfn(global_ns->inside, "rand", opp_rand))
+		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "typeof", opp_typeof))
+		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "append", opp_append))
+		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "getc", opp_getc))
 		internal_error("STD Fail", 2);
 }
 
@@ -73,6 +88,62 @@ void opp_print(struct Opp_List* args, struct Opp_Obj* obj)
 				printf("%d\n", res.obool);
 				break;
 		}
+	}
+}
+
+void opp_append(struct Opp_List* args, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_INT;
+
+	expect_args(2);
+
+	struct Opp_Expr_Unary* name = (struct Opp_Expr_Unary*)(args->list[0]->expr);
+
+	if (name->type != IDENT)
+		opp_error(NULL, "Expected array as first argument in func 'append'");
+
+	unsigned int loc = hash_str(name->val.strval, current_ns->inside);
+	struct Namespace* search = current_ns;
+
+	int type = -1;
+	while (search != NULL)
+	{
+		if (search->inside->list[loc] != NULL) {
+
+			struct Opp_Obj res = {0};
+			opp_eval_expr(args->list[1], &res);
+			env_new_element(search->inside, name->val.strval, &res);
+			obj->oint = 1;
+			return;
+		}
+		search = search->parent;
+	}
+	obj->oint = 0;
+}
+
+void opp_getc(struct Opp_List* args, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_STR;
+
+	char out[2] = {0};
+	out[0] = getchar();
+	strcpy(obj->ostr, out);
+}
+
+void opp_typeof(struct Opp_List* args, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_INT;
+	expect_args(1);
+
+	struct Opp_Obj type = {0};
+	opp_eval_expr(args->list[0], &type);
+
+	switch (type.obj_type)
+	{
+		case OBJ_INT:   obj->oint = 1; break;
+		case OBJ_FLOAT: obj->oint = 2; break;
+		case OBJ_BOOL:  obj->oint = 3; break; 
+		case OBJ_STR:   obj->oint = 4; break;
 	}
 }
 
