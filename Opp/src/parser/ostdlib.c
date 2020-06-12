@@ -11,6 +11,7 @@ void opp_init_std()
 	env_new_int(global_ns->inside, "BOOL", 3);
 	env_new_int(global_ns->inside, "STRING", 4);
 
+	// Standart Functions
 	if (!env_new_cfn(global_ns->inside, "echo", echo))
 		internal_error("STD Fail", 2);
 
@@ -30,6 +31,12 @@ void opp_init_std()
 		internal_error("STD Fail", 2);
 
 	if (!env_new_cfn(global_ns->inside, "getc", opp_getc))
+		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "str_to_num", opp_strtonum))
+		internal_error("STD Fail", 2);
+
+	if (!env_new_cfn(global_ns->inside, "len", opp_len))
 		internal_error("STD Fail", 2);
 }
 
@@ -93,7 +100,7 @@ void opp_print(struct Opp_List* args, struct Opp_Obj* obj)
 
 void opp_append(struct Opp_List* args, struct Opp_Obj* obj)
 {
-	obj->obj_type = OBJ_INT;
+	obj->obj_type = OBJ_NONE;
 
 	expect_args(2);
 
@@ -105,20 +112,18 @@ void opp_append(struct Opp_List* args, struct Opp_Obj* obj)
 	unsigned int loc = hash_str(name->val.strval, current_ns->inside);
 	struct Namespace* search = current_ns;
 
-	int type = -1;
 	while (search != NULL)
 	{
 		if (search->inside->list[loc] != NULL) {
 
 			struct Opp_Obj res = {0};
 			opp_eval_expr(args->list[1], &res);
-			env_new_element(search->inside, name->val.strval, &res);
-			obj->oint = 1;
+			if (!env_new_element(search->inside, name->val.strval, &res))
+				opp_error(NULL, "Error appending to '%s'", name->val.strval);
 			return;
 		}
 		search = search->parent;
 	}
-	obj->oint = 0;
 }
 
 void opp_getc(struct Opp_List* args, struct Opp_Obj* obj)
@@ -126,7 +131,7 @@ void opp_getc(struct Opp_List* args, struct Opp_Obj* obj)
 	obj->obj_type = OBJ_STR;
 
 	char out[2] = {0};
-	out[0] = getchar();
+	scanf(" %c", &out[0]);
 	strcpy(obj->ostr, out);
 }
 
@@ -145,6 +150,61 @@ void opp_typeof(struct Opp_List* args, struct Opp_Obj* obj)
 		case OBJ_BOOL:  obj->oint = 3; break; 
 		case OBJ_STR:   obj->oint = 4; break;
 	}
+}
+
+void opp_strtonum(struct Opp_List* args, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_INT;
+	expect_args(1);
+
+	struct Opp_Obj ret;
+	opp_eval_expr(args->list[0], &ret);
+
+	if (ret.obj_type != OBJ_STR)
+		opp_error(NULL, "Error expected string as first argument 'str_to_num'");
+
+	if ( (ret.ostr[0] >= 'a' && ret.ostr[0] <= 'z')
+		|| (ret.ostr[0] >= 'A' && ret.ostr[0] <= 'Z'))
+	{
+		obj->oint = (int)ret.ostr[0];
+		return;
+	}
+
+	obj->oint = atoi(ret.ostr);
+}
+
+void opp_len(struct Opp_List* args, struct Opp_Obj* obj)
+{
+	obj->obj_type = OBJ_INT;
+	expect_args(1);
+
+	struct Opp_Obj ret;
+	opp_eval_expr(args->list[0], &ret);
+
+	if (ret.obj_type == OBJ_STR)
+		obj->oint = strlen(ret.ostr);
+	else if (ret.obj_type == OBJ_ARRAY)
+	{
+		struct Namespace* search = current_ns;
+		while (search != NULL)
+		{
+			if (search->inside->list[ret.oint] != NULL) {
+
+				int counter = 0;
+				for (struct Opp_Value* i = &search->inside->list[ret.oint]->value; i != NULL; i = i->next)
+				{
+					counter++;
+				}
+				obj->oint = counter;
+
+				return;
+			}
+			search = search->parent;
+		}
+	}
+	
+	else
+		opp_error(NULL, "Expected str as argument to func 'len'");
 }
 
 void opp_input(struct Opp_List* args, struct Opp_Obj* obj)

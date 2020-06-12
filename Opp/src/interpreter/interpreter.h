@@ -1,6 +1,7 @@
 #ifndef OPP_INTER
 #define OPP_INTER
 #include <stdio.h>
+#include <dlfcn.h>
 #include <stdlib.h>
 #include "../opp.h"
 #include "../env/enviroment.h"
@@ -42,6 +43,7 @@ struct Opp_Array opp_array;
 struct Opp_Obj* obj_make(enum Opp_Obj_Type obj_type);
 void opp_eval_init(struct Opp_Parser* parser);
 void opp_repl_ret(struct Opp_Obj* val);
+void opp_repl_array(struct Opp_Obj* val);
 
 void opp_eval(struct Opp_Stmt* stmt, struct Opp_Obj* obj);
 void opp_eval_expr(struct Opp_Expr* expr, struct Opp_Obj* literal);

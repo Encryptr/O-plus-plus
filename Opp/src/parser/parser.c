@@ -503,7 +503,7 @@ struct Opp_List* opp_parse_args(struct Opp_Scan* s)
 struct Opp_Expr* opp_parse_array(struct Opp_Scan* s)
 {
 	struct Opp_Expr_Array* array = (struct Opp_Expr_Array*)malloc(sizeof(struct Opp_Expr_Array));
-	array->elements = (struct Opp_Expr**)malloc(sizeof(struct Opp_Expr*)*10);
+	array->elements = (struct Opp_Expr**)malloc(sizeof(struct Opp_Expr*)*15); // make array size
 	struct Opp_Expr* expr = NULL;
 
 	int i = 0;

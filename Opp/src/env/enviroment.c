@@ -220,8 +220,9 @@ void env_get_element(struct Table* t, char* key, int id, struct Opp_Obj* obj)
 					return;
 				}
 			}
-			if (pos->next != NULL)
+			if (pos->next != NULL) {
 				pos = pos->next;
+			}
 			else {
 				obj->obj_type = OBJ_NONE;
 				return;
@@ -557,6 +558,7 @@ bool env_new_element(struct Table *t, char* key, struct Opp_Obj* obj)
 			if (pos->type == VLIST) 
 			{
 				for (struct Opp_Value* i = &pos->value; i != NULL; i = i->next)
+				// for (struct Opp_Value* i = &pos->value; i->vtype != VNONE; i = i->next)
 				{
 					if (i->next == NULL)
 					{

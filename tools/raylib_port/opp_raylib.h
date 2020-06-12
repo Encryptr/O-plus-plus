@@ -98,4 +98,3 @@ OPP_MODULE opp_DrawCircleV(OPP_ARGS, OPP_RETURN) {
 
 	DrawCircleV(vec, val3.oint, MAROON);
 }
-

@@ -8,7 +8,7 @@ void opp_eval_init(struct Opp_Parser* parser)
 	for (int stmt=0; stmt<parser->nstmt; stmt++)
 	{
 		struct Opp_Obj ret_val = {0};
-		opp_eval(parser->statments[stmt], &ret_val);
+		opp_eval(parser->statments[stmt], &ret_val); 
 
 		if (parser->mode == IREPL)
 			opp_repl_ret(&ret_val);
@@ -37,6 +37,35 @@ void opp_repl_ret(struct Opp_Obj* val)
 		case OBJ_FLOAT:
 			printf("REAL: %lf\n", val->ofloat);
 			break;
+
+		case OBJ_ARRAY:
+			printf("ARRAY: ");
+			opp_repl_array(val);
+			break;
+	}
+}
+
+void opp_repl_array(struct Opp_Obj* val)
+{
+	struct Namespace* search = current_ns;
+
+	while (search != NULL)
+	{
+		if (search->inside->list[val->oint] != NULL) {
+			printf("[");
+			for (struct Opp_Value* i = &search->inside->list[val->oint]->value; i != NULL; i = i->next)
+			{
+				switch (i->vtype)
+				{
+					case VINT: printf("%d", i->ival); break;
+				}
+				if (i->next != NULL)
+					printf(" ");
+			}
+			printf("]\n");
+			return;
+		}
+		search = search->parent;
 	}
 }
 
@@ -170,6 +199,7 @@ void opp_eval_expr(struct Opp_Expr* expr, struct Opp_Obj* literal)
 
 								case VLIST:
 									literal->obj_type = OBJ_ARRAY;
+									literal->oint = loc;
 									break;
 
 								case VNONE:
@@ -263,7 +293,6 @@ void opp_get_element(struct Opp_Obj* obj, char* name)
 	while (search != NULL)
 	{
 		if (search->inside->list[loc] != NULL) {
-			
 			int id = obj->oint;
 			env_get_element(search->inside, name, obj->oint, obj);
 
@@ -274,6 +303,7 @@ void opp_get_element(struct Opp_Obj* obj, char* name)
 		}
 		search = search->parent;
 	}
+	obj->obj_type = OBJ_NONE;
 }
 
 void opp_eval_element(struct Opp_Expr_Element* expr, struct Opp_Obj* obj)
@@ -320,6 +350,9 @@ void opp_eval_element(struct Opp_Expr_Element* expr, struct Opp_Obj* obj)
 					obj->obj_type = OBJ_STR;
 					strcpy(obj->ostr, temp.ostr);
 					break;
+
+				case OBJ_NONE:
+					opp_error(NULL, "Error unidentified array %s[%d]", name->val.strval, temp.oint);
 			}
 			break; 
 		}
@@ -753,7 +786,7 @@ void opp_eval_block(struct Opp_Stmt_Block* expr, struct Opp_Obj* obj)
 		free(new_ns->inside->list[a]);
 	free(new_ns->inside->list);
 	free(new_ns->inside);
-	free(new_ns);
+	free(new_ns); // free allocated strings
 
 	current_ns = temp;	
 }
@@ -970,11 +1003,32 @@ void opp_eval_import(struct Opp_Stmt_Import* expr, struct Opp_Obj* obj)
 	if (str.obj_type != OBJ_STR)
 		opp_error(NULL, "Expected string after import statement");
 
+	int islib = 0;
+	if (str.ostr[strlen(str.ostr)-1] == 'o' && str.ostr[strlen(str.ostr)-2] == 's')
+		islib = 1;
+	void (*func_init)(struct Namespace*);
+
+	if (islib)
+	{
+		void* handle;
+		handle = dlopen(str.ostr, RTLD_LAZY);
+
+		if (!handle)
+			opp_error(NULL, "Error importing lib '%s'", str.ostr);
+
+		func_init = dlsym(handle, "opp_init_lib");
+
+		if (!func_init) {
+			dlclose(handle);
+			opp_error(NULL, "Could not find 'opp_init_lib' func in lib '%s'", str.ostr);
+		}
+		func_init(global_ns);
+		// dlclose(handle);
+	}
+	else 
+		init_opp(str.ostr);
 	// Init Modules
 	// if (!strcmp(str.ostr, "raylib")) init_raylib();
-
-	else init_opp(str.ostr);
-
 }
 
 void opp_eval_while(struct Opp_Stmt_While* expr, struct Opp_Obj* obj)
@@ -1023,17 +1077,17 @@ void opp_eval_while(struct Opp_Stmt_While* expr, struct Opp_Obj* obj)
 void opp_eval_array(struct Opp_Expr_Array* expr, struct Opp_Obj* obj)
 {
 	obj->obj_type = OBJ_ARRAY;
+
 	struct Opp_Value* ptr = &opp_array.array;
 	opp_array.used = 1;
 
-	if (expr->amount == 0)
+	if (expr->amount == 0) 
 		opp_array.array.vtype = VNONE;
 
 	for (int i = 0; i < expr->amount; i++)
 	{
-		struct Opp_Expr* a = (struct Opp_Expr*)(expr->elements[i]);
-		struct Opp_Obj ret;
-		opp_eval_expr(a, &ret);
+		struct Opp_Obj ret = {0};
+		opp_eval_expr(expr->elements[i], &ret);
 
 		switch (ret.obj_type)
 		{
@@ -1055,6 +1109,8 @@ void opp_eval_array(struct Opp_Expr_Array* expr, struct Opp_Obj* obj)
 			ptr = ptr->next;
 		}
 	}
+	// if (ptr->next != NULL)
+	// 	free(ptr->next);
 	ptr->next = NULL;
 }
 

@@ -1,0 +1,32 @@
+var arr = [10, 2, 3, 4, 6, 43, 2, 12, 65, 5, 8, 14];
+
+func bubble_sort() {
+	var n = len(arr);
+
+	var i = 0;
+	var j = 0;
+	while i < n-1 {
+		while j < n-i-1 {
+			if arr[j] > arr[j+1] {
+				var temp = arr[j];
+				arr[j] = arr[j+1];
+				arr[j+1] = temp;
+			}
+			j = j + 1;	
+		}
+		i = i + 1;
+		j = 0;
+	}
+}
+
+func main() {
+	bubble_sort();
+
+	var i = 0;
+	while i < len(arr) {
+		print(arr[i]);
+		i = i + 1;
+	}
+}
+
+main();
