@@ -3,7 +3,7 @@
 
 Opp was created to be a simple but powerfull general purpose langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Bopp also takes inspiration from the old B programming language as well as C. In the end Bopp is made to educate and experimant with creating standalone compilers.
 
-<img src="logo.png" width="250" height="250"/>
+<img src="logo.png" width="400" height="400"/>
 
 ## Installation
 
