@@ -1,0 +1,194 @@
+## Opp IR ##
+
+Design:
+	- 3 Main registers, RAX, RCX, RDX
+	- 2 Backup registers R10, R11
+	- Floating point??
+	- Register allocation (spill)
+	- Spill reuse system
+	- Data and rodata segment
+
+Compilation Examples:
+	Expressions 1:
+		(a*b) + (a*b)
+
+		mov rax, [a]
+		imul rax, [b]
+		# Two possibilites 
+			Spill    - mov [rbp-8], rax
+			Register - mov rcx, [a]
+		imul rcx, [b]
+		add rax, rcx
+
+	Expressions 2:
+		# Function call is always executed first
+		test()*a OR a*test()
+
+		call test
+		mov rcx, [a]
+		imul rcx, rax
+
+	Pointer offset:
+		a[4] = b
+
+		mov rax, [a]
+		add rax, 32 # n*8
+		mov rcx, [b]
+		mov [rax], rcx
+
+	Register spill:
+		a = test() * test()
+
+		call test
+		mov [rbp-16], rax # 8 byte spill
+		call test
+		mov rcx, [rbp-16] # 8 byte reload
+		imul rcx, rax # Look over
+		mov [rbp-8], rcx
+
+	Inlining Builtins:
+		For functions such as the "cast()" calling a function for that
+		would be quite wasteful, raising the need to inline functions.
+		For the moment I have a strategy for allowing inlining of builtin
+		functions such as cast. This will not inline user defined functions, 
+		but for now allow for making these builtin extra features.
+
+		cast(CHAR, &a, 10);
+
+		Cast will at first be treated as a function, passing in the arguments 
+		like a regular func.
+
+		mov rdi, CHAR
+		mov rsi, a
+		mov rdx, 10
+		# This is no gen code but just the template of passing args
+
+		Now instead of a call to cast the inline begins here
+		mov rax, rdx
+		mov rcx, rax
+		mov rax, rsi
+		mov byte [rax], cl
+
+		This will cast from the 64 bit value 10 into the char sized location "a"
+
+Optimizations:
+	Multiplication:
+		Any mul operation to a power of two can be replaced 
+		with a shift left to n amount.
+		Ex: (Assume a in rax)
+			a * 2 # shl rax, 1
+			a * 4 # shl rax, 2
+
+	Division:
+		Any div operation to a power of two can be replaced
+		with a shift right to n amount.
+		Ex: (Assume a in rax)
+			a / 2 # shr rax, 1
+			a / 4 # shr rax, 2
+
+	Frame pointer:
+		A useful optimization for code size can be not omiting
+		a stack frame pointer. Instead of using up a register
+		(rbp) you can allocate the stack by hand.
+		Ex: 
+			a = 2
+
+			# Old
+			mov rax, 2
+			mov [rbp-8], rax
+
+			# Optimized
+			mov rax, 2
+			mov [rsp], rax
+
+	Unused Statements / Expressions:
+		A simple but powerful optimization is removing unused
+		code. Control flow statements are not the only stmts 
+		that can be optimized by this, however they are the most
+		performance effecting.
+		Ex:
+			while (1) { 
+				... 
+			}
+			Optimize to endless loop. Dont make a useless compare
+			instruction since the condition never changes. Also 
+			the opposite is true if the condition is 0 it will 
+			always be false. At that point the loop can be removed.
+
+			if (2 < 3) { 
+				... 
+			} else { 
+				... 
+			}
+			Since the if statment has a const expr you will never
+			need to run the else. This will always result in being 
+			true. The opposite can be true as well.
+
+Ir Examples:
+	Advanced expression:
+		(a*b) + ((a*b) + (a*b))
+
+		OPCODE_CONST (a)
+			PUSH REG_RAX => a
+		OPCODE_CONST (b)
+			PUSH REG_RCX => b
+		OPCODE_MUL
+			POP => REG_RCX
+			POP => REG_RAX
+			REG_RAX = REG_RAX * REG_RCX
+			PUSH REG_RAX
+
+		OPCODE_CONST (a)
+			PUSH REG_RCX => a
+		OPCODE_CONST (b)
+			PUSH REG_RDX => b
+		OPCODE_MUL
+			POP => REG_RDX
+			POP => REG_RCX
+			REG_RCX = REG_RCX * REG_RDX
+			PUSH REG_RCX
+
+		OPCODE_CONST (a)
+			PUSH REG_RDX => a
+		OPCODE_CONST (b)
+			** SPILL NEEDED NO MORE REGS **
+			** SPILL REG FROM BOTTOM (REG_RAX) **
+			** MARK REG_RAX AS SPILLED **
+			SPILL REG_RAX
+			PUSH REG_RAX => b
+		OPCODE_MUL
+			POP => REG_RAX
+			POP => REG_RDX
+			REG_RDX = REG_RDX * REG_RAX
+			PUSH REG_RDX
+
+		OPCODE_ADD
+			POP => REG_RDX
+			POP => REG_RCX
+			REG_RCX = REG_RCX + REG_RDX
+			PUSH REG_RCX
+
+		OPCODE_ADD
+			POP => REG_RCX
+			POP => REG_RAX (SPILL FLAG SET)
+ 			UN-SPILL REG_RAX
+			REG_RAX = REG_RAX + REG_RCX
+			PUSH REG_RAX
+
+	Function call:
+		b + test()
+
+		OPCODE_CALL (test)
+			** CALL CHECKS REG STACK FOR ANY REGS AND SPILLS **
+			SPILL ALL
+			PUSH REG_RAX
+		OPCODE_CONST (b)
+			PUSH REG_RCX => a
+		OPCODE_ADD
+			POP => REG_RCX
+			POP => REG_RAX
+			REG_RAX = REG_RAX + REG_RCX
+			PUSH REG_RAX
+
+
+

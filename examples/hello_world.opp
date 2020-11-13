@@ -1,0 +1,12 @@
+import "oppio";
+
+main(argc, **argv) {
+
+	println("Hello World!");
+	
+	// Or
+	
+	printf("Hello world\n");
+
+	return 0;
+}
