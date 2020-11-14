@@ -3,6 +3,9 @@
 
 Opp was created to be a simple but powerfull general purpose langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Bopp also takes inspiration from the old B programming language as well as C. In the end Bopp is made to educate and experimant with creating standalone compilers.
 
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Issues][issues-shield]][issues-url]
 <img src="logo.png" width="350" height="350"/>
 
 ## Installation
@@ -56,3 +59,10 @@ Distributed under the Apache-2.0 license. See ``LICENSE`` for more information.
 
 <!-- Markdown link & img dfn's -->
 [wiki]: https://github.com/Encryptr/O-plus-plus/wiki
+[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=flat-square
+[contributors-url]: https://github.com/Encryptr/O-plus-plus/contributors
+[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=flat-square
+[forks-url]: https://github.com/Encryptr/O-plus-plus/network/members
+[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=flat-square
+[issues-url]: https://github.com/Encryptr/O-plus-plus/contributors/issues
+
