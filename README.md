@@ -7,7 +7,7 @@
 [![Issues][issues-shield]][issues-url]
 [![License][license-shield]][license-url]
 
-Opp was created to be a simple but powerfull general purpose langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Bopp also takes inspiration from the old B programming language as well as C. In the end Bopp is made to educate and experimant with creating standalone compilers.
+Opp was created to be a simple but powerfull general purpose langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Opp also takes inspiration from the old B programming language as well as C. In the end Opp is being made to educate and experimant with creating standalone compilers.
 
 <img src="logo.png" width="350" height="350"/>
 
@@ -29,7 +29,7 @@ mingw32-make.exe
 
 ## Usage example
 
-Example of the bopp language can be found under the examples folder. Opp can be also learned in the [wiki][wiki]!
+Example of the opp language can be found under the examples folder. Opp can be also learned in the [wiki][wiki]!
 
 ```c
 main(argc, **argv) {
@@ -39,8 +39,9 @@ main(argc, **argv) {
 ```
 
 ## Development
+> Opp is being developed by **Encryptr**, a open-source organization. Becoming a dev/contributor is as easy as joining Encryptr's discord server. [Link](https://discord.gg/8tcf6sJ5Gq)
 
-Currently Opp is a compiler aimed for linux x86-64 however opp will be able to compile to macos/win in the future. Opp main compile targets are going to be linux / mac and windows will be saved for last. Opp requires **ld** to link the generated obj file with opp's standart library alongside c's stdandart library. 
+Currently Opp is a compiler aimed for linux/mac x86-64 however opp will be able to compile to win in the future. Opp requires **ld** to link the generated obj file with opp's standart library alongside c's stdandart library. 
 
 ## Release History
 * 0.0.1
@@ -50,7 +51,7 @@ Currently Opp is a compiler aimed for linux x86-64 however opp will be able to c
 
 Distributed under the Apache-2.0 license. See ``LICENSE`` for more information.
 
-[https://github.com/Encryptr/Bopp](https://github.com/Encryptr/)
+[https://github.com/Encryptr/O-plus-plus](https://github.com/Encryptr/O-plus-plus)
 
 ## Contributing
 
