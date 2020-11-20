@@ -142,14 +142,16 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser)
 
 	func_node->fn_stmt.args = opp_parse_args(parser);
 	opp_next(parser->lex);
-	func_node->fn_stmt.body = opp_parse_statement(parser);
+
+	if (parser->lex->t.id == TSEMICOLON)
+		func_node->fn_stmt.body = NULL;
+	else
+		func_node->fn_stmt.body = opp_parse_statement(parser);
 
 	return func_node;
 }
 
 #define DEFAULT_LIST_SIZE 8
-
-// ADD BLOCKER
 static struct Opp_List* opp_parse_args(struct Opp_Parser* parser)
 {
 	struct Opp_List* args = (struct Opp_List*)malloc(sizeof(struct Opp_List));
@@ -161,14 +163,16 @@ static struct Opp_List* opp_parse_args(struct Opp_Parser* parser)
 		if (parser->lex->t.id == TCLOSEP 
 			|| parser->lex->t.id == FEND)
 			break;
-
-		args->list[i] = opp_parse_allign(parser);
+		if (i == DEFAULT_LIST_SIZE) 
+			opp_parse_allign(parser);
+		else 
+			args->list[i] = opp_parse_allign(parser);
 		i++;
 
 	} while (parser->lex->t.id == TCOMMA);
 
 	if (parser->lex->t.id != TCLOSEP)
-		opp_expect_error(parser, ')');
+		opp_error(parser->lex, "Expected terminating ')'");
 
 	args->length = i;
 
@@ -179,6 +183,9 @@ static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser)
 {
 	switch (parser->lex->t.id)
 	{
+		case TSEMICOLON:
+			return NULL;
+			
 		case TOPENC:
 			return opp_parse_block(parser);
 
@@ -196,6 +203,18 @@ static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser)
 
 		case TIF:
 			return opp_parse_if(parser);
+
+		case TFOR:
+			return opp_parse_for(parser);
+
+		case TSWITCH:
+			return opp_parse_switch(parser);
+
+		case TCASE:
+			return opp_parse_case(parser);
+
+		case TBREAK:
+			return opp_parse_break(parser);
 
 		case TIDENT: 
 			if (opp_parse_peak(parser, ':'))
@@ -239,7 +258,7 @@ static struct Opp_Node* opp_parse_block(struct Opp_Parser* parser)
 	block->block_stmt.len = index;
 
 	if (parser->lex->t.id != TCLOSEC || parser->lex->t.id == FEND)
-		opp_expect_error(parser, '}');
+		opp_error(parser->lex, "Expected terminating '}' after block statement\n");
 
 	return block;
 }
@@ -252,6 +271,83 @@ static struct Opp_Node* opp_parse_label(struct Opp_Parser* parser)
 	opp_next(parser->lex);
 
 	return label;
+}
+
+static struct Opp_Node* opp_parse_for(struct Opp_Parser* parser)
+{
+	struct Opp_Node* for_loop = opp_new_node(parser, STMT_FOR);
+
+	opp_next(parser->lex);
+
+	if (parser->lex->t.id != TOPENP)
+		opp_error(parser->lex, "Expectd '(' after 'for'");
+
+	opp_next(parser->lex);
+	for_loop->for_stmt.decl = opp_parse_statement(parser);
+	opp_next(parser->lex);
+	for_loop->for_stmt.cond = opp_parse_expr(parser);
+	opp_next(parser->lex);
+	for_loop->for_stmt.expr = opp_parse_allign(parser);
+
+	if (parser->lex->t.id != TCLOSEP)
+		opp_error(parser->lex, "Expected ')' after 'for' statement");
+
+	opp_next(parser->lex);
+
+	for_loop->for_stmt.body = opp_parse_statement(parser);
+
+	return for_loop;
+}
+
+static struct Opp_Node* opp_parse_case(struct Opp_Parser* parser)
+{
+	struct Opp_Node* cond = opp_new_node(parser, STMT_CASE);
+
+	opp_next(parser->lex);
+
+	cond->case_stmt.cond = opp_parse_allign(parser);
+
+	if (parser->lex->t.id != TCOLON)
+		opp_error(parser->lex, "Expected colon after 'case' keyword");
+
+	opp_next(parser->lex);
+	cond->case_stmt.stmt = opp_parse_statement(parser);
+
+	return cond;
+}
+
+static struct Opp_Node* opp_parse_switch(struct Opp_Parser* parser)
+{
+	struct Opp_Node* swt = opp_new_node(parser, STMT_SWITCH);
+
+	opp_next(parser->lex);
+
+	if (parser->lex->t.id != TOPENP)
+		opp_error(parser->lex, "Expected '(' after 'switch' statement");
+
+	opp_next(parser->lex);
+	swt->switch_stmt.cond = opp_parse_allign(parser);
+
+	if (parser->lex->t.id != TCLOSEP)
+		opp_error(parser->lex, "Expected ')' after 'switch' condition");
+
+	opp_next(parser->lex);
+
+	if (parser->lex->t.id != TOPENC)
+		opp_error(parser->lex, "Expected '{' after 'switch' condition\n\tFormat: switch (...) { \n\t\t\t...\n\t\t}");
+
+	swt->switch_stmt.block = opp_parse_block(parser);
+
+	return swt;
+}
+
+static struct Opp_Node* opp_parse_break(struct Opp_Parser* parser)
+{
+	struct Opp_Node* brk = opp_new_node(parser, STMT_BREAK);
+
+	opp_next(parser->lex);
+
+	return brk;
 }
 
 static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser)
@@ -297,10 +393,17 @@ static struct Opp_Node* opp_parse_extern(struct Opp_Parser* parser)
 
 	opp_next(parser->lex);
 
-	extrn->extrn_stmt.func_decl = opp_parse_unary(parser);
-	opp_next(parser->lex);
-	extrn->extrn_stmt.args = opp_parse_args(parser);
-	opp_next(parser->lex);
+	if (parser->lex->t.id != TAUTO) {
+		extrn->extrn_stmt.func = 1;
+		extrn->extrn_stmt.decl = opp_parse_unary(parser);
+		opp_next(parser->lex);
+		extrn->extrn_stmt.args = opp_parse_args(parser);
+		opp_next(parser->lex);
+	}
+	else {
+		extrn->extrn_stmt.func = 0;
+		extrn->extrn_stmt.decl = opp_parse_var_decl(parser);
+	}
 
 	if (parser->lex->t.id != TSEMICOLON)
 		opp_error(parser->lex, "Expected ';' after extern declaration");
@@ -318,7 +421,6 @@ static struct Opp_Node* opp_parse_goto(struct Opp_Parser* parser)
 		opp_error(parser->lex, "Expected label after goto");
 
 	jmp->goto_stmt.name = opp_parse_unary(parser);
-
 
 	opp_next(parser->lex);
 
@@ -363,8 +465,15 @@ static struct Opp_Node* opp_parse_if(struct Opp_Parser* parser)
 	opp_next(parser->lex);
 
 	ifstmt->if_stmt.then = opp_parse_statement(parser);
+	ifstmt->if_stmt.other = NULL;
 
-	// use opp_lex_peek
+	opp_peek_tok(parser->lex);
+
+	if (parser->lex->t.id == TELSE) {
+		opp_next(parser->lex);
+		opp_next(parser->lex);
+		ifstmt->if_stmt.other = opp_parse_statement(parser);
+	}
 
 	return ifstmt;
 }
@@ -373,14 +482,12 @@ static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser)
 {
 	struct Opp_Node* new_expr = opp_parse_allign(parser);
 
-	if (parser->lex->t.id != TSEMICOLON) {
-		opp_expect_error(parser, ';');
-	}
+	if (parser->lex->t.id != TSEMICOLON) 
+		opp_error(parser->lex, "Expected ';' after expression");
 
 	return new_expr;
 }
 
-// ADD BLOCKER
 static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser)
 {
 	int i = 0;
@@ -395,15 +502,16 @@ static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser)
 		INTERNAL_ERROR("Malloc fail");
 
 	do {
+		if (i == DEFAULT_LIST_SIZE)
+			opp_error(parser->lex, "Max auto list variable declaration limit met (8)");
 		opp_next(parser->lex);
 		list->list[i] = opp_parse_allign(parser);
-		// opp_next(parser->lex);
 		i++;
 	} while (parser->lex->t.id == TCOMMA);
 
 	list->length = i;
 	if (parser->lex->t.id != TSEMICOLON)
-		opp_expect_error(parser, ';');
+		opp_error(parser->lex, "Expected ';' after auto list initializaion");
 
 	return list;
 }
@@ -662,6 +770,27 @@ static struct Opp_Node* opp_parse_prefix(struct Opp_Parser* parser)
 				opp_next(parser->lex);
 				left = result;
 
+				break;
+			}
+
+			case TOPENB: {
+				result = opp_new_node(parser, EELEMENT);
+				result->elem_expr.name = left;
+				opp_next(parser->lex);
+				result->elem_expr.loc = opp_parse_allign(parser);
+
+				opp_next(parser->lex);
+				left = result;
+				break;
+			}
+
+			case TDECR: case TINCR: {
+				result = opp_new_node(parser, EADJUST);
+				result->adjust_expr.left = left;
+				result->adjust_expr.type = operator;
+
+				opp_next(parser->lex);
+				left = result;
 				break;
 			}
 

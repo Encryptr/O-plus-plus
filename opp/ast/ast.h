@@ -41,14 +41,16 @@ enum Opp_Node_Type {
 	IGNORE,
 	EBIN, ELOGIC, ECALL,
 	EASSIGN, EUNARY, ESUB,
-	EELEMENT, EDEREF,
+	EELEMENT, EDEREF, EADJUST,
 	EADDR, ESIZEOF,
 
 	STMT_LABEL, STMT_GOTO, STMT_IF,
 	STMT_BLOCK, STMT_VAR,
 	STMT_IMPORT, STMT_WHILE,
 	STMT_FUNC, STMT_RET, 
-	STMT_EXTERN
+	STMT_EXTERN, STMT_FOR,
+	STMT_SWITCH, STMT_ENUM,
+	STMT_CASE, STMT_BREAK,
 };
 
 struct Opp_Debug {
@@ -95,11 +97,6 @@ struct Opp_Expr_Sub {
 	struct Opp_Node* unary;
 };
 
-struct Opp_Expr_Array {
-	int amount;
-	struct Opp_Node** elements;
-};
-
 struct Opp_Expr_Element {
 	struct Opp_Node* name;
 	struct Opp_Node* loc;
@@ -130,6 +127,23 @@ struct Opp_Stmt_Goto {
 	struct Opp_Node* name;
 };
 
+struct Opp_Stmt_Switch {
+	struct Opp_Node* cond;
+	struct Opp_Node* block;
+};
+
+struct Opp_Stmt_Case {
+	struct Opp_Node* cond;
+	struct Opp_Node* stmt;	
+};
+
+struct Opp_Stmt_For {
+	struct Opp_Node* decl;
+	struct Opp_Node* cond;
+	struct Opp_Node* expr;
+	struct Opp_Node* body;
+};
+
 struct Opp_Expr_Dot {
 	struct Opp_Node* left;
 	struct Opp_Node* right;
@@ -142,7 +156,8 @@ struct Opp_Stmt_If {
 };
 
 struct Opp_Stmt_Extrn {
-	struct Opp_Node* func_decl;
+	bool func;
+	struct Opp_Node* decl;
 	struct Opp_List* args;
 };
 
@@ -174,7 +189,6 @@ struct Opp_Stmt_Ret {
 	struct Opp_Node* value;
 };
 
-#define NODE_UNION_SIZE 24
 struct Opp_Node {
 	enum Opp_Node_Type type;
 	struct Opp_Debug debug;
@@ -189,10 +203,14 @@ struct Opp_Node {
 		struct Opp_Expr_Adjust adjust_expr;
 		struct Opp_Expr_Deref defer_expr;
 		struct Opp_Expr_Addr addr_expr;
+		struct Opp_Expr_Element elem_expr;
 		struct Opp_Expr_Sizeof sizeof_expr;
 		struct Opp_Stmt_Label label_stmt;
 		struct Opp_Expr_Dot dot_expr;
 		struct Opp_Stmt_If if_stmt;
+		struct Opp_Stmt_Switch switch_stmt;
+		struct Opp_Stmt_Case case_stmt;
+		struct Opp_Stmt_For for_stmt;
 		struct Opp_Stmt_Block block_stmt;
 		struct Opp_Stmt_Var var_stmt;
 		struct Opp_Stmt_Import import_stmt;

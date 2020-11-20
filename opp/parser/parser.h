@@ -29,7 +29,7 @@ struct Opp_Parser {
 	struct Opp_Scan* lex;
 	struct Opp_Node** statments;
 	size_t stmt_size;
-	int nstmts;
+	unsigned int nstmts;
 };
 
 struct Opp_Parser* opp_parser_init(struct Opp_Scan* s);
@@ -55,6 +55,10 @@ static struct Opp_Node* opp_parse_goto(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_if(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_extern(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_import(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_for(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_switch(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_case(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_break(struct Opp_Parser* parser);
 
 // Expressions
 static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser);
