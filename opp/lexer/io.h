@@ -25,6 +25,7 @@
 struct Opp_IO {
 	const char* fname;
 	FILE* file;
+	long fsize;
 };
 
 typedef struct Opp_IO OppIO;

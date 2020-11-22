@@ -1,0 +1,137 @@
+## Logic Tests
+
+https://refspecs.linuxbase.org/elf/gabi4+/ch4.sheader.html
+
+// b = (a == 2 || a == 3) && a > 2;
+// b = a == 1 || (a == 2 && a == 3);
+
+// These two are examples of left side casusing extra label
+// b = (a == 2 && a == 3) || a == 1;
+// b = (a == 1 || a == 2) && a == 9;
+
+
+// if (a == 1 && a == 2 || a == 3) {
+//     a = 5;
+// }
+
+
+Basic structure of logic:
+
+- Basic Comparison 
+	Ex: (a == 1)
+
+	cmp [a], 1
+	jne false # Jmp flag opposite from condition
+true: 
+	mov eax, 1
+	jmp end
+false: 
+	mov eax, 0
+end: 
+	...
+
+- And Comparison
+	Ex: (a == 1 && a > 0)
+
+	cmp [a], 1
+	jne false
+	cmp [a], 0
+	jle false
+true:
+	mov eax, 1
+	jmp end
+false:
+	mov eax, 0
+end:
+	...
+
+- Or Comparison
+	Ex: (a == 1 || a == 2)
+
+	cmp [a], 1
+	je true # Not opposite of cond
+	cmp [a], 2
+	jne false
+true:
+	mov eax, 1
+	jmp end
+false:
+	mov eax, 0
+end:
+	...
+
+- Multi layer Comparison
+	Ex: (a == 1 || a == 2) && a == 1
+
+	cmp [a], 1
+	je right
+	cmp, [a], 2
+	jne false # Depends on AND 
+right:
+	cmp [a], 1
+	jne false
+true:
+	mov eax, 1
+	jmp end
+false:
+	mov eax, 0
+end:
+	...
+
+
+
+###############################################################################
+Example: b = (a == 2 && a == 3) || a == 1;
+
+  cmp QWORD PTR [rbp-8], 2
+  jne .L2
+  cmp QWORD PTR [rbp-8], 3
+  je .L3
+.L2:
+  cmp QWORD PTR [rbp-8], 1
+  jne .L4
+.L3:
+  mov eax, 1
+  jmp .L5
+.L4:
+  mov eax, 0
+.L5:
+  cdqe
+  mov QWORD PTR [rbp-16], rax
+
+###############################################################################
+Example: b = (a == 2 || a == 3) && a > 2;
+
+  cmp QWORD PTR [rbp-8], 2
+  je .L6
+  cmp QWORD PTR [rbp-8], 3
+  jne .L7
+.L6:
+  cmp QWORD PTR [rbp-8], 2
+  jle .L7
+  mov eax, 1
+  jmp .L8
+.L7:
+  mov eax, 0
+.L8:
+  cdqe
+  mov QWORD PTR [rbp-16], rax
+
+###############################################################################
+Example: b = a == 1 || (a == 2 && a == 3);
+
+  cmp QWORD PTR [rbp-8], 1
+  je .L9
+  cmp QWORD PTR [rbp-8], 2
+  jne .L10
+  cmp QWORD PTR [rbp-8], 3
+  jne .L10
+.L9:
+  mov eax, 1
+  jmp .L11
+.L10:
+  mov eax, 0
+.L11:
+  cdqe
+  mov QWORD PTR [rbp-16], rax
+

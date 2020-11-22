@@ -33,7 +33,7 @@ enum Opp_Bucket_Type {
 };
 
 enum Opp_Var_Type {
-	TYPE_NUM, TYPE_PTR
+	TYPE_NONE, TYPE_NUM, TYPE_PTR
 };
 
 struct Opp_Function {

@@ -29,7 +29,7 @@
 #define INIT_BYTECODE_SIZE 64
 
 #define IR_EMIT(op) \
-	ir->code.bytes[ir->code.idx++] = op;
+	ir->code.bytes[ir->code.idx++] = op
 
 enum Regs {
 	REG_RAX,
@@ -39,12 +39,16 @@ enum Regs {
 
 enum OppIr_Opcode_Type {
 	OPCODE_CONST,
-	
 	OPCODE_FUNC,
-
 	OPCODE_VAR,
 	OPCODE_ARITH,
-
+	OPCODE_CMP,
+	OPCODE_JMP,
+	OPCODE_LABEL,
+	OPCODE_DEREF,
+	OPCODE_ADDR,
+	OPCODE_ASSIGN,
+	OPCODE_REG,
 	OPCODE_END,
 };
 
@@ -55,13 +59,8 @@ struct Register {
 };
 
 #define REG_COUNT 3
-static struct Register regs[] = {
-	{.reg = REG_RAX, .used = 0},
-	{.reg = REG_RCX, .used = 0},
-	{.reg = REG_RDX, .used = 0}
-};
-
 #define DEFAULT_REG_STACK 8
+
 struct Reg_Stack {
 	struct Register* stack;
 	struct Register* top;
@@ -91,7 +90,7 @@ struct Bytecode {
 };
 
 enum OppIr_Const_Type {
-	IMM_LOC, IMM_STR, IMM_I64,
+	IMM_STR, IMM_LOC, IMM_I64,
 	IMM_U32, IMM_I32,
 	IMM_I8, IMM_F64
 };
@@ -99,6 +98,7 @@ enum OppIr_Const_Type {
 struct OppIr_Const {
 	enum OppIr_Const_Type type;
 	bool global;
+	bool nopush;
 
 	union {
 		char*	 imm_sym;
@@ -134,6 +134,25 @@ struct OppIr_Arith {
 	enum OppIr_Arith_Type type;
 };
 
+enum OppIr_Jmp_Type {
+	PURE_JMP, RET_JMP,
+	// Rest jmp types are in Opp_Token
+};
+
+struct OppIr_Jmp {
+	enum OppIr_Jmp_Type type;
+	unsigned int loc;
+};
+
+struct OppIr_Cmp {
+	bool imm;
+	struct OppIr_Const val;
+};
+
+struct OppIr_Reg {
+	bool push;
+};
+
 struct OppIr_Opcode {
 	enum OppIr_Opcode_Type type;
 
@@ -142,6 +161,9 @@ struct OppIr_Opcode {
 		struct OppIr_Func  func;
 		struct OppIr_Var   var;
 		struct OppIr_Arith arith;
+		struct OppIr_Jmp   jmp;
+		struct OppIr_Cmp   cmp;
+		struct OppIr_Reg   reg_op;
 	};
 };
 
@@ -150,23 +172,38 @@ struct OppIr_Instr {
 	struct OppIr_Opcode* opcodes;
 };
 
+struct Jmp_Item {
+	size_t loc;
+	unsigned int table_pos;
+};
+
+#define DEFAULT_OFFSET_TABLE 32
+struct OppIr_Offsets {
+	size_t allocated;
+	unsigned int jmp_idx;
+	int32_t* offset_table;
+	struct Jmp_Item* jmp_table;
+};
+
 struct OppIr {
 	struct Bytecode code;
 	struct Allocation regalloc;
 	struct Reg_Stack reg_stack;
 	struct Stack local_stack;
 	struct OppIr_Instr* instr;
+	struct OppIr_Offsets offsets;
 };
 
 #ifdef LINUX64
 #	include "ir-linux.h"
 #endif
 
-// ir-debug.c
-// Ir debug tools
-void oppir_pretty_print(struct OppIr* ir);
+#ifdef MAC64
+#	include "ir-mac.h"
+#endif
 
 struct OppIr* init_oppir();
+void oppir_free(struct OppIr* ir);
 void oppir_get_opcodes(struct OppIr *ir, struct OppIr_Instr* instr);
 void oppir_eval(struct OppIr* ir);
 void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op);
@@ -179,11 +216,17 @@ static enum Regs oppir_pop_reg(struct OppIr* ir);
 static enum Regs oppir_reg_alloc(struct OppIr* ir);
 static void oppir_write_const(struct OppIr* ir, struct OppIr_Const* imm);
 static int32_t oppir_get_spill(struct OppIr* ir);
+static void oppir_set_offsets(struct OppIr* ir);
 
 // Opcodes
 static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm);
 static void oppir_local_param(struct OppIr* ir, unsigned int args);
 static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn);
+static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc);
+static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp);
+static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var);
+static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp);
+static void oppir_eval_reg(struct OppIr* ir, struct OppIr_Reg* reg_op);
 static void oppir_eval_end(struct OppIr* ir);
 
 #endif /* OPP_IR */

@@ -83,8 +83,7 @@ struct Opp_Keywords {
 	enum Opp_Token id;
 };
 
-#define OPP_KEYOWRDS 12
-
+#define OPP_KEYOWRDS 15
 static const struct Opp_Keywords opp_keywords[] = {
 	{"asm",  TASM},
 	{"auto", TAUTO},
@@ -97,7 +96,10 @@ static const struct Opp_Keywords opp_keywords[] = {
 	{"return", TRET},
 	{"goto", TGOTO},
 	{"extern", TEXTERN},
-	{"import", TIMPORT}
+	{"import", TIMPORT},
+	{"for", TFOR},
+	{"case", TCASE},
+	{"break", TBREAK}
 };
 
 bool is_keyword(struct Opp_Scan* s)
@@ -150,7 +152,7 @@ void opp_deinit(struct Opp_Scan* s)
 
 void opp_lex_identifier(struct Opp_Scan* s)
 {
-	int idx = 0;
+	unsigned int idx = 0;
 	while (isletter(*s->src) || isnum(*s->src)) {
 
 		if (idx > s->t.buffer.len)
@@ -168,7 +170,7 @@ void opp_lex_identifier(struct Opp_Scan* s)
 
 void opp_lex_hex(struct Opp_Scan* s)
 {
-	int idx = 0;
+	unsigned int idx = 0;
 	s->t.id = TINTEGER;
 	INCR;
 	while (isletter(*s->src) || isnum(*s->src)) {
@@ -182,7 +184,7 @@ void opp_lex_hex(struct Opp_Scan* s)
 
 void opp_lex_numeral(struct Opp_Scan* s)
 {
-	int idx = 0;
+	unsigned int idx = 0;
 	s->t.id = TINTEGER;
 	INCR;
 	if (*s->src == 'x' || *s->src == 'X') {
@@ -228,7 +230,7 @@ void opp_peek_tok(struct Opp_Scan* s)
 void opp_lex_str(struct Opp_Scan* s)
 {
 	INCR;
-	int idx = 0;
+	unsigned int idx = 0;
 	while (*s->src != '"') {
 		if (idx >= s->t.buffer.len)
 			realloc_buf(s);
@@ -282,10 +284,22 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 		case '{': return TOPENC;
 		case '}': return TCLOSEC;
 		case '.': return TDOT;
-		case '+': return TADD;
-		case '-': return TMIN;
 		case ':': return TCOLON;
 
+		case '-':
+			INCR;
+			if (*s->src == '-') 
+				return TDECR;
+			DECR;
+			return TMIN;
+
+		case '+':
+			INCR;
+			if (*s->src == '+') 
+				return TINCR;
+			DECR;
+			return TADD;
+			
 		case '>': 
 			INCR; 
 			if (*s->src == '=') 

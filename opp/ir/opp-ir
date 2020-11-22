@@ -7,6 +7,8 @@ Design:
 	- Register allocation (spill)
 	- Spill reuse system
 	- Data and rodata segment
+	- Manual jump offsets calculations
+		- Jmp/addr stack 
 
 Compilation Examples:
 	Expressions 1:
@@ -32,7 +34,7 @@ Compilation Examples:
 		a[4] = b
 
 		mov rax, [a]
-		add rax, 32 # n*8
+		add rax, 4 # Incremented by bytes
 		mov rcx, [b]
 		mov [rax], rcx
 
@@ -70,6 +72,21 @@ Compilation Examples:
 		mov byte [rax], cl
 
 		This will cast from the 64 bit value 10 into the char sized location "a"
+
+		Conditionals 1:
+			a > 2 && a < 3
+			
+			mov rax, [a]
+			cmp rax, 2
+			jle else
+			mov rax, [a]
+			cmp rax, 3
+			jg else
+			mov rax, 1
+			jmp end
+		else:
+			mov rax, 0
+		end: ...
 
 Optimizations:
 	Multiplication:
@@ -190,5 +207,30 @@ Ir Examples:
 			REG_RAX = REG_RAX + REG_RCX
 			PUSH REG_RAX
 
+	Label / Jump 1:
+		goto end;
+		...
+		end:
+
+		OPCODE_JMP
+			SYM-STACK PUSH (PURE_JMP)
+
+		...
+
+		OPCODE_LABEL (end)
+			SYM-STACK POP => PURE_JMP
+			Write current addres back at the goto
+
+
+	Label / Jump 2:
+		while (1) {}
+
+		OPCODE_LABEL
+			SYM-STACK PUSH (LABEL)
+
+		...
+
+		OPCODE_JMP
+			
 
 

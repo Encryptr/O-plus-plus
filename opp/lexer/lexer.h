@@ -35,10 +35,10 @@ enum Opp_Token {
 	TIDENT, TINTEGER, TFLOAT, THEX, TSTR,
 
 	// || && > < >= <= 
-	TOR, TAND, TGT, TLT, TGE, TLE,
+	TOR, TAND, TGT, TLE, TLT, TGE,
 
 	// == = ! != ' "
-	TEQEQ, TEQ, TNOT, TNOTEQ, TTIK, TQUOTE,	
+	TEQEQ, TNOTEQ, TEQ, TNOT, TTIK, TQUOTE,	
 	
 	// + - / * % -- ++
 	TADD, TMIN, TDIV, TMUL, TMOD, TDECR, TINCR,
@@ -56,7 +56,7 @@ enum Opp_Token {
 	// O++ Keywords
 	TASM, TAUTO, TSIZEOF, TWHILE, TIF, 
 	TELSE, TRET, TSWITCH, TSTRUCT, TGOTO,
-	TEXTERN, TIMPORT,
+	TEXTERN, TIMPORT, TFOR, TCASE, TBREAK,
 	
 	FEND
 };

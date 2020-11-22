@@ -39,14 +39,14 @@ struct Elf64_Header {
 	uint16_t e_shstrndx;
 };
 
-#define MAG0 0x7F
-#define MAG1 'E'
-#define MAG2 'L'
-#define MAG3 'F'
+#define EI_MAG0 0x7F
+#define EI_MAG1 'E'
+#define EI_MAG2 'L'
+#define EI_MAG3 'F'
 #define ELFCLASS64 0x02
 #define ELFDATA2LSB 0x1
 #define EV_CURRENT 0x1
-
+#define ELFOSABI_NONE 0x0
 #define ET_REL 0x1
 #define EM_X86_64 0x3e
 #define DEFAULT_ENTRY 0x0

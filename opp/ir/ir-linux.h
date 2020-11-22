@@ -20,9 +20,12 @@
 #ifndef IR_LINUX
 #define IR_LINUX
 
+#define DEFAULT_SECT 6
+
 enum Linux_Sections {
-	SECT_TEXT, SECT_SHSTRTAB,
-	SECT_SYMTAB, SECT_STRTAB
+	SECT_TEXT, SECT_DATA,
+	SECT_SHSTRTAB, SECT_SYMTAB, 
+	SECT_STRTAB, SECT_RELA_TEXT
 };
 
 struct Elf_Pair {
@@ -37,21 +40,28 @@ struct Elf_Syms {
 
 static struct Elf64_SHDR* sect_list;
 static struct Elf_Syms symbols;
+
+// Basic Elf segments
 static unsigned char* strtable;
+static struct Elf64_Header elf64_hdr;
 
-// void init_sect_list();
-// void init_symtab();
-// void init_strtab();
+static unsigned char setup_bytes[] = {
+	0xe8, 0x0, 0x0, 0x0, 0x0,
+	0x48, 0x89, 0xc7,
+	0xb8, 0x3c, 0x0, 0x0, 0x0,
+	0x0f, 0x05
+};
 
-// void init_elf_header();
-// void init_text_sect();
-// void init_symtab_sect();
-// void init_shstrtab_sect();
-// void init_strtab_sect();
+
+void init_elf_deps();
+void init_elf_header();
+void init_text_sect(struct OppIr* ir);
+void init_symtab_sect();
+void init_shstrtab_sect();
+void init_strtab_sect();
+void init_rela_text_sect();
+
 // void elf_offsets(struct OppIr* ir);
-
-// // Header offsets
-// void init_offsets();
 
 // // Write elf file
 // void write_elf64_header(OppIO* io);
