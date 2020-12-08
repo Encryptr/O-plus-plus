@@ -83,6 +83,7 @@ struct OppIr* init_oppir()
 
 	err:
 		INTERNAL_ERROR("Malloc Fail");
+		return NULL;
 }
 
 void oppir_free(struct OppIr* ir)
@@ -92,7 +93,6 @@ void oppir_free(struct OppIr* ir)
 	free(ir->offsets.jmp_table);
 	free(ir->regalloc.spills);
 	free(ir->reg_stack.stack);
-
 	free(ir);
 }
 
@@ -189,7 +189,7 @@ static enum Regs oppir_reg_alloc(struct OppIr* ir)
 	unsigned char reg_op = 0;
 
 	for (struct Register* i = ir->reg_stack.stack; i < ir->reg_stack.top; i++) {
-		if (i->used && !i->spilled) { // check this system !i->spilled
+		if (i->used && !i->spilled) {
 			i->spilled = 1;
 			i->loc = oppir_get_spill(ir);
 			spill_reg.loc = i->loc;
@@ -310,9 +310,12 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 			oppir_eval_var(ir, &op->var);
 			break;
 
-		case OPCODE_REG:
-			oppir_eval_reg(ir, &op->reg_op);
+		case OPCODE_ASSIGN:
+			oppir_eval_set(ir, &op->set);
 			break;
+
+		case OPCODE_CALL: break;
+			// oppir_eval_call(ir, &op->)
 	}
 }
 
@@ -333,7 +336,6 @@ static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 		oppir_check_realloc(ir, 7);
 		IR_EMIT(0x48);
 		IR_EMIT(0x8b);
-
 
 		if (imm->imm_i32 < -255)
 			IR_EMIT(0x85 + (reg_type*8));
@@ -499,10 +501,7 @@ static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp)
 	IR_EMIT(0x48); IR_EMIT(0x39); IR_EMIT(0xc8);
 }
 
-static void oppir_eval_reg(struct OppIr* ir, struct OppIr_Reg* reg_op)
+static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set)
 {
-	if (reg_op->push)
-		oppir_push_reg(ir);
-	else 
-		oppir_pop_reg(ir);
+	/// handle assign
 }

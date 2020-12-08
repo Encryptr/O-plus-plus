@@ -64,9 +64,10 @@ enum Opp_Cond_Type {
 struct Opp_Cond {
 	enum Opp_Cond_Type cond_type;
 	bool in_logic;
-	unsigned int locs[3];
+	unsigned int locs[2], endloc;
+	int curr_logic;
 	bool use_op;
-	unsigned int jloc;
+	unsigned int jloc, hs;
 };
 
 struct Opp_Info {
@@ -110,7 +111,6 @@ static void opp_generate_ret(struct Opp_Context* opp);
 static void opp_check_label(struct Opp_Context* opp, unsigned int idx);
 
 // Expr
-// TODO: MAKE ALL EXPR FUNC's return OPP_TYPE for better type checks
 static struct Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unary);
 static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin);
 static struct Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node* sub);
@@ -137,5 +137,8 @@ static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn);
 static void opp_compile_while(struct Opp_Context* opp, struct Opp_Node* loop);
 static void opp_compile_for(struct Opp_Context* opp, struct Opp_Node* loop);
 static void opp_compile_switch(struct Opp_Context* opp, struct Opp_Node* cond);
+
+// Debug
+void opp_debug_node(struct Opp_Node* base);
 
 #endif /* OPP_COMPILER */

@@ -33,6 +33,7 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 	opp->global_ns = init_namespace(NULL, malloc);
 	opp->oppir = NULL;
 
+	// Info
 	opp->info.state = STATE_DEFAULT;
 	opp->info.cur_ns = opp->global_ns;
 	opp->info.fn_name = NULL;
@@ -44,10 +45,10 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 		goto err;
 	opp->info.goto_idx = 0;
 
-	opp->cond_state.in_logic = 0;
-	opp->cond_state.use_op = 0;
-	opp->cond_state.jloc = 0;
+	// Cond
+	memset(&opp->cond_state, 0, sizeof(struct Opp_Cond));
 
+	// Ir
 	opp->ir.instr_idx = 0;
 	opp->ir.allocated = DEFAULT_OPCODE_SIZE;
 	opp->ir.opcodes = (struct OppIr_Opcode*)
@@ -62,6 +63,7 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 
 	err:
 		INTERNAL_ERROR("Malloc Fail");
+		return NULL;
 }
 
 void opp_free_compiler(struct Opp_Context* opp)
@@ -91,10 +93,13 @@ static void opp_compile_error(struct Opp_Context* opp,
 
 	#ifdef UNX
 		printf(CL_RESET);
-	#endif 
+	#endif
 	vfprintf(stdout, str, ap);
 	fprintf(stdout, "\n");
 	va_end(ap);
+	printf("\t" CL_GREEN);
+	opp_debug_node(node);
+	printf(CL_RESET "\n");
 	exit(1);
 }
 
@@ -108,7 +113,6 @@ static void opp_warning(struct Opp_Context* opp,
 		opp_compile_error(opp, node, str);
 		return;
 	}
-
 
 	va_list ap;
 	va_start(ap, str);
@@ -127,6 +131,9 @@ static void opp_warning(struct Opp_Context* opp,
 	vfprintf(stdout, str, ap);
 	fprintf(stdout, "\n");
 	va_end(ap);
+	printf("\t" CL_GREEN);
+	opp_debug_node(node);
+	printf(CL_RESET "\n");
 }
 
 static inline void opp_realloc_instrs(struct Opp_Context* opp)
@@ -211,7 +218,6 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 			if (opp->info.state != STATE_SWITCH)
 				opp_compile_error(opp, stmt,
 					"Unexpected 'case' statement outside 'switch'");
-
 			break;
 		
 		// case EBIN: case ELOGIC: case EUNARY: case ESUB:
@@ -562,7 +568,7 @@ static void opp_compile_goto(struct Opp_Context* opp, struct Opp_Node* lab)
 
 static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt)
 {
-
+	// optimize if (1) else 
 }
 
 static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn)
@@ -572,7 +578,8 @@ static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn)
 
 static void opp_compile_while(struct Opp_Context* opp, struct Opp_Node* loop)
 {
-
+	// optimize while (1)
+	// check for break inside, if no then allow for noreturn optimization
 }
 
 static void opp_compile_for(struct Opp_Context* opp, struct Opp_Node* loop)
@@ -793,29 +800,15 @@ static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node*
 	return type_info;
 }
 
-static enum Opp_Token jmp_opposites[] = {
-	[TGT] = TLE,
-	[TLT] = TGE,
-	[TEQEQ] = TNOTEQ,
-	[TGE] = TLT,
-	[TLE] = TGT,
-	[TNOTEQ] = TEQEQ
-};
-
 static struct Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Node* logic)
 {
 	struct Opp_Type type_info;
 	bool in_parent = false;
+
 	if (!opp->cond_state.in_logic) {
 		switch (opp->cond_state.cond_type)
 		{
 			case LOGIC_COND: {
-				// Generate 3 Labels
-				opp_check_label(opp, 3);
-				opp->cond_state.locs[0] = opp->info.label_loc++; // end
-				opp->cond_state.locs[1] = opp->info.label_loc++; // false
-				opp->cond_state.locs[2] = opp->info.label_loc++; // true
-
 				opp_compile_time_eval(opp, logic);
 
 				if (logic->type == EUNARY) {
@@ -823,9 +816,15 @@ static struct Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Nod
 					return type_info;
 				}
 
+				opp_check_label(opp, 3);
+				opp->cond_state.endloc = opp->info.label_loc++;
+				opp->cond_state.locs[0] = opp->info.label_loc++; // True
+				opp->cond_state.locs[1] = opp->info.label_loc++; // False
+
 				opp->cond_state.use_op = true;
 				opp->cond_state.jloc = opp->cond_state.locs[1];
-
+				opp->cond_state.curr_logic = 0;
+				opp->cond_state.hs = 0;
 				break;
 			}
 
@@ -838,7 +837,6 @@ static struct Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Nod
 	}
 
 	type_info = opp_compile_logic_assign(opp, logic);
-
 
 	if (in_parent) {
 		opp_compile_logic_end(opp, logic);
@@ -855,7 +853,7 @@ static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logi
 		case LOGIC_COND: {
 			opp_realloc_instrs(opp);
 			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
-			opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[2];
+			opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[0];
 			opp->ir.instr_idx++;
 
 			opp_realloc_instrs(opp);
@@ -868,7 +866,7 @@ static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logi
 			opp_realloc_instrs(opp);
 			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
 			opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
-			opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = opp->cond_state.locs[0];
+			opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = opp->cond_state.endloc;
 			opp->ir.instr_idx++;
 
 			opp_realloc_instrs(opp);
@@ -880,33 +878,41 @@ static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logi
 			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CONST;
 			opp->ir.opcodes[opp->ir.instr_idx].constant.type = IMM_I64;
 			opp->ir.opcodes[opp->ir.instr_idx].constant.imm_i64 = 0;
-			opp->ir.opcodes[opp->ir.instr_idx].constant.nopush = 1;
+			opp->ir.opcodes[opp->ir.instr_idx].constant.nopush = 0;
 			opp->ir.instr_idx++;
 
 			opp_realloc_instrs(opp);
 			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
-			opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[0];
+			opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.endloc;
 			opp->ir.instr_idx++;
-
-			opp_realloc_instrs(opp);
-			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_REG;
-			opp->ir.opcodes[opp->ir.instr_idx].reg_op.push = 1;
-			opp->ir.instr_idx++;
-
 			break;
 		}
 	}
 }
 
+static enum Opp_Token jmp_opposites[] = {
+	[TGT] = TLE,
+	[TLT] = TGE,
+	[TEQEQ] = TNOTEQ,
+	[TGE] = TLT,
+	[TLE] = TGT,
+	[TNOTEQ] = TEQEQ
+};
+
 static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct Opp_Node* logic)
 {
 	struct Opp_Type type_info = {0};
+	struct Opp_Cond save = opp->cond_state;
+
 	switch (logic->logic_expr.tok) 
 	{
 		case TEQEQ: case TNOTEQ: case TLT:
 		case TGT: case TLE: case TGE: {
-			opp_compile_expr(opp, logic->logic_expr.left);
-			opp_compile_expr(opp, logic->logic_expr.right);
+			struct Opp_Type lhs = opp_compile_expr(opp, logic->logic_expr.left);
+			struct Opp_Type rhs = opp_compile_expr(opp, logic->logic_expr.right);
+
+			if (lhs.type != rhs.type)
+				opp_warning(opp, logic, "Comparing different types");
 			// TODO: check for imm
 
 			opp_realloc_instrs(opp);
@@ -919,88 +925,107 @@ static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct 
 
 			if (opp->cond_state.use_op)
 				opp->ir.opcodes[opp->ir.instr_idx].jmp.type = 
-					jmp_opposites[logic->logic_expr.tok];
+					(enum OppIr_Jmp_Type)jmp_opposites[logic->logic_expr.tok];
 			else
 				opp->ir.opcodes[opp->ir.instr_idx].jmp.type = 
-					logic->logic_expr.tok;
+					(enum OppIr_Jmp_Type)logic->logic_expr.tok;
 
 			opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = opp->cond_state.jloc;
 			opp->ir.instr_idx++;
 			break;
 		}
 
-		case TAND: {
-			bool use_op = opp->cond_state.use_op;
-			unsigned int jloc = opp->cond_state.jloc;
+		case TOR: {
+			opp->cond_state.curr_logic = TOR;
 
-			opp->cond_state.use_op = 1;
-			opp->cond_state.jloc = opp->cond_state.locs[1];
+			if (logic->logic_expr.left->logic_expr.tok == TAND) {
+				opp_check_label(opp, 1);
+				opp->cond_state.locs[1] = opp->info.label_loc++;
+			}
 
-			opp_compile_expr(opp, logic->logic_expr.left);
-			opp_compile_expr(opp, logic->logic_expr.right);
+			opp->cond_state.use_op = 0;
+			opp->cond_state.jloc = opp->cond_state.locs[0];
+			opp->cond_state.hs = 0;
+			opp_compile_logic_assign(opp, logic->logic_expr.left); // Make possibly for assuming true Ex. 1 && 1
 
-			opp->cond_state.use_op = use_op;
-			opp->cond_state.jloc = jloc;
+			if (logic->logic_expr.left->logic_expr.tok == TAND) {
+				opp_realloc_instrs(opp);
+				opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+				opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[1];
+				opp->ir.instr_idx++;
 
+				opp->cond_state.locs[1] = save.locs[1];
+			}
+
+			if (save.curr_logic == TOR && save.hs == 0) {
+				opp->cond_state.use_op = 0;
+				opp->cond_state.jloc = opp->cond_state.locs[0];
+			}
+			else if (save.hs == 1 && save.curr_logic == TOR) {
+				opp->cond_state.use_op = 0;
+				opp->cond_state.jloc = opp->cond_state.locs[0];
+			}
+			else {
+				opp->cond_state.use_op = 1;
+				opp->cond_state.jloc = opp->cond_state.locs[1];
+			}
+			opp->cond_state.hs = 1;
+			opp->cond_state.curr_logic = save.curr_logic;
+			opp_compile_logic_assign(opp, logic->logic_expr.right);
 			break;
 		}
 
-		case TOR: {
-			bool use_op = opp->cond_state.use_op;
-			unsigned int jloc = opp->cond_state.jloc;
+		case TAND: {
+			opp->cond_state.curr_logic = TAND;
 
-			// if (logic->logic_expr.left.tok == TAND) {
-			// 	opp->cond_state.parent = true;
-			// 	opp_check_label(opp, 1);
-			// 	opp->cond_state.lr[0] = 
-
-			// }
-			// else {
-			// 	opp->cond_state.use_op = 0;
-			// 	opp->cond_state.jloc = opp->cond_state.locs[2]; 
-			// }
-			/*
-				POSSIBLY ALWAYS GENERATE extra label in OR format.
-				IT will look like this 
-				
-				Ex: (a == 2 || a == 3) ||/&& (cond)
-				cmp [a], 2
-				je next
-				cmp [a], 3
-				jne depend # This jump depends on whether it is nested in other logic expr's
-				# Triple || makes this a je (dont know how.)
-				
-				# Note if outer is a logic AND then depend would instead be false
-				# Note if outer is a logic OR then depend would instead be je true
-
-				Factors:
-					- Jmp types are not constant even when &&/|| is determined
-					- Parent logic expression effects current logic expr's jmp's 
-					- When there is a AND/OR on the lhs or an AND/OR an extra label needs to be used
-					- Currently I cannot notice a pattern 
-
-
-				* Maybe set a flag that identifies whether we are on the lhs or rhs
-
-			*/
-			opp_compile_expr(opp, logic->logic_expr.left);
+			if (logic->logic_expr.left->logic_expr.tok == TOR) {
+				opp_check_label(opp, 1);
+				opp->cond_state.locs[0] = opp->info.label_loc++;
+			}
 
 			opp->cond_state.use_op = 1;
 			opp->cond_state.jloc = opp->cond_state.locs[1];
+			opp->cond_state.hs = 0;
+			opp_compile_logic_assign(opp, logic->logic_expr.left); // Make possibly for assuming true Ex. 1 && 1
 
-			opp_compile_expr(opp, logic->logic_expr.right);
+			if (logic->logic_expr.left->logic_expr.tok == TOR) {
+				opp_realloc_instrs(opp);
+				opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+				opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[0];
+				opp->ir.instr_idx++;
 
-			opp->cond_state.use_op = use_op;
-			opp->cond_state.jloc = jloc;
+				opp->cond_state.locs[0] = save.locs[0];
+			}
+
+			if (save.curr_logic == TOR && save.hs == 0) {
+				opp->cond_state.use_op = 0;
+				opp->cond_state.jloc = opp->cond_state.locs[0];
+			}
+			else if (save.hs == 1 && save.curr_logic == TOR) {
+				opp->cond_state.use_op = 0;
+				opp->cond_state.jloc = opp->cond_state.locs[0];
+			}
+			else {
+				opp->cond_state.use_op = 1;
+				opp->cond_state.jloc = opp->cond_state.locs[1];
+			}
+			opp->cond_state.hs = 1;
+			opp->cond_state.curr_logic = save.curr_logic;
+			opp_compile_logic_assign(opp, logic->logic_expr.right);
+			break;
+
 			break;
 		}
 	}
+
+	opp->cond_state = save;
 	return type_info;
 }
 
 static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* assign)
 {
 	struct Opp_Type type_info = {0};
+	type_info.type = TYPE_NONE;
 	struct Opp_Node* node = assign->assign_expr.ident;
 	unsigned int ptr_depth = 0;
 
@@ -1035,8 +1060,31 @@ static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_No
 			"Attempt to dereference var '%s' more then its pointer depth of '%d'",
 			node->unary_expr.val.strval, var->var.ptr_depth);
 
-	// struct Opp_Type rhs = opp_compile_expr(opp, assign->assign_expr.val);
+	struct Opp_Type rhs = opp_compile_expr(opp, assign->assign_expr.val);
 
+	if (rhs.type != var->var.type)
+		opp_warning(opp, assign,
+			"Attempt to assign var '%s' to not the same type");
+	if (rhs.type == TYPE_PTR && rhs.ptr_depth > var->var.ptr_depth)
+		opp_warning(opp, assign,
+			"Attempt to assign var '%s' to a pointer of depth '%d'", rhs.ptr_depth);
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ASSIGN;
+	opp->ir.opcodes[opp->ir.instr_idx].set.global = 0;
+	opp->ir.opcodes[opp->ir.instr_idx].set.imm = 0; // TODO: OPTIMIZE IMM
+
+	if (var->type == TYPE_GLOBAL) {
+		opp->ir.opcodes[opp->ir.instr_idx].set.global = 1;
+		opp->ir.opcodes[opp->ir.instr_idx].set.val.type = IMM_STR;
+		// opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_sym = var->key; // TODO MAKE COPY ?? 
+	}
+	else {
+		opp->ir.opcodes[opp->ir.instr_idx].set.val.type = IMM_LOC;
+		opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_i64 = var->var.offset;
+	}
+
+	opp->ir.instr_idx++;
 
 	return type_info;
 }
@@ -1044,13 +1092,34 @@ static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_No
 static struct Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node* sub)
 {
 	struct Opp_Type type_info = {0};
+
+	if (sub->sub_expr.unary->type == EUNARY && sub->sub_expr.unary->unary_expr.type != TIDENT) {
+		if (sub->sub_expr.unary->unary_expr.type != TINTEGER)
+			opp_warning(opp, sub,
+				"Attempting to negate a non integer type");
+
+		sub->sub_expr.unary->unary_expr.val.i64val = -sub->sub_expr.unary->unary_expr.val.i64val;
+		goto opt;
+	}
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
+	// add mul -1
+	opp->ir.instr_idx++;
+
+	opt:
 	return type_info;
-	// optimize sub if a integer
 }
 
 static struct Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call)
 {
 	struct Opp_Type type_info = {0};
+
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CALL;
+	opp->ir.instr_idx++;
+
+
 	return type_info;
 }
 

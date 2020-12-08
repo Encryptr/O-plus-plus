@@ -1,9 +1,9 @@
 #include "ir.h"
 
+#ifdef LINUX64
 void init_elf_deps()
 {
 	strtable = (unsigned char*)malloc(1 * 64);
-	
 	
 
 }
@@ -76,3 +76,5 @@ void init_rela_text_sect()
 {
 
 }
+
+#endif

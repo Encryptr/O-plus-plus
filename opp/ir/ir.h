@@ -39,6 +39,7 @@ enum Regs {
 
 enum OppIr_Opcode_Type {
 	OPCODE_CONST,
+	OPCODE_CALL,
 	OPCODE_FUNC,
 	OPCODE_VAR,
 	OPCODE_ARITH,
@@ -48,7 +49,6 @@ enum OppIr_Opcode_Type {
 	OPCODE_DEREF,
 	OPCODE_ADDR,
 	OPCODE_ASSIGN,
-	OPCODE_REG,
 	OPCODE_END,
 };
 
@@ -97,9 +97,7 @@ enum OppIr_Const_Type {
 
 struct OppIr_Const {
 	enum OppIr_Const_Type type;
-	bool global;
-	bool nopush;
-
+	bool global, nopush;
 	union {
 		char*	 imm_sym;
 		int64_t  imm_i64;
@@ -114,6 +112,7 @@ struct OppIr_Var {
 	bool global;
 	char* name;
 	uint32_t offset;
+	unsigned int elem;
 };
 
 struct OppIr_Func {
@@ -149,8 +148,9 @@ struct OppIr_Cmp {
 	struct OppIr_Const val;
 };
 
-struct OppIr_Reg {
-	bool push;
+struct OppIr_Set {
+	bool global, imm;
+	struct OppIr_Const val;
 };
 
 struct OppIr_Opcode {
@@ -163,7 +163,7 @@ struct OppIr_Opcode {
 		struct OppIr_Arith arith;
 		struct OppIr_Jmp   jmp;
 		struct OppIr_Cmp   cmp;
-		struct OppIr_Reg   reg_op;
+		struct OppIr_Set   set;
 	};
 };
 
@@ -226,7 +226,7 @@ static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc);
 static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp);
 static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var);
 static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp);
-static void oppir_eval_reg(struct OppIr* ir, struct OppIr_Reg* reg_op);
+static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set);
 static void oppir_eval_end(struct OppIr* ir);
 
 #endif /* OPP_IR */

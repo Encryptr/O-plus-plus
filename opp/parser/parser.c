@@ -91,19 +91,6 @@ static void opp_expect_error(struct Opp_Parser* parser, char sym)
 	}
 }
 
-static void opp_debug_parser(struct Opp_Node* node)
-{
-	switch (node->type)
-	{
-		case EASSIGN:
-			printf("Assign type: %d\n", node->assign_expr.op);
-			printf("Left: %s\n", node->assign_expr.ident->unary_expr.val.strval);
-			printf("Value: %ld\n", node->assign_expr.val->unary_expr.val.i64val);
-			break;
-
-	}
-}
-
 static struct Opp_Node* opp_parse_global_def(struct Opp_Parser* parser)
 {
 	switch (parser->lex->t.id)

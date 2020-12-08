@@ -130,7 +130,7 @@ static void opp_help()
 	printf("\t-nostd          | Don't link Opp stdlib\n");
 	printf("\t-w              | Hide warnings\n");
 	printf("\t-debug          | Debug compiler stats\n");
-	printf("\t-Wall           | Turn warnings to erros\n");
+	printf("\t-Wall           | Turn warnings to errors\n");
 	printf("\n");
 }
 

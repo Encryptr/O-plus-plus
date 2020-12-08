@@ -18,7 +18,7 @@
  */ 
 
 #include <stdlib.h>
-#include <malloc.h>
+#include <stdio.h>
 #include <stdbool.h>
 
 #define BLOCK_SIZE 64000

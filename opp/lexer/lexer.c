@@ -426,7 +426,7 @@ void dump_tokens(struct Opp_Scan* s)
 		if (s->t.id == TFLOAT)
 			printf("FLOAT %lf\n", s->t.real);
 		else if (s->t.id == TINTEGER)
-			printf("INT %ld\n", s->t.num);
+			printf("INT %lld\n", s->t.num);
 		else if (s->t.id == TIDENT)
 			printf("IDENT %s\n", s->t.buffer.buf);
 		else if (s->t.id == TSTR)

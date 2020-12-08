@@ -96,6 +96,13 @@ Optimizations:
 			a * 2 # shl rax, 1
 			a * 4 # shl rax, 2
 
+		Also any mul operation by 1 can be ignored and any by -1 
+		can be changed into a neg operation.
+
+		Ex: (Assume a in rax)
+			a * 1 # Ignore
+			a * -1 # neg rax
+
 	Division:
 		Any div operation to a power of two can be replaced
 		with a shift right to n amount.
