@@ -233,8 +233,36 @@ static enum Regs oppir_pop_reg(struct OppIr* ir)
 		printf("Error reg_stack pop overflow\n");
 
 	if (ir->reg_stack.top->spilled) {
-		printf("HANDLE SPILLED\n");
-		// unspill reg
+		oppir_check_realloc(ir, 3);
+		struct OppIr_Const val = {
+			.type = IMM_I8
+		};
+		ir->reg_stack.top->used = 0;
+		ir->reg_stack.top->spilled = 0;
+		IR_EMIT(0x48); IR_EMIT(0x8b);
+
+		ir->reg_stack.top++;
+		enum Regs new_reg = oppir_push_reg(ir);
+		pop_reg = oppir_pop_reg(ir);
+		ir->reg_stack.top--;
+
+		if (ir->reg_stack.top->loc < -255) {
+			IR_EMIT(0x85 + (new_reg*8));
+			val.type = IMM_I32;
+			val.imm_i32 = ir->reg_stack.top->loc;
+		}
+		else {
+			IR_EMIT(0x45 + (new_reg*8));
+			val.imm_i8 = ir->reg_stack.top->loc;
+		}
+		oppir_write_const(ir, &val);
+
+		for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+			if (ir->regalloc.spills[i].loc == ir->reg_stack.top->loc) {
+				ir->regalloc.spills[i].use = 0;
+				break;
+			}
+		}
 	}
 	else {
 		ir->reg_stack.top->used = 0;
@@ -249,32 +277,37 @@ static void oppir_write_const(struct OppIr* ir, struct OppIr_Const* imm)
 {
 	switch (imm->type)
 	{
-		case IMM_I64:
+		case IMM_I64: {
 			oppir_check_realloc(ir, 8); 
 			ir->code.bytes[ir->code.idx++] = imm->imm_i64 & 0xFF;
 			for (int i = 8; i <= 56; i += 8) 
 				ir->code.bytes[ir->code.idx++] = (imm->imm_i64 >> i) & 0xFF;
 			break;
+		}
 
-		case IMM_I32:
+		case IMM_I32: {
 			oppir_check_realloc(ir, 4); 
 			ir->code.bytes[ir->code.idx++] = imm->imm_i32 & 0xFF;
 			for (int i = 8; i <= 24; i += 8) 
 				ir->code.bytes[ir->code.idx++] = (imm->imm_i32 >> i) & 0xFF;
 			break;
+		}
 
-		case IMM_U32:
+		case IMM_U32: {
 			oppir_check_realloc(ir, 4); 
 			ir->code.bytes[ir->code.idx++] = imm->imm_u32 & 0xFF;
 			for (int i = 8; i <= 24; i += 8) 
 				ir->code.bytes[ir->code.idx++] = (imm->imm_u32 >> i) & 0xFF;
 			break;
+		}
 
-
-		case IMM_I8:
-			oppir_check_realloc(ir, 1); 
+		case IMM_I8: {
+			oppir_check_realloc(ir, 1);
 			ir->code.bytes[ir->code.idx++] = imm->imm_i8;
 			break;
+		}
+
+		default: break;
 	}
 }
 
@@ -314,8 +347,18 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 			oppir_eval_set(ir, &op->set);
 			break;
 
+		case OPCODE_RET:
+			oppir_eval_ret(ir);
+			break;
+
+		case OPCODE_ARITH:
+			oppir_eval_arith(ir, &op->arith);
+			break;
+
 		case OPCODE_CALL: break;
 			// oppir_eval_call(ir, &op->)
+
+		default: break;
 	}
 }
 
@@ -371,8 +414,13 @@ static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn)
 	// Reset local func info
 	ir->local_stack.size = 0;
 	ir->local_stack.pos = 0;
-	ir->regalloc.amount = 0;
 	ir->offsets.jmp_idx = 0;
+	ir->regalloc.amount = 0;
+	ir->reg_stack.top = ir->reg_stack.stack;
+	for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+		ir->regalloc.spills[i].made = 0;
+		ir->regalloc.spills[i].use = 0;
+	}
 
 	oppir_emit_frame(ir);
 	oppir_local_param(ir, fn->args);
@@ -464,17 +512,19 @@ static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp)
 		printf("JMP REALLOC NEEDED\n");
 	}
 
-	if (jmp->type == RET_JMP)
-		oppir_pop_reg(ir);
-	else if (jmp->type == PURE_JMP)
+	if (jmp->type == PURE_JMP) // TODO: REMOVE NEW JMP TYPE ENUM ??
 		IR_EMIT(0xe9);
 	else
 		IR_EMIT(0x0f);
 
 	switch (jmp->type)
 	{
-		case TEQEQ: IR_EMIT(0x84); break;
+		case TEQEQ:  IR_EMIT(0x84); break;
 		case TNOTEQ: IR_EMIT(0x85); break;
+		case TGT:    IR_EMIT(0x8f); break;
+		case TLE:    IR_EMIT(0x8e); break;
+		case TLT:    IR_EMIT(0x8c); break;
+		case TGE:    IR_EMIT(0x8d); break;
 	}
 	ir->offsets.jmp_table[ir->offsets.jmp_idx].loc = ir->code.idx;
 	ir->offsets.jmp_table[ir->offsets.jmp_idx].table_pos = jmp->loc;
@@ -488,20 +538,143 @@ static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp)
 
 static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var)
 {
-	
+	if (var->global) {
+		// make the symbol
+	}
+	else {
+		ir->local_stack.size += 8 * var->elem;
+		ir->local_stack.pos  -= 8 * var->elem;
+	}
 }
 
 static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp)
 {
-	// OPTIMIZE IMM TODO!!
+	// TODO: IMM 
 	enum Regs lhs = oppir_pop_reg(ir);
-	enum Regs rhs = oppir_pop_reg(ir);
+	enum Regs rhs;
+
+	if (!cmp->imm) 
+		rhs = oppir_pop_reg(ir);
 
 	oppir_check_realloc(ir, 3);
-	IR_EMIT(0x48); IR_EMIT(0x39); IR_EMIT(0xc8);
+	
+	IR_EMIT(0x48); IR_EMIT(0x39);
+
+	switch (lhs)
+	{
+		case REG_RAX:
+			IR_EMIT(0xc0 + (rhs*8));
+			break;
+
+		case REG_RCX:
+			IR_EMIT(0xc1 + (rhs*8));
+			break;
+
+		case REG_RDX:
+			IR_EMIT(0xc2 + (rhs*8));
+			break;
+	}
 }
 
 static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set)
 {
-	/// handle assign
+	enum Regs reg_type = oppir_pop_reg(ir);
+
+	struct OppIr_Const val = {
+		.type = IMM_I32, 
+		.imm_i32 = 0
+	};
+
+	oppir_check_realloc(ir, 3);
+	IR_EMIT(0x48); IR_EMIT(0x89);
+
+	if (!set->global) {
+		if (set->val.imm_i32 < -255) {
+			IR_EMIT(0x85 + (reg_type*8));
+			val.imm_i32 = set->val.imm_i32;
+		}
+		else {
+			IR_EMIT(0x45 + (reg_type*8));
+			val.type = IMM_I8;
+			val.imm_i8 = (char)set->val.imm_i32;
+		}
+
+		oppir_write_const(ir, &val);
+	}
+}
+
+static void oppir_eval_ret(struct OppIr* ir)
+{
+	enum Regs res_reg = oppir_pop_reg(ir);
+
+	if (res_reg != REG_RAX) {
+		oppir_check_realloc(ir, 3);
+		IR_EMIT(0x48);
+		IR_EMIT(0x89);
+		IR_EMIT(0xc8 + ((res_reg-1)*8));
+	}
+}
+
+static void oppir_emit_reg_comb(struct OppIr* ir, enum Regs lhs, enum Regs rhs)
+{
+	switch (lhs)
+	{
+		case REG_RAX: IR_EMIT(0xc0 + (rhs*8)); break;
+		case REG_RCX: IR_EMIT(0xc1 + (rhs*8)); break;
+		case REG_RDX: IR_EMIT(0xc2 + (rhs*8)); break;
+	}
+}
+
+static void oppir_eval_arith(struct OppIr* ir, struct OppIr_Arith* arith)
+{
+	enum Regs rhs = oppir_pop_reg(ir);
+	enum Regs lhs;
+
+	if (!arith->imm)
+		lhs = oppir_pop_reg(ir);
+
+	oppir_check_realloc(ir, 7);
+	IR_EMIT(0x48);
+
+	switch (arith->type)
+	{
+		case TADD: {
+			if (arith->imm) {
+				if (arith->val.type == IMM_I8) {
+					IR_EMIT(0x83);
+					IR_EMIT(0xc0 + rhs);
+				}
+				else {
+					if (lhs == REG_RAX)
+						IR_EMIT(0x05);
+					else {
+						IR_EMIT(0x81);
+						IR_EMIT(0xc0 + rhs);
+					}
+				}
+			}
+			else
+				IR_EMIT(0x1);
+			break;
+		}
+
+		case TMIN: {
+			break;
+		}
+
+		case TMUL: {
+			break;
+		}
+
+		case TDIV: {
+			break;
+		}
+	}
+
+	if (arith->imm)
+		oppir_write_const(ir, &arith->val);
+	else 
+		oppir_emit_reg_comb(ir, lhs, rhs);
+
+	oppir_push_reg(ir);
 }

@@ -150,6 +150,7 @@ static inline void opp_realloc_instrs(struct Opp_Context* opp)
 
 static void opp_check_label(struct Opp_Context* opp, unsigned int idx)
 {
+	// Possibly remove since IR SHOULD HANDLE LABEL relocation
 	if ((opp->info.label_loc+idx) >= DEFAULT_OFFSET_TABLE) {
 		printf("NEED MORE LABEL LOC's\n");
 	}
@@ -175,6 +176,8 @@ void opp_compile(struct Opp_Context* opp)
 			case STMT_VAR:
 				opp_compile_var(opp, opp->parser->statments[stmt]);
 				break;
+
+			default: break;
 		}
 	}
 }
@@ -196,7 +199,12 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 			break;
 
 		case STMT_IF:
+			opp_compile_if(opp, stmt);
+			break;
+
 		case STMT_WHILE:
+		case STMT_FOR:
+		case STMT_SWITCH:
 			break;
 
 		case STMT_VAR:
@@ -211,7 +219,6 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 			if (opp->info.state != STATE_LOOP)
 				opp_compile_error(opp, stmt,
 					"Unexpected 'break' statement outide a loop");
-
 			break;
 
 		case STMT_CASE:
@@ -290,6 +297,8 @@ static struct Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node
 		case ESUB:
 			type = opp_compile_sub(opp, expr);
 			break;
+
+		default: break;
 	}
 
 	return type;
@@ -342,10 +351,13 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 	struct Opp_Stmt_Func* fn = &func->fn_stmt;
 	char* const name = fn->name->unary_expr.val.strval;
 
-	// Setup
+	// ==============================
+	// Setup / Resets
 	opp->info.fn_name = name;
 	opp->info.stack_offset = 0;
 	opp->info.goto_idx = 0;
+	opp->info.label_loc = 1;
+	// ==============================
 
 	struct Opp_Bucket* fn_node = env_add_item(opp->global_ns, name);
 
@@ -367,7 +379,7 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 	opp->info.cur_ns = init_namespace(opp->global_ns, (void*)alloc);
 
 	if (fn->args->length > 6)
-		opp_compile_error(opp, func, "Error function parameter amount is above limit (6) provided '%u'",
+		opp_compile_error(opp, func, "Error function parameter amount is above limit (6), got '%u'",
 			fn->args->length);
 
 	opp_compile_args(opp, func);
@@ -418,12 +430,15 @@ static void opp_set_offsets(struct Opp_Context* opp)
 
 static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret)
 {
-	if (ret->ret_stmt.value)
+	if (ret->ret_stmt.value) {
 		opp_compile_expr(opp, ret->ret_stmt.value);
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx++].type = OPCODE_RET;
+	}
 
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
-	opp->ir.opcodes[opp->ir.instr_idx].jmp.type = RET_JMP;
+	opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
 
 	if (opp->info.goto_idx >= DEFAULT_OFFSET_TABLE) 
 		opp_compile_error(opp, ret, "Max goto limit met (%d) in 'return' statement",
@@ -490,7 +505,7 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 		opp->info.stack_offset -= 8; 
 
 		if (assign) {
-			struct Opp_Type res = opp_compile_expr(opp, var->var_stmt.vars->list[i]->assign_expr.val);
+			struct Opp_Type res = opp_compile_expr(opp, var->var_stmt.vars->list[i]);
 
 			if (bucket->var.type != res.type)
 				opp_warning(opp, var, 
@@ -507,12 +522,11 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 		opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_VAR;
 		opp->ir.opcodes[opp->ir.instr_idx].var.global = global;
+		opp->ir.opcodes[opp->ir.instr_idx].var.elem = 1;
 
 		if (global) 
 			opp->ir.opcodes[opp->ir.instr_idx].var.name = node->unary_expr.val.strval;
-		else 
-			opp->ir.opcodes[opp->ir.instr_idx].var.offset = opp->info.stack_offset;
-
+	
 		opp->ir.instr_idx++;
 	}
 }
@@ -568,7 +582,66 @@ static void opp_compile_goto(struct Opp_Context* opp, struct Opp_Node* lab)
 
 static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt)
 {
-	// optimize if (1) else 
+	opp_compile_time_eval(opp, ifstmt->if_stmt.cond);
+
+	if (ifstmt->if_stmt.cond->type == EUNARY) {
+		if (ifstmt->if_stmt.cond->unary_expr.val.i64val)
+			opp_compile_stmt(opp, ifstmt->if_stmt.then);
+		else {
+			if (ifstmt->if_stmt.other != NULL)
+				opp_compile_stmt(opp, ifstmt->if_stmt.other);
+		}
+		return;
+	}
+
+	bool iselse = ifstmt->if_stmt.other == NULL ? 0 : 1;
+
+	opp->cond_state.cond_type = IFWHILE_COND;
+	opp_check_label(opp, iselse ? 3 : 2);
+
+	opp->cond_state.endloc = opp->info.label_loc++;
+	opp->cond_state.locs[0] = opp->info.label_loc++;
+	if (iselse) opp->cond_state.locs[1] = opp->info.label_loc++;
+	else opp->cond_state.locs[1] = opp->cond_state.endloc;
+
+
+	/* If structure
+		<cond>
+	true:
+		true ...
+	false:
+		false ...
+	end:
+
+	*/
+
+	opp_compile_expr(opp, ifstmt->if_stmt.cond);
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[0];
+	opp->ir.instr_idx++;
+
+	opp_compile_stmt(opp, ifstmt->if_stmt.then);
+
+	if (iselse) {
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
+		opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
+		opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = opp->cond_state.endloc;
+		opp->ir.instr_idx++;
+
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[1];
+		opp->ir.instr_idx++;
+		opp_compile_stmt(opp, ifstmt->if_stmt.other);
+	}
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.endloc;
+	opp->ir.instr_idx++;
 }
 
 static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn)
@@ -618,6 +691,8 @@ static struct Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Nod
 		case TIDENT:
 			type_info = opp_compile_literal(opp, unary);
 			break;
+
+		default: break;
 	}
 
 	opp->ir.instr_idx++;
@@ -782,22 +857,65 @@ static struct Opp_Node* opp_compile_time_eval(struct Opp_Context* opp, struct Op
 
 			break;
 		}
+		default: break;
 	}
 	return NULL;
 }
 
 static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin)
 {
-	struct Opp_Type type_info = {0};
 	opp_compile_time_eval(opp, bin);
+	struct Opp_Type lhs;
+	struct Opp_Type rhs;
+	bool imm = false;
 
 	if (bin->type == EUNARY) {
-		type_info = opp_compile_unary(opp, bin);
-		return type_info;
+		lhs = opp_compile_unary(opp, bin);
+		return lhs;
 	}
 
+	// Find first bin side TODO: MOVE TO FN??
+	// This needs to also make consts on the rhs
+	if (bin->bin_expr.right->type == ECALL) {
+		struct Opp_Node* temp = bin->bin_expr.left;
+		bin->bin_expr.left = bin->bin_expr.right;
+		bin->bin_expr.right = temp;
+	}
 
-	return type_info;
+	lhs = opp_compile_expr(opp, bin->bin_expr.left);
+
+
+	// SWITCH THIS INTO DOING const expr eval and if its unary
+	if (bin->bin_expr.right->type == EUNARY 
+		&& bin->bin_expr.right->unary_expr.type == TINTEGER
+		&& bin->bin_expr.right->unary_expr.val.i64val <= UINT_MAX)
+	{
+		imm = true;
+		rhs.type = TYPE_NUM;
+	}
+	else
+		rhs = opp_compile_expr(opp, bin->bin_expr.right);
+
+	if (lhs.type != rhs.type)
+		opp_warning(opp, bin, 
+			"Found mixing types in a binary operation");
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
+	opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 0;
+	opp->ir.opcodes[opp->ir.instr_idx].arith.type = bin->bin_expr.tok;
+
+	if (imm) {
+		opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 1;
+		opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = IMM_I8;
+		if (bin->bin_expr.right->unary_expr.val.i64val > 255)
+			opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = IMM_I32;
+		opp->ir.opcodes[opp->ir.instr_idx].arith.val.imm_i32 = 
+			(uint32_t)bin->bin_expr.right->unary_expr.val.i64val;
+	}
+	opp->ir.instr_idx++;
+
+	return lhs;
 }
 
 static struct Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Node* logic)
@@ -828,9 +946,15 @@ static struct Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Nod
 				break;
 			}
 
-			case IFWHILE_COND:
-				// comptime eval check 
+			case IFWHILE_COND: {
+				opp->cond_state.use_op = true;
+				opp->cond_state.jloc = opp->cond_state.locs[1];
+				opp->cond_state.curr_logic = 0;
+				opp->cond_state.hs = 0;
 				break;
+			}
+
+			case SWITCH_COND: { break; }
 		}
 		opp->cond_state.in_logic = true;
 		in_parent = true;
@@ -887,6 +1011,13 @@ static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logi
 			opp->ir.instr_idx++;
 			break;
 		}
+
+		case IFWHILE_COND:
+			opp->cond_state.cond_type = LOGIC_COND;
+			break;
+
+		case SWITCH_COND:
+			break;
 	}
 }
 
@@ -925,10 +1056,10 @@ static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct 
 
 			if (opp->cond_state.use_op)
 				opp->ir.opcodes[opp->ir.instr_idx].jmp.type = 
-					(enum OppIr_Jmp_Type)jmp_opposites[logic->logic_expr.tok];
+					jmp_opposites[logic->logic_expr.tok];
 			else
 				opp->ir.opcodes[opp->ir.instr_idx].jmp.type = 
-					(enum OppIr_Jmp_Type)logic->logic_expr.tok;
+					logic->logic_expr.tok;
 
 			opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = opp->cond_state.jloc;
 			opp->ir.instr_idx++;
@@ -1013,9 +1144,9 @@ static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct 
 			opp->cond_state.curr_logic = save.curr_logic;
 			opp_compile_logic_assign(opp, logic->logic_expr.right);
 			break;
-
-			break;
 		}
+
+		default: break;
 	}
 
 	opp->cond_state = save;
@@ -1024,22 +1155,16 @@ static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct 
 
 static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* assign)
 {
-	struct Opp_Type type_info = {0};
-	type_info.type = TYPE_NONE;
 	struct Opp_Node* node = assign->assign_expr.ident;
-	unsigned int ptr_depth = 0;
 
-	while (node->type != EUNARY) {
-		if (node->type != EDEREF)
-			opp_compile_error(opp, assign,
-				"Error in dereferance assigment (unexpected lvalue)");
-		node = node->defer_expr.defer;
-		ptr_depth++;
-	}
-
-	if (node->unary_expr.type != TIDENT)
-		opp_compile_error(opp, assign,
+	if ((assign->assign_expr.ident->type != EUNARY 
+		&& assign->assign_expr.ident->unary_expr.type != TIDENT)
+	 	&& assign->assign_expr.ident->type != EDEREF)
+	 	opp_compile_error(opp, assign,
 			"Expected a identifier on the left side of '=' operator");
+
+	if (node->type == EDEREF)
+		return opp_compile_ptr_assign(opp, assign);
 
 	struct Opp_Bucket* var = env_get_item(opp->info.cur_ns, node->unary_expr.val.strval);
 
@@ -1050,15 +1175,6 @@ static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_No
 	if (var->type == TYPE_LABEL)
 		opp_compile_error(opp, assign,
 			"Attempt to assign a '%s' which is not a variable", node->unary_expr.val.strval);
-
-	if (var->type != TYPE_PTR && ptr_depth > 0)
-		opp_compile_error(opp, assign, 
-			"Attempting to dereference assign var '%s' which is not a pointer");
-
-	if (var->type == TYPE_PTR && ptr_depth > var->var.ptr_depth)
-		opp_compile_error(opp, assign, 
-			"Attempt to dereference var '%s' more then its pointer depth of '%d'",
-			node->unary_expr.val.strval, var->var.ptr_depth);
 
 	struct Opp_Type rhs = opp_compile_expr(opp, assign->assign_expr.val);
 
@@ -1081,10 +1197,46 @@ static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_No
 	}
 	else {
 		opp->ir.opcodes[opp->ir.instr_idx].set.val.type = IMM_LOC;
-		opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_i64 = var->var.offset;
+		opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_i32 = var->var.offset;
 	}
 
 	opp->ir.instr_idx++;
+
+	return rhs;
+}
+
+static struct Opp_Type opp_compile_ptr_assign(struct Opp_Context* opp, struct Opp_Node* expr)
+{
+	struct Opp_Type type_info = {0};
+	unsigned int ptr_depth = 0;
+	struct Opp_Node* node = expr->assign_expr.ident;
+
+	while (node->type != EUNARY && node->type != EBIN) {
+		if (node->type != EDEREF)
+			opp_compile_error(opp, expr,
+				"Error in dereferance assigment (unexpected lvalue)");
+		node = node->defer_expr.defer;
+		ptr_depth++;
+	}
+
+	// set a flag 
+	// ex
+	/*
+		***a = 3;
+
+		into deref # 1
+		into deref # 2
+		into deref # 3
+			Sees flag and ident / bin next
+
+		mov rax, [a]
+		mov rcx, [rax]
+		mov rax, [rcx]
+		mov rcx, 2
+		mov [rax], rcx
+
+	*/
+
 
 	return type_info;
 }
@@ -1098,15 +1250,23 @@ static struct Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node*
 			opp_warning(opp, sub,
 				"Attempting to negate a non integer type");
 
-		sub->sub_expr.unary->unary_expr.val.i64val = -sub->sub_expr.unary->unary_expr.val.i64val;
-		goto opt;
+		int64_t neg = -sub->sub_expr.unary->unary_expr.val.i64val;
+		struct Opp_Debug temp = {.line = sub->debug.line, .colum = sub->debug.colum};
+		memset(sub, 0, sizeof(struct Opp_Node));
+
+		sub->type = EUNARY;
+		sub->unary_expr.type = TINTEGER;
+		sub->unary_expr.val.i64val = neg;
+		sub->debug = temp;
+		type_info.type = TYPE_NUM;
+		return type_info;
 	}
+
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
 	// add mul -1
 	opp->ir.instr_idx++;
 
-	opt:
 	return type_info;
 }
 
@@ -1114,11 +1274,9 @@ static struct Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node
 {
 	struct Opp_Type type_info = {0};
 
-
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CALL;
 	opp->ir.instr_idx++;
-
 
 	return type_info;
 }
@@ -1130,12 +1288,6 @@ static struct Opp_Type opp_compile_addr(struct Opp_Context* opp, struct Opp_Node
 }
 
 static struct Opp_Type opp_compile_deref(struct Opp_Context* opp, struct Opp_Node* expr)
-{
-	struct Opp_Type type_info = {0};
-	return type_info;
-}
-
-static struct Opp_Type opp_compile_ptr_assign(struct Opp_Context* opp, struct Opp_Node* expr)
 {
 	struct Opp_Type type_info = {0};
 	return type_info;

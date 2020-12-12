@@ -28,6 +28,8 @@
 #include "../env/env.h"
 #include "../ast/ast.h"
 
+#define UINT_MAX 4294967295
+
 enum Opp_State {
 	STATE_DEFAULT,
 	STATE_LOOP,

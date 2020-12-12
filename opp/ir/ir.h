@@ -45,6 +45,7 @@ enum OppIr_Opcode_Type {
 	OPCODE_ARITH,
 	OPCODE_CMP,
 	OPCODE_JMP,
+	OPCODE_RET,
 	OPCODE_LABEL,
 	OPCODE_DEREF,
 	OPCODE_ADDR,
@@ -111,7 +112,6 @@ struct OppIr_Const {
 struct OppIr_Var {
 	bool global;
 	char* name;
-	uint32_t offset;
 	unsigned int elem;
 };
 
@@ -121,25 +121,12 @@ struct OppIr_Func {
 	unsigned int args;
 };
 
-enum OppIr_Arith_Type {
-	ARITH_ADD,
-	ARITH_SUB,
-	ARITH_MUL,
-	ARITH_DIV,
-	ARITH_MOD,
-};
-
-struct OppIr_Arith {
-	enum OppIr_Arith_Type type;
-};
-
-enum OppIr_Jmp_Type {
-	PURE_JMP, RET_JMP,
-	// Rest jmp types are in Opp_Token
+enum {
+	PURE_JMP = 0,
 };
 
 struct OppIr_Jmp {
-	enum OppIr_Jmp_Type type;
+	int type; // 0 = Pure Jmp
 	unsigned int loc;
 };
 
@@ -153,6 +140,12 @@ struct OppIr_Set {
 	struct OppIr_Const val;
 };
 
+struct OppIr_Arith {
+	int type;
+	bool imm;
+	struct OppIr_Const val;
+};
+
 struct OppIr_Opcode {
 	enum OppIr_Opcode_Type type;
 
@@ -160,9 +153,9 @@ struct OppIr_Opcode {
 		struct OppIr_Const constant;
 		struct OppIr_Func  func;
 		struct OppIr_Var   var;
-		struct OppIr_Arith arith;
 		struct OppIr_Jmp   jmp;
 		struct OppIr_Cmp   cmp;
+		struct OppIr_Arith arith;
 		struct OppIr_Set   set;
 	};
 };
@@ -226,7 +219,9 @@ static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc);
 static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp);
 static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var);
 static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp);
+static void oppir_eval_arith(struct OppIr* ir, struct OppIr_Arith* arith);
 static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set);
 static void oppir_eval_end(struct OppIr* ir);
+static void oppir_eval_ret(struct OppIr* ir);
 
 #endif /* OPP_IR */

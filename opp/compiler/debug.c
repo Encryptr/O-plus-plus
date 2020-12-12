@@ -31,6 +31,7 @@ void opp_debug_node(struct Opp_Node* base)
 				case TMUL: printf(" * "); break;
 				case TDIV: printf(" / "); break;
 				case TMOD: printf(" %% "); break;
+				default: break;
 			}
 			opp_debug_node(base->bin_expr.right);
 			break;
@@ -47,6 +48,7 @@ void opp_debug_node(struct Opp_Node* base)
 				case TNOTEQ: printf(" != "); break;
 				case TLE: printf(" <= "); break;
 				case TGE: printf(" >= "); break;
+				default: break;
 			}
 			opp_debug_node(base->logic_expr.right);
 			break;
@@ -62,6 +64,7 @@ void opp_debug_node(struct Opp_Node* base)
 			switch (base->assign_expr.op)
 			{
 				case TEQ: printf(" = "); break;
+				default: break;
 			}
 
 			opp_debug_node(base->assign_expr.val);
@@ -73,7 +76,8 @@ void opp_debug_node(struct Opp_Node* base)
 			{
 				case TSTR: printf("\"%s\"", base->unary_expr.val.strval); break;
 				case TIDENT: printf("%s", base->unary_expr.val.strval); break;
-				case TINTEGER: printf("%lld", base->unary_expr.val.i64val);
+				case TINTEGER: printf("%lld", base->unary_expr.val.i64val); break;
+				default: break;
 			}
 			break;
 		}

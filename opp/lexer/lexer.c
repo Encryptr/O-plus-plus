@@ -212,6 +212,8 @@ void opp_lex_numeral(struct Opp_Scan* s)
 		case TFLOAT:
 			s->t.real = atof(s->t.buffer.buf);
 			break;
+
+		default: break;
 	}
 }
 
@@ -362,6 +364,8 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 				return TMODEQ; 
 			DECR; 
 			return TMOD;
+
+		default: break;
 		
 	}
 	return INVALID;
