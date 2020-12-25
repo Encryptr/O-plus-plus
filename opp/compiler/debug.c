@@ -68,6 +68,7 @@ void opp_debug_node(struct Opp_Node* base)
 			}
 
 			opp_debug_node(base->assign_expr.val);
+			printf(";");
 			break;
 		}
 
@@ -76,7 +77,7 @@ void opp_debug_node(struct Opp_Node* base)
 			{
 				case TSTR: printf("\"%s\"", base->unary_expr.val.strval); break;
 				case TIDENT: printf("%s", base->unary_expr.val.strval); break;
-				case TINTEGER: printf("%lld", base->unary_expr.val.i64val); break;
+				case TINTEGER: printf("%ld", base->unary_expr.val.i64val); break;
 				default: break;
 			}
 			break;
@@ -115,9 +116,11 @@ void opp_debug_node(struct Opp_Node* base)
 		case STMT_GOTO: {
 			printf("goto ");
 			opp_debug_node(base->goto_stmt.name);
+			printf(";");
 			break;
 		}
 		case STMT_IF: {
+			printf("if (");
 			break;
 		}
 		case STMT_VAR: {
@@ -134,6 +137,19 @@ void opp_debug_node(struct Opp_Node* base)
 			break;
 		}
 		case STMT_WHILE: {
+			printf("while (");
+			opp_debug_node(base->while_stmt.cond);
+			printf(")");
+			opp_debug_node(base->while_stmt.then);
+			break;
+		}
+		case STMT_BLOCK: {
+			printf(" {\n\t");
+			for (unsigned int i = 0; i < base->block_stmt.len; i++) {
+				printf("\t");
+				opp_debug_node(base->block_stmt.stmts[i]);
+			}
+			printf("\n\t}");
 			break;
 		}
 		case STMT_FUNC: {

@@ -1,0 +1,6 @@
+//1
+main() {
+	auto a = 5;
+	auto b = 3;
+	return a*3 == ((b*2) + (b * 3));
+}

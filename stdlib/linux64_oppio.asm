@@ -8,6 +8,17 @@ global __oppio_RDWR
 
 section .text
 
+__oppio_strlen:
+    xor rax, rax
+start_len:
+    cmp byte [rdi], 0
+    je end_len
+    inc rax
+    inc rdi
+    jmp start_len
+end_len:
+    ret
+
 __oppio_println:
 
 	ret
@@ -16,14 +27,6 @@ __oppio_printnumb:
 	ret
 
 __oppio_open_io:
-	; Create the file
-	mov rax, 85
-	mov rdx, 
-
-	syscall
-
-	mov rax, 2
-	mov rsi, rsi
 	ret
 
 __oppio_read_io:

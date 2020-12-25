@@ -1,0 +1,9 @@
+
+main() 
+{
+
+	
+	// return (a * b) + ((a*b) + (a*b));
+	// auto c = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
+	//auto d = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
+}

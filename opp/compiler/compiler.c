@@ -44,6 +44,7 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 	if (opp->info.goto_list == NULL)
 		goto err;
 	opp->info.goto_idx = 0;
+	opp->info.deref_assign = 0;
 
 	// Cond
 	memset(&opp->cond_state, 0, sizeof(struct Opp_Cond));
@@ -203,6 +204,9 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 			break;
 
 		case STMT_WHILE:
+			opp_compile_while(opp, stmt);
+			break;
+
 		case STMT_FOR:
 		case STMT_SWITCH:
 			break;
@@ -227,11 +231,11 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 					"Unexpected 'case' statement outside 'switch'");
 			break;
 		
-		// case EBIN: case ELOGIC: case EUNARY: case ESUB:
-		// case EELEMENT: case EDEREF:
-		// case EADDR: case ESIZEOF:
-		// 	opp_warning(opp, stmt, "Unused expression");
-		// 	break;
+		case EBIN: case ELOGIC: case EUNARY: case ESUB:
+		case EELEMENT: case EDEREF:
+		case EADDR: case ESIZEOF:
+			opp_warning(opp, stmt, "Unused expression");
+			break;
 
 		default: 
 			opp_compile_expr(opp, stmt);
@@ -363,6 +367,7 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 
 	if (fn_node == NULL)
 		opp_compile_error(opp, func, "Redefinition of function '%s(...)'", name);
+	fn_node->type = TYPE_FUNC;
 
 	if (fn->body == NULL)
 		return;
@@ -440,6 +445,8 @@ static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret)
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
 	opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
 
+	// DO I NEED THIS??? LABEL LOC IS always 0 ????? TODO
+
 	if (opp->info.goto_idx >= DEFAULT_OFFSET_TABLE) 
 		opp_compile_error(opp, ret, "Max goto limit met (%d) in 'return' statement",
 			DEFAULT_OFFSET_TABLE);
@@ -451,10 +458,57 @@ static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret)
 	opp->ir.instr_idx++;
 }
 
+static void opp_compile_bitfield(struct Opp_Context* opp, struct Opp_Node* bit)
+{
+	if (bit->assign_expr.ident->type == EUNARY && bit->assign_expr.ident->unary_expr.type != TIDENT)
+		opp_compile_error(opp, bit,
+			"Expected identifier on left hand side of bitfield declaration");
+	char* name = bit->assign_expr.ident->unary_expr.val.strval;
+
+	struct Opp_Bucket* var = env_add_item(opp->info.cur_ns, name);
+
+	if (bit == NULL)
+		opp_compile_error(opp, bit, "Redefinition of variable '%s'", name);
+
+	bool global = (opp->info.cur_ns == opp->global_ns);
+
+	var->type = global ? TYPE_GLOBAL : TYPE_LOCAL;
+	var->var.type = TYPE_BIT;
+
+	opp_compile_time_eval(opp, bit->assign_expr.val);
+	if (bit->assign_expr.val->type != EUNARY)
+		opp_compile_error(opp, bit,
+			"Expected constant bit size on right hand side");
+
+	if (bit->assign_expr.val->unary_expr.val.i64val > 64 || bit->assign_expr.val->unary_expr.val.i64val < 0)
+			opp_compile_error(opp, bit,
+				"Variables '%s' bitfield size cannot exceed 64 bits", name);
+
+	var->var.ptr_depth = (unsigned int)bit->assign_expr.val->unary_expr.val.i64val;
+
+	var->var.offset = var->var.ptr_depth;
+	while ((var->var.offset != 8 && var->var.offset != 16) 
+		&& (var->var.offset != 32 && var->var.offset != 64))
+		var->var.offset++;
+	var->var.offset /= 8;
+
+	opp->info.stack_offset -= var->var.offset;
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_VAR;
+	opp->ir.opcodes[opp->ir.instr_idx].var.global = global;
+	opp->ir.opcodes[opp->ir.instr_idx].var.size = var->var.offset;
+
+	if (global) 
+		opp->ir.opcodes[opp->ir.instr_idx].var.name = name;
+
+	opp->ir.instr_idx++;
+	var->var.offset = opp->info.stack_offset;
+}
+
 static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 {
 	bool global = (opp->info.cur_ns == opp->global_ns) ? 1 : 0;
-	struct Opp_Bucket* cur_var = NULL;
 
 	for (unsigned int i = 0; i < var->var_stmt.vars->length; i++) {
 		bool assign = true;
@@ -465,6 +519,11 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 			assign = false;
 		else if (node->type == EASSIGN)
 		{
+			if (node->assign_expr.op == TCOLON) {
+				opp_compile_bitfield(opp, var->var_stmt.vars->list[i]);
+				continue;
+			}
+
 			if (node->assign_expr.op != TEQ)
 				opp_compile_error(opp, node, "Expected '=' in auto declaration");
 			node = var->var_stmt.vars->list[i]->assign_expr.ident;
@@ -481,6 +540,9 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 
 		if (node->unary_expr.type != TIDENT)
 			opp_compile_error(opp, var, "Expected a identifier on left side of '=' in auto decl");
+
+		if (assign)
+			var->var_stmt.vars->list[i]->assign_expr.ident = node;
 
 		if (global && assign) {
 			// TODO: HANDLE CONST EXPR
@@ -502,7 +564,17 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 		else 
 			bucket->var.type = TYPE_NUM;
 		
-		opp->info.stack_offset -= 8; 
+		opp->info.stack_offset -= 8;
+
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_VAR;
+		opp->ir.opcodes[opp->ir.instr_idx].var.global = global;
+		opp->ir.opcodes[opp->ir.instr_idx].var.size = 8;
+
+		if (global) 
+			opp->ir.opcodes[opp->ir.instr_idx].var.name = node->unary_expr.val.strval;
+	
+		opp->ir.instr_idx++;
 
 		if (assign) {
 			struct Opp_Type res = opp_compile_expr(opp, var->var_stmt.vars->list[i]);
@@ -518,16 +590,6 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 							node->unary_expr.val.strval, res.ptr_depth);
 			}
 		}
-
-		opp_realloc_instrs(opp);
-		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_VAR;
-		opp->ir.opcodes[opp->ir.instr_idx].var.global = global;
-		opp->ir.opcodes[opp->ir.instr_idx].var.elem = 1;
-
-		if (global) 
-			opp->ir.opcodes[opp->ir.instr_idx].var.name = node->unary_expr.val.strval;
-	
-		opp->ir.instr_idx++;
 	}
 }
 
@@ -599,11 +661,17 @@ static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt)
 	opp->cond_state.cond_type = IFWHILE_COND;
 	opp_check_label(opp, iselse ? 3 : 2);
 
-	opp->cond_state.endloc = opp->info.label_loc++;
-	opp->cond_state.locs[0] = opp->info.label_loc++;
-	if (iselse) opp->cond_state.locs[1] = opp->info.label_loc++;
-	else opp->cond_state.locs[1] = opp->cond_state.endloc;
+	unsigned int end, body, other;
 
+	end = opp->info.label_loc++;
+	body = opp->info.label_loc++;
+	if (iselse) other = opp->info.label_loc++;
+	else other = end;
+
+	opp->cond_state.endloc = end;
+	opp->cond_state.locs[0] = body;
+	opp->cond_state.locs[1] = other;
+	
 
 	/* If structure
 		<cond>
@@ -619,7 +687,7 @@ static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt)
 
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
-	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[0];
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = body;
 	opp->ir.instr_idx++;
 
 	opp_compile_stmt(opp, ifstmt->if_stmt.then);
@@ -628,19 +696,19 @@ static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt)
 		opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
 		opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
-		opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = opp->cond_state.endloc;
+		opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = end;
 		opp->ir.instr_idx++;
 
 		opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
-		opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.locs[1];
+		opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = other;
 		opp->ir.instr_idx++;
 		opp_compile_stmt(opp, ifstmt->if_stmt.other);
 	}
 
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
-	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = opp->cond_state.endloc;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = end;
 	opp->ir.instr_idx++;
 }
 
@@ -649,10 +717,79 @@ static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn)
 
 }
 
+static void opp_compile_infinite(struct Opp_Context* opp, struct Opp_Node* loop)
+{
+	opp_check_label(opp, 1);
+
+	unsigned int start = opp->info.label_loc++;
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = start;
+	opp->ir.instr_idx++;
+
+	opp_compile_stmt(opp, loop->while_stmt.then);
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
+	opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
+	opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = start;
+	opp->ir.instr_idx++;
+}
+
 static void opp_compile_while(struct Opp_Context* opp, struct Opp_Node* loop)
 {
-	// optimize while (1)
-	// check for break inside, if no then allow for noreturn optimization
+	opp_compile_time_eval(opp, loop->while_stmt.cond);
+	if (loop->while_stmt.cond->type == EUNARY) {
+		if (loop->while_stmt.cond->unary_expr.val.i64val == 0)
+			return;
+		else if (loop->while_stmt.cond->unary_expr.val.i64val == 1) {
+			opp_compile_infinite(opp, loop);
+			return;
+		}
+		else
+			opp_compile_error(opp, loop,
+				"Unexpected condition type in while loop '%d'", 
+					loop->while_stmt.cond->unary_expr.val.i64val);
+	}
+
+	unsigned int start, body, end;
+
+	opp->cond_state.cond_type = IFWHILE_COND;
+	opp_check_label(opp, 3);
+
+	start = opp->info.label_loc++;
+	body = opp->info.label_loc++;
+	end = opp->info.label_loc++;
+
+	opp->cond_state.endloc = end;
+	opp->cond_state.locs[0] = body;
+	opp->cond_state.locs[1] = end;
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = start;
+	opp->ir.instr_idx++;
+
+	opp_compile_expr(opp, loop->while_stmt.cond);
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = body;
+	opp->ir.instr_idx++;
+
+	opp_compile_stmt(opp, loop->while_stmt.then);
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_JMP;
+	opp->ir.opcodes[opp->ir.instr_idx].jmp.type = PURE_JMP;
+	opp->ir.opcodes[opp->ir.instr_idx].jmp.loc = start;
+	opp->ir.instr_idx++;
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_LABEL;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_u32 = end;
+	opp->ir.instr_idx++;
 }
 
 static void opp_compile_for(struct Opp_Context* opp, struct Opp_Node* loop)
@@ -713,20 +850,30 @@ static struct Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_N
 
 	if (sym->type == TYPE_LABEL)
 		opp_compile_error(opp, unary, 
-			"Invalid use of the variable '%s'", unary->unary_expr.val.strval);
+			"Invalid use of the label '%s'", unary->unary_expr.val.strval);
 
-	type_info.type = sym->var.type;
-	if (sym->var.type == TYPE_PTR)
+	if (sym->type == TYPE_LOCAL || sym->type == TYPE_GLOBAL) {
+		opp->ir.opcodes[opp->ir.instr_idx].constant.global = sym->type == TYPE_GLOBAL ? 1 : 0;
+		type_info.type = sym->var.type;
 		type_info.ptr_depth = sym->var.ptr_depth;
 
-	if (opp->info.cur_ns == opp->global_ns) {
+		if (sym->var.type == TYPE_BIT) {
+			opp->ir.opcodes[opp->ir.instr_idx].constant.type = IMM_BIT;
+			opp->ir.opcodes[opp->ir.instr_idx].constant.extra = sym->var.ptr_depth;
+			type_info.type = TYPE_NUM;
+			type_info.ptr_depth = 0;
+		}
+	}
+	else if (sym->type == TYPE_FUNC) {
 		opp->ir.opcodes[opp->ir.instr_idx].constant.global = 1;
-		printf("ADD GLOBAL\n");
+		type_info.type = TYPE_PTR;
+		type_info.ptr_depth = 1;
 	}
-	else {
-		opp->ir.opcodes[opp->ir.instr_idx].constant.global = 0;
+
+	if (sym->type == TYPE_LOCAL)
 		opp->ir.opcodes[opp->ir.instr_idx].constant.imm_i32 = sym->var.offset;
-	}
+	else
+		opp->ir.opcodes[opp->ir.instr_idx].constant.imm_sym = sym->key;
 
 	return type_info;
 }
@@ -857,9 +1004,52 @@ static struct Opp_Node* opp_compile_time_eval(struct Opp_Context* opp, struct Op
 
 			break;
 		}
+
+		case ESUB: {
+			lhs = opp_compile_time_eval(opp, expr->sub_expr.unary);
+			
+			if (lhs == NULL) 
+				return NULL;
+
+			if (lhs->unary_expr.type == TINTEGER) {
+				int64_t neg = -lhs->unary_expr.val.i64val;
+				struct Opp_Debug temp = {.line = expr->debug.line, .colum = expr->debug.colum};
+				memset(expr, 0, sizeof(struct Opp_Node));
+				expr->type = EUNARY;
+				expr->unary_expr.type = TINTEGER;
+				expr->debug = temp;
+				expr->unary_expr.val.i64val = neg;
+
+				return expr;
+			}
+
+			break;
+		}
+
 		default: break;
 	}
 	return NULL;
+}
+
+static bool opp_determine_bin(struct Opp_Node* bin)
+{
+	bool result = false;
+
+	if (bin->bin_expr.right->type == EUNARY && 
+		bin->bin_expr.right->unary_expr.type == TINTEGER && 
+		bin->bin_expr.right->unary_expr.val.i64val <= UINT_MAX)
+	{
+		if (bin->bin_expr.tok == TADD || bin->bin_expr.tok == TMIN)
+			result = true;
+		else if (bin->bin_expr.tok == TMUL || bin->bin_expr.tok == TDIV)
+		{
+			if (bin->bin_expr.right->unary_expr.val.i64val % 2 == 0 ||
+				bin->bin_expr.right->unary_expr.val.i64val == -1)
+				result = true;
+		}
+	}
+
+	return result;
 }
 
 static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin)
@@ -874,26 +1064,27 @@ static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node*
 		return lhs;
 	}
 
-	// Find first bin side TODO: MOVE TO FN??
-	// This needs to also make consts on the rhs
-	if (bin->bin_expr.right->type == ECALL) {
-		struct Opp_Node* temp = bin->bin_expr.left;
+	///  OPTIMIZE THIS
+	struct Opp_Node* temp;
+	if (bin->bin_expr.left->type == EUNARY &&
+		bin->bin_expr.left->unary_expr.type == TINTEGER) {
+		temp = bin->bin_expr.left;
+		bin->bin_expr.left = bin->bin_expr.right;
+		bin->bin_expr.right = temp;
+	}
+	else if (bin->bin_expr.right->type == ECALL) {
+		temp = bin->bin_expr.left;
 		bin->bin_expr.left = bin->bin_expr.right;
 		bin->bin_expr.right = temp;
 	}
 
 	lhs = opp_compile_expr(opp, bin->bin_expr.left);
 
-
-	// SWITCH THIS INTO DOING const expr eval and if its unary
-	if (bin->bin_expr.right->type == EUNARY 
-		&& bin->bin_expr.right->unary_expr.type == TINTEGER
-		&& bin->bin_expr.right->unary_expr.val.i64val <= UINT_MAX)
-	{
+	if (opp_determine_bin(bin)) {
 		imm = true;
-		rhs.type = TYPE_NUM;
+		rhs.type = TYPE_NUM;	
 	}
-	else
+	else 
 		rhs = opp_compile_expr(opp, bin->bin_expr.right);
 
 	if (lhs.type != rhs.type)
@@ -908,7 +1099,7 @@ static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node*
 	if (imm) {
 		opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 1;
 		opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = IMM_I8;
-		if (bin->bin_expr.right->unary_expr.val.i64val > 255)
+		if (bin->bin_expr.right->unary_expr.val.i64val > 255 || bin->bin_expr.right->unary_expr.val.i64val < -255)
 			opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = IMM_I32;
 		opp->ir.opcodes[opp->ir.instr_idx].arith.val.imm_i32 = 
 			(uint32_t)bin->bin_expr.right->unary_expr.val.i64val;
@@ -1153,6 +1344,111 @@ static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct 
 	return type_info;
 }
 
+static struct Opp_Type opp_compile_bit_assign(struct Opp_Context* opp, 
+	struct Opp_Node* assign, struct Opp_Bucket* var)
+{
+	bool imm = false;
+	struct Opp_Type rhs;
+	
+	opp_compile_time_eval(opp, assign->assign_expr.val);
+
+	if (assign->assign_expr.val->type == EUNARY
+		&& assign->assign_expr.val->unary_expr.type == TINTEGER) {
+		imm = true;
+		rhs.type = TYPE_NUM;
+	} 
+	else {
+		rhs = opp_compile_expr(opp, assign->assign_expr.val);
+
+		if (rhs.type != TYPE_NUM)
+			opp_warning(opp, assign, 
+				"Assigning bit field '%s' to a pointer of depth '%d'", var->key, rhs.ptr_depth);
+	}
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CONST;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.nopush = 0;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.global = 0;
+	// TODO HANDLE GLOBAL
+	opp->ir.opcodes[opp->ir.instr_idx].constant.type = IMM_LOC;
+	opp->ir.opcodes[opp->ir.instr_idx].constant.imm_i32 = var->var.offset;
+	opp->ir.instr_idx++;
+
+	unsigned long mask = 0xffffffffffffffff;
+	unsigned long bit = (unsigned long)1 << (unsigned long)(var->var.ptr_depth-1);
+
+	while (bit != 0) {
+		mask -= bit;
+		bit >>= 1; 
+	}
+
+	bool imm_and = false;
+
+	if (var->var.ptr_depth > 31) {
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CONST;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.nopush = 0;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.global = 0;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.type = IMM_I64;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.imm_i64 = (unsigned long)mask;
+		opp->ir.instr_idx++;
+	}
+	else
+		imm_and = true;
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_BIT;
+	opp->ir.opcodes[opp->ir.instr_idx].bit.type = BIT_AND;
+	opp->ir.opcodes[opp->ir.instr_idx].bit.imm = imm_and;
+	if (imm_and) {
+		opp->ir.opcodes[opp->ir.instr_idx].bit.val.type = IMM_I32;
+		opp->ir.opcodes[opp->ir.instr_idx].bit.val.imm_i32 = (int32_t)mask;
+	}
+	opp->ir.instr_idx++;
+
+	if (!imm) {
+		if (!imm_and) {
+
+			mask = 0xffffffff;
+			bit = 0x100000000;
+
+			for (unsigned int i = 0; i < var->var.ptr_depth-32; i++) {
+				mask += bit;
+				bit <<= 1;
+			}
+
+			opp_realloc_instrs(opp);
+			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CONST;
+			opp->ir.opcodes[opp->ir.instr_idx].constant.nopush = 0;
+			opp->ir.opcodes[opp->ir.instr_idx].constant.global = 0;
+			opp->ir.opcodes[opp->ir.instr_idx].constant.type = IMM_I64;
+			opp->ir.opcodes[opp->ir.instr_idx].constant.imm_i64 = (unsigned long)mask;
+			opp->ir.instr_idx++;
+
+			opp_realloc_instrs(opp);
+			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_BIT;
+			opp->ir.opcodes[opp->ir.instr_idx].bit.type = BIT_AND;
+			opp->ir.opcodes[opp->ir.instr_idx].bit.imm = 0;
+			opp->ir.opcodes[opp->ir.instr_idx].bit.lookback = 1;
+			opp->ir.instr_idx++;
+		}
+	}
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_BIT;
+	opp->ir.opcodes[opp->ir.instr_idx].bit.type = BIT_OR;
+	opp->ir.opcodes[opp->ir.instr_idx].bit.imm = imm;
+	opp->ir.opcodes[opp->ir.instr_idx].bit.lookback = 0;
+	if (imm) {
+		opp->ir.opcodes[opp->ir.instr_idx].bit.val.type = IMM_I32;
+		opp->ir.opcodes[opp->ir.instr_idx].bit.val.imm_i32 = 
+			(int32_t)assign->assign_expr.val->unary_expr.val.i64val;
+	}
+	opp->ir.instr_idx++;
+
+	return rhs;
+}
+
 static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* assign)
 {
 	struct Opp_Node* node = assign->assign_expr.ident;
@@ -1175,15 +1471,21 @@ static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_No
 	if (var->type == TYPE_LABEL)
 		opp_compile_error(opp, assign,
 			"Attempt to assign a '%s' which is not a variable", node->unary_expr.val.strval);
+	
+	struct Opp_Type rhs; 
 
-	struct Opp_Type rhs = opp_compile_expr(opp, assign->assign_expr.val);
+	if ((var->type == TYPE_LOCAL || var->type == TYPE_GLOBAL) && var->var.type == TYPE_BIT)
+		rhs = opp_compile_bit_assign(opp, assign, var);
+	else
+		rhs = opp_compile_expr(opp, assign->assign_expr.val);
 
-	if (rhs.type != var->var.type)
+	if (rhs.type != var->var.type && var->type == TYPE_BIT)
 		opp_warning(opp, assign,
-			"Attempt to assign var '%s' to not the same type");
-	if (rhs.type == TYPE_PTR && rhs.ptr_depth > var->var.ptr_depth)
+			"Attempt to assign var '%s' to different type", node->unary_expr.val.strval);
+	if (rhs.type == TYPE_PTR && (rhs.ptr_depth > var->var.ptr_depth || rhs.ptr_depth < var->var.ptr_depth))
 		opp_warning(opp, assign,
-			"Attempt to assign var '%s' to a pointer of depth '%d'", rhs.ptr_depth);
+			"Attempt to assign var '%s' to a pointer of depth '%d'", 
+			node->unary_expr.val.strval, rhs.ptr_depth);
 
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ASSIGN;
@@ -1219,6 +1521,7 @@ static struct Opp_Type opp_compile_ptr_assign(struct Opp_Context* opp, struct Op
 		ptr_depth++;
 	}
 
+	opp->info.deref_assign = 1;
 	// set a flag 
 	// ex
 	/*
@@ -1245,23 +1548,7 @@ static struct Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node*
 {
 	struct Opp_Type type_info = {0};
 
-	if (sub->sub_expr.unary->type == EUNARY && sub->sub_expr.unary->unary_expr.type != TIDENT) {
-		if (sub->sub_expr.unary->unary_expr.type != TINTEGER)
-			opp_warning(opp, sub,
-				"Attempting to negate a non integer type");
-
-		int64_t neg = -sub->sub_expr.unary->unary_expr.val.i64val;
-		struct Opp_Debug temp = {.line = sub->debug.line, .colum = sub->debug.colum};
-		memset(sub, 0, sizeof(struct Opp_Node));
-
-		sub->type = EUNARY;
-		sub->unary_expr.type = TINTEGER;
-		sub->unary_expr.val.i64val = neg;
-		sub->debug = temp;
-		type_info.type = TYPE_NUM;
-		return type_info;
-	}
-
+	printf("ADD sub\n");
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
 	// add mul -1

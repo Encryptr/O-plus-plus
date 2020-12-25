@@ -80,6 +80,7 @@ struct Opp_Info {
 	unsigned int label_loc;
 	unsigned int goto_idx;
 	struct Opp_Link* goto_list;
+	bool deref_assign;
 };
 
 #define DEFAULT_OPCODE_SIZE 64
@@ -132,6 +133,7 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func);
 static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret);
 static void opp_compile_block(struct Opp_Context* opp, struct Opp_Node* block);
 static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var);
+static void opp_compile_bitfield(struct Opp_Context* opp, struct Opp_Node* bit);
 static void opp_compile_label(struct Opp_Context* opp, struct Opp_Node* lab);
 static void opp_compile_goto(struct Opp_Context* opp, struct Opp_Node* lab);
 static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt);

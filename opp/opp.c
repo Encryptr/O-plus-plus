@@ -63,6 +63,20 @@ static void opp_debug_info(double ptime, double ctime, struct Opp_Context* opp)
 	#endif
 }
 
+#include <sys/mman.h>
+void run_main(struct OppIr* ir)
+{
+	void *mem = mmap(NULL, 4096, PROT_WRITE | PROT_EXEC,
+        32 | MAP_PRIVATE, -1, 0);
+
+	memcpy(mem, ir->code.bytes, ir->code.idx);
+
+	long (*run)(int) = mem;
+	printf("%ld\n", run(2));
+	munmap(mem, 4096);
+}
+
+
 void opp_init_module(const char* fname, struct Opp_Options* opts)
 {
 	struct Opp_Scan scan = {0};
@@ -84,13 +98,15 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 	// Move to a func
 	cstart = clock();
 	context->oppir = init_oppir();
+	oppir_setup(&scan.io);
 	oppir_get_opcodes(context->oppir, &context->ir);
 	oppir_eval(context->oppir);
-
 	OppIO io = {
 		.file = fopen("out.bin", "wb")
 	};
 	dump_bytes(context->oppir, &io);
+	run_main(context->oppir);
+	// oppir_emit_obj(context->oppir, &io);
 	cend = clock();
 	ctime = ((double) (cend - cstart)) / CLOCKS_PER_SEC;
 
@@ -185,7 +201,7 @@ int main(int argc, const char** argv)
 	opp_args(argc, argv, &opts);
 	opp_init_module(argv[argc-1], &opts);
 
-	// objdump -b binary -D -m i386:x86-64 out.bin 
+	// objdump -b binary -D -m i386:x86-64 -M intel out.bin 
 
 	allocator_free();
 

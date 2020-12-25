@@ -33,7 +33,8 @@ enum Opp_Bucket_Type {
 };
 
 enum Opp_Var_Type {
-	TYPE_NONE, TYPE_NUM, TYPE_PTR
+	TYPE_NONE, TYPE_NUM, 
+	TYPE_PTR, TYPE_BIT
 };
 
 struct Opp_Function {
@@ -45,6 +46,7 @@ struct Opp_Function {
 struct Opp_Var {
 	enum Opp_Var_Type type;
 	int32_t offset;
+	
 	unsigned int ptr_depth;
 };
 
@@ -68,5 +70,6 @@ struct Opp_Namespace {
 struct Opp_Namespace* init_namespace(struct Opp_Namespace* parent, void* (*xmalloc)(size_t));
 struct Opp_Bucket* env_add_item(struct Opp_Namespace* ns, char* name);
 struct Opp_Bucket* env_get_item(struct Opp_Namespace* ns, char* name);
+void env_free(struct Opp_Namespace* ns);
 
 #endif /* OPP_ENV */

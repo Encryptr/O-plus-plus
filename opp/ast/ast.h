@@ -42,7 +42,7 @@ enum Opp_Node_Type {
 	EBIN, ELOGIC, ECALL,
 	EASSIGN, EUNARY, ESUB,
 	EELEMENT, EDEREF, EADJUST,
-	EADDR, ESIZEOF,
+	EADDR, ESIZEOF, EBITFIELD,
 
 	STMT_LABEL, STMT_GOTO, STMT_IF,
 	STMT_BLOCK, STMT_VAR,
@@ -188,6 +188,7 @@ struct Opp_Stmt_Func {
 struct Opp_Stmt_Ret {
 	struct Opp_Node* value;
 };
+
 
 struct Opp_Node {
 	enum Opp_Node_Type type;

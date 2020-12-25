@@ -217,12 +217,13 @@ void opp_lex_numeral(struct Opp_Scan* s)
 	}
 }
 
-void opp_peek_tok(struct Opp_Scan* s)
+void opp_peek_tok(struct Opp_Scan* s, int times)
 {
 	char* temp = s->src;
 	uint32_t tline = s->line, tcolum = s->colum;
 
-	opp_next(s);
+	for (int i = 0; i < times; i++)
+		opp_next(s);
 
 	s->src = temp;
 	s->line = tline;
@@ -430,7 +431,7 @@ void dump_tokens(struct Opp_Scan* s)
 		if (s->t.id == TFLOAT)
 			printf("FLOAT %lf\n", s->t.real);
 		else if (s->t.id == TINTEGER)
-			printf("INT %lld\n", s->t.num);
+			printf("INT %ld\n", s->t.num);
 		else if (s->t.id == TIDENT)
 			printf("IDENT %s\n", s->t.buffer.buf);
 		else if (s->t.id == TSTR)

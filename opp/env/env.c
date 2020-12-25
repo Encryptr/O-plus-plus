@@ -121,3 +121,10 @@ struct Opp_Bucket* env_get_item(struct Opp_Namespace* ns, char* name)
 
 	return NULL;
 }
+
+void env_free(struct Opp_Namespace* ns)
+{
+	for (size_t i = 0; i < ns->size; i++) {
+		
+	}
+}

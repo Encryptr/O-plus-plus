@@ -13,7 +13,7 @@ import "oppio";
 auto global = 2;
 auto* ptr = "hello";
 
-main(argc, **argv) {
+int main(argc, **argv) {
 	*argc = 2; // Error compiler sees that argc is not a pointer
 
 	switch (argc) {
@@ -23,6 +23,16 @@ main(argc, **argv) {
 	}
 
 	return 1;
+}
+
+types() {
+	// 32 bit bitfield
+	int a = 2;
+	// Same thing 64 bit bitfield
+	auto b;
+	long b;
+
+	char 
 }
 
 memset(*data, val, len) {
@@ -44,6 +54,15 @@ test(val) {
 	}
 
 	return val;
+}
+
+*new_vec(size) {
+	auto* vec = malloc(4 * size);
+
+	for (auto i = 0; i < size; i++) 
+		cast(INT, &vec[i*4], 0);
+
+	return vec;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -98,3 +117,28 @@ cast(INT, &Data[4], 2);
 Data[8] = 3;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Idea for struct implementaion
+struct Name {
+	int a;
+	long b;
+	char c;
+};
+
+/*
+	When assigning a member maybe compiler can call 
+	cast behind the scenes;
+
+	Ex:
+	auto i = 2;
+	Name b; <-- Struct object
+	
+	b.a = i;
+	// Behing the scenes
+	// cast(INT, &b.a, i);
+
+	// But handling this
+	i = b.a;
+	// Figure this out
+	i = read_cast(INT, &b.a);
+
+*/

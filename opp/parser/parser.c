@@ -454,7 +454,7 @@ static struct Opp_Node* opp_parse_if(struct Opp_Parser* parser)
 	ifstmt->if_stmt.then = opp_parse_statement(parser);
 	ifstmt->if_stmt.other = NULL;
 
-	opp_peek_tok(parser->lex);
+	opp_peek_tok(parser->lex, 1);
 
 	if (parser->lex->t.id == TELSE) {
 		opp_next(parser->lex);
@@ -491,6 +491,7 @@ static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser)
 	do {
 		if (i == DEFAULT_LIST_SIZE)
 			opp_error(parser->lex, "Max auto list variable declaration limit met (8)");
+
 		opp_next(parser->lex);
 		list->list[i] = opp_parse_allign(parser);
 		i++;
@@ -519,7 +520,7 @@ static struct Opp_Node* opp_parse_allign(struct Opp_Parser* parser)
 
 	int operator = parser->lex->t.id;
 
-	while (operator == TEQ)
+	while (operator == TEQ || operator == TCOLON)
 	{
 		opp_next(parser->lex);
 		right = opp_parse_or(parser);
