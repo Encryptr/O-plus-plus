@@ -80,6 +80,7 @@ struct Opp_Expr_Assign {
 	enum Opp_Token op;
 	struct Opp_Node* val;
 	struct Opp_Node* ident;
+	bool bit_assign;
 };
 
 struct Opp_Expr_Call {

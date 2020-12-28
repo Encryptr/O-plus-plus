@@ -105,7 +105,7 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 		.file = fopen("out.bin", "wb")
 	};
 	dump_bytes(context->oppir, &io);
-	run_main(context->oppir);
+	// run_main(context->oppir);
 	// oppir_emit_obj(context->oppir, &io);
 	cend = clock();
 	ctime = ((double) (cend - cstart)) / CLOCKS_PER_SEC;

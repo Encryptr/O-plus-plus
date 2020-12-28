@@ -176,6 +176,10 @@ static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser)
 		case TOPENC:
 			return opp_parse_block(parser);
 
+		case TTCHAR:
+		case TTSHORT:
+		case TTINT:
+		case TTLONG:
 		case TAUTO:
 			return opp_parse_var_decl(parser);
 
@@ -341,7 +345,19 @@ static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser)
 {
 	struct Opp_Node* var = opp_new_node(parser, STMT_VAR);
 
-	var->var_stmt.vars = opp_parse_comma(parser);
+	int var_size = 0;
+
+	switch (parser->lex->t.id)
+	{
+		case TTLONG:
+		case TAUTO:   var_size = 64; break;
+		case TTCHAR:  var_size = 8;  break;
+		case TTSHORT: var_size = 16; break;
+		case TTINT:   var_size = 32; break;
+		default: break; 
+	}
+
+	var->var_stmt.vars = opp_parse_comma(parser, var_size);
 
 	return var;
 }
@@ -475,7 +491,7 @@ static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser)
 	return new_expr;
 }
 
-static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser)
+static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser, const int size)
 {
 	int i = 0;
 	struct Opp_List* list = (struct Opp_List*)malloc(sizeof(struct Opp_List));
@@ -494,6 +510,26 @@ static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser)
 
 		opp_next(parser->lex);
 		list->list[i] = opp_parse_allign(parser);
+
+		// if (size != 64) 
+		{
+			switch (list->list[i]->type)
+			{
+				case EASSIGN: {
+					// if (list->list[i]->assign_expr.op == TCOLON) 
+					// 	break;
+
+					printf("==>%d\n", list->list[i]->assign_expr.ident->type == EUNARY);
+
+					break;
+				}
+
+				case EUNARY: {
+					break;
+				}
+			}
+		}
+
 		i++;
 	} while (parser->lex->t.id == TCOMMA);
 

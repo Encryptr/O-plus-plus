@@ -463,8 +463,8 @@ static void opp_compile_bitfield(struct Opp_Context* opp, struct Opp_Node* bit)
 	if (bit->assign_expr.ident->type == EUNARY && bit->assign_expr.ident->unary_expr.type != TIDENT)
 		opp_compile_error(opp, bit,
 			"Expected identifier on left hand side of bitfield declaration");
+	
 	char* name = bit->assign_expr.ident->unary_expr.val.strval;
-
 	struct Opp_Bucket* var = env_add_item(opp->info.cur_ns, name);
 
 	if (bit == NULL)

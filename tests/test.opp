@@ -1,9 +1,9 @@
 
 main() 
 {
-
-	
+	// auto c : (32 = 2);
 	// return (a * b) + ((a*b) + (a*b));
 	// auto c = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
-	//auto d = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
+	// auto d = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
+
 }

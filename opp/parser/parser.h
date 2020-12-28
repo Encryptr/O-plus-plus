@@ -62,7 +62,7 @@ static struct Opp_Node* opp_parse_break(struct Opp_Parser* parser);
 
 // Expressions
 static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser);
-static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser);
+static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser, const int size);
 static struct Opp_Node* opp_parse_allign(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_or(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_and(struct Opp_Parser* parser);
