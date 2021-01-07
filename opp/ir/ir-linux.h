@@ -41,7 +41,7 @@ struct Elf_Syms {
 };
 
 void strtable_write(unsigned int len, char* bytes);
-void check_sym(unsigned int idx);
+struct Elf_Pair* get_sym(unsigned int idx);
 
 void init_elf_syms();
 void init_strtab();

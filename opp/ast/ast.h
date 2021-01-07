@@ -43,6 +43,7 @@ enum Opp_Node_Type {
 	EASSIGN, EUNARY, ESUB,
 	EELEMENT, EDEREF, EADJUST,
 	EADDR, ESIZEOF, EBITFIELD,
+	EDOT,
 
 	STMT_LABEL, STMT_GOTO, STMT_IF,
 	STMT_BLOCK, STMT_VAR,
@@ -51,6 +52,7 @@ enum Opp_Node_Type {
 	STMT_EXTERN, STMT_FOR,
 	STMT_SWITCH, STMT_ENUM,
 	STMT_CASE, STMT_BREAK,
+	STMT_STRUCT,
 };
 
 struct Opp_Debug {
@@ -59,6 +61,12 @@ struct Opp_Debug {
 };
 
 typedef struct Opp_Debug OppDebug;
+
+struct Opp_Type_Decl {
+	struct Opp_Type_Entry* decl;
+	unsigned int depth, size;
+	bool unsign;
+};
 
 struct Opp_List { // make this object not ptr
 	unsigned int length;
@@ -80,7 +88,6 @@ struct Opp_Expr_Assign {
 	enum Opp_Token op;
 	struct Opp_Node* val;
 	struct Opp_Node* ident;
-	bool bit_assign;
 };
 
 struct Opp_Expr_Call {
@@ -157,9 +164,7 @@ struct Opp_Stmt_If {
 };
 
 struct Opp_Stmt_Extrn {
-	bool func;
-	struct Opp_Node* decl;
-	struct Opp_List* args;
+	struct Opp_Node* stmt;
 };
 
 struct Opp_Stmt_Block {
@@ -168,6 +173,7 @@ struct Opp_Stmt_Block {
 };
 
 struct Opp_Stmt_Var {
+	struct Opp_Type_Decl type;
 	struct Opp_List* vars;
 };
 
@@ -180,16 +186,32 @@ struct Opp_Stmt_While {
 	struct Opp_Node* then;
 };
 
+struct Opp_Func_Args {
+	struct Opp_Type_Decl type;
+	struct Opp_Node* name;
+};
+
 struct Opp_Stmt_Func {
+	struct Opp_Type_Decl type;
 	struct Opp_Node* name;
 	struct Opp_Node* body;
-	struct Opp_List* args;
+	unsigned int len;
+	struct Opp_Func_Args* args;
 };
 
 struct Opp_Stmt_Ret {
 	struct Opp_Node* value;
 };
 
+struct Opp_Stmt_Struct {
+	char* name;
+	unsigned int len;
+	struct Opp_Func_Args* elems; 
+};
+
+struct Opp_Stmt_Enum {
+
+};
 
 struct Opp_Node {
 	enum Opp_Node_Type type;

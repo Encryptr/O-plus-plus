@@ -1,6 +1,6 @@
-/** @file opp.h
+/** @file types.h
  * 
- * @brief Main opp header
+ * @brief Type tree module
  *      
  * Copyright (c) 2020 Maks S
  *
@@ -15,22 +15,39 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+ */
 
-#ifndef OPP_H
-#define OPP_H
+#ifndef OPP_TYPES
+#define OPP_TYPES
 
-#include "./compiler/compiler.h"
-#include "./analysis/analysis.h"
-#include "./ir/ir.h"
-#include "./header/os.h"
+enum Opp_Std_Type {
+	TYPE_VOID,
+	TYPE_I8,
+	TYPE_I16,
+	TYPE_I32,
+	TYPE_I64,
+	TYPE_FLOAT,
+	TYPE_DOUBLE,
+	TYPE_BITFIELD,
+	TYPE_ARRAY,
+	TYPE_STRUCT,
+};
 
-struct Opp_Scan;
-struct Opp_Options;
-struct Opp_Context;
+struct Opp_Struct {
+	enum Opp_Std_Type* elems;
+	unsigned int count;
+};
 
-void opp_init_file(const char* fname, struct Opp_Scan* s);
-void opp_init_module(const char* fname, struct Opp_Options* opts);
-void opp_add_module(const char* fname, struct Opp_Context* opp);
+struct Opp_Type_Entry {
+	char* id;
+	enum Opp_Std_Type t_type;
+	struct Opp_Struct s_type;
+	struct Opp_Type_Entry* next;
+};
 
-#endif /* OPP_H */
+struct Opp_Type_Tree {
+	struct Opp_Type_Entry** types;
+	size_t size;
+};
+
+#endif /* OPP_TYPES */

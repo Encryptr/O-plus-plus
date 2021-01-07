@@ -86,6 +86,7 @@ struct Opp_Bucket* env_add_item(struct Opp_Namespace* ns, char* name)
 			INTERNAL_ERROR("Malloc fail");
 
 		node->key = name;
+		node->next = NULL;
 		ns->items[loc] = node;
 
 		return node;

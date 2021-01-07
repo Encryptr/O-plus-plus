@@ -23,39 +23,31 @@
 #include "../opp.h"
 #include "../lexer/lexer.h"
 #include "../ast/ast.h"
-#include "types.h"
 #include <ctype.h>
-
-#define DEFAULT_TYPE_TREE_SIZE 160
-#define DEFAULT_LIST_SIZE 8
 
 struct Opp_Parser {
 	struct Opp_Scan* lex;
 	struct Opp_Node** statments;
 	size_t stmt_size;
 	unsigned int nstmts;
-	struct Opp_Type_Tree tree;
 };
 
 struct Opp_Parser* opp_parser_init(struct Opp_Scan* s);
 void opp_parser_begin(struct Opp_Parser* parser);
-
 static void opp_debug_parser(struct Opp_Node* node);
 static void opp_expect_error(struct Opp_Parser* parser, char sym);
 
 static struct Opp_Node* opp_new_node(struct Opp_Parser* parser, enum Opp_Node_Type type);
 static struct Opp_Node* opp_parse_global_def(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser);
 static struct Opp_List* opp_parse_args(struct Opp_Parser* parser);
 static bool opp_parse_peak(struct Opp_Parser* parser, char ch);
 
 // Statements
 static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_block(struct Opp_Parser* parser);
-static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser, struct Opp_Type_Decl type);
-static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Type_Decl type);
-static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser);
-
+static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_return(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_while(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_label(struct Opp_Parser* parser);
@@ -70,7 +62,7 @@ static struct Opp_Node* opp_parse_break(struct Opp_Parser* parser);
 
 // Expressions
 static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser);
-static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser);
+static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser, const int size);
 static struct Opp_Node* opp_parse_allign(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_or(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_and(struct Opp_Parser* parser);

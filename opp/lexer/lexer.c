@@ -83,7 +83,7 @@ struct Opp_Keywords {
 	enum Opp_Token id;
 };
 
-#define OPP_KEYOWRDS 19
+#define OPP_KEYOWRDS 16
 static const struct Opp_Keywords opp_keywords[] = {
 	{"asm",  TASM},
 	{"auto", TAUTO},
@@ -100,10 +100,7 @@ static const struct Opp_Keywords opp_keywords[] = {
 	{"for", TFOR},
 	{"case", TCASE},
 	{"break", TBREAK},
-	{"char", TTCHAR},
-	{"short", TTSHORT},
-	{"int", TTINT},
-	{"long", TTLONG}
+	{"unsigned", TUNSIGNED}
 };
 
 bool is_keyword(struct Opp_Scan* s)

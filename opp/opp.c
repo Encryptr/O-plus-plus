@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include <sys/mman.h>
 #include <stdbool.h>
 #include <time.h>
 #include "opp.h"
@@ -36,7 +37,7 @@ void opp_init_file(const char* fname, struct Opp_Scan* s)
 	rewind(s->io.file);
 	char* content = calloc(1, size + 2); 
 
-	fread(content, size, 1, s->io.file);
+	int _ = fread(content, size, 1, s->io.file);
 	fclose(s->io.file);
 
 	init_opp_lex(s, content);
@@ -63,7 +64,6 @@ static void opp_debug_info(double ptime, double ctime, struct Opp_Context* opp)
 	#endif
 }
 
-#include <sys/mman.h>
 void run_main(struct OppIr* ir)
 {
 	void *mem = mmap(NULL, 4096, PROT_WRITE | PROT_EXEC,
@@ -92,26 +92,28 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 	pend = clock();
 	ptime = ((double) (pend - pstart)) / CLOCKS_PER_SEC;
 
-	struct Opp_Context* context = opp_init_compile(parser, opts);
-	opp_compile(context);
+	struct Opp_Analize* ctx = opp_init_analize(parser);
+	analize_tree(ctx);
 
-	// Move to a func
+	// struct Opp_Context* context = opp_init_compile(parser, opts);
+	// opp_compile(context);
+
 	cstart = clock();
-	context->oppir = init_oppir();
-	oppir_setup(&scan.io);
-	oppir_get_opcodes(context->oppir, &context->ir);
-	oppir_eval(context->oppir);
-	OppIO io = {
-		.file = fopen("out.bin", "wb")
-	};
-	dump_bytes(context->oppir, &io);
+	// context->oppir = init_oppir();
+	// oppir_setup(&scan.io);
+	// oppir_get_opcodes(context->oppir, &context->ir);
+	// oppir_eval(context->oppir);
+	// OppIO io = {
+	// 	.file = fopen("out.bin", "wb")
+	// };
+	// dump_bytes(context->oppir, &io);
 	// run_main(context->oppir);
 	// oppir_emit_obj(context->oppir, &io);
 	cend = clock();
 	ctime = ((double) (cend - cstart)) / CLOCKS_PER_SEC;
 
-	if (opts->debug)
-		opp_debug_info(ptime, ctime, context);
+	// if (opts->debug)
+	// 	opp_debug_info(ptime, ctime, context);
 }
 
 void opp_add_module(const char* fname, struct Opp_Context* opp)
@@ -126,7 +128,7 @@ void opp_add_module(const char* fname, struct Opp_Context* opp)
 
 	opp->parser = parser;
 
-	opp_compile(opp);
+	// opp_compile(opp);
 
 	opp->parser = old_parser;
 }

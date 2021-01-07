@@ -1,9 +1,13 @@
 
-main() 
+
+int main(int** a, void b) 
 {
-	// auto c : (32 = 2);
+	unsigned int a;
+
+
+
 	// return (a * b) + ((a*b) + (a*b));
 	// auto c = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
 	// auto d = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
-
 }
+ 

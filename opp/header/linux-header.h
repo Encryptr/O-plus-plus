@@ -90,4 +90,6 @@ struct Elf64_Symbol {
 #define SHT_PROGBITS 0x1
 #define SHT_SYMTAB 0x2
 
+#define ELF64_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
+
 #endif /* ELF_HEADER */

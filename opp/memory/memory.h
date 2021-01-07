@@ -17,6 +17,9 @@
  * limitations under the License.
  */ 
 
+#ifndef OPP_ALLOCATOR
+#define OPP_ALLOCATOR
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -38,3 +41,5 @@ bool allocator_init();
 char* alloc(size_t size);
 void allocator_free();
 void allocator_reset();
+
+#endif /* OPP_ALLOCATOR */

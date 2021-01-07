@@ -1,0 +1,31 @@
+// Opp Goal 
+
+struct Bucket {
+	auto* key;
+	auto val;
+}
+
+struct Table {
+	Bucket** items;
+	auto size;
+};
+
+alloc_items(size) {
+	Table* t;
+	t = malloc(sizeof(Table));
+
+	(*t).size = size;
+	t->items = malloc(sizeof(Bucket)*size);
+
+	memset(t->items, 0, sizeof(Bucket)*size);
+
+	return t;
+}
+
+main() {
+	Table* t;
+	t = alloc_items(size);
+
+	if (t == 0)
+		return 1;
+}

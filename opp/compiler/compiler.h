@@ -77,7 +77,7 @@ struct Opp_Info {
 	struct Opp_Namespace* cur_ns;
 	int32_t stack_offset;
 	char* fn_name;
-	unsigned int label_loc;
+	unsigned int label_loc, sym_loc;
 	unsigned int goto_idx;
 	struct Opp_Link* goto_list;
 	bool deref_assign;
@@ -100,10 +100,10 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 									struct Opp_Options* opts);
 void opp_free_compiler(struct Opp_Context* opp);
 void opp_compile(struct Opp_Context* opp);
-static void opp_compile_error(struct Opp_Context* opp, 
-		struct Opp_Node* node, const char* str, ...);
-static void opp_warning(struct Opp_Context* opp, 
-		struct Opp_Node* node, const char* str, ...);
+// static void opp_compile_error(struct Opp_Context* opp, 
+// 		struct Opp_Node* node, const char* str, ...);
+// static void opp_warning(struct Opp_Context* opp, 
+// 		struct Opp_Node* node, const char* str, ...);
 
 static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt);
 static struct Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);

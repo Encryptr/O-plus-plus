@@ -502,6 +502,17 @@ static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn)
 		ir->regalloc.spills[i].use = 0;
 	}
 
+	#ifdef LINUX64
+	// struct Elf_Pair* sym = get_sym(fn->sym);
+
+	// sym->st_name = 0;
+	// sym->st_value = 0;
+	// sym->st_size = 0;
+	// sym->st_info = 3;
+	// sym->st_other = 0;
+	// sym->st_shndx = 2;
+	#endif
+
 	oppir_emit_frame(ir);
 	oppir_local_param(ir, fn->args);
 }
@@ -833,7 +844,7 @@ static void oppir_eval_bitwise(struct OppIr* ir, struct OppIr_Bit* bit)
 
 	UNBLOCK_REG(rhs);
 
-	enum Regs temp;
+	enum Regs temp = 0;
 	if (bit->lookback) {
 		temp = lhs;
 		lhs = oppir_pop_reg(ir);

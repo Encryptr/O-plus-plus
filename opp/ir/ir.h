@@ -128,7 +128,7 @@ struct OppIr_Var {
 struct OppIr_Func {
 	char* fn_name;
 	bool private;
-	unsigned int args;
+	unsigned int args, sym;
 };
 
 enum {

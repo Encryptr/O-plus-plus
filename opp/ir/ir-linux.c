@@ -54,11 +54,14 @@ static unsigned char shstrtab[] = {
 	0x0
 };
 
-void check_sym(unsigned int idx)
+struct Elf_Pair* get_sym(unsigned int idx)
 {
-	if ((elf_info.symbols.sym_idx + idx) >= elf_info.symbols.allocated) {
+	if (idx >= elf_info.symbols.allocated) {
 		printf("REALLOC SYM\n");
 	}
+
+	elf_info.symbols.sym_idx++;
+	return &elf_info.symbols.pairs[idx];
 }
 
 void strtable_write(unsigned int len, char* bytes)
@@ -121,18 +124,7 @@ void init_elf_syms(OppIO* io)
 	sym->st_info = 3;
 	sym->st_other = 0;
 	sym->st_shndx = 2;
-	elf_info.symbols.sym_idx += 4;
-
-	//temp
-	sym = &elf_info.symbols.pairs[4].syms;
-	sym->st_name = 10;
-	sym->st_value = 0;
-	sym->st_size = 0;
-	sym->st_info = 16;
-	sym->st_other = 0;
-	sym->st_shndx = 1;
-	elf_info.symbols.sym_idx++;
-	strtable_write(strlen("main"), "main");
+	elf_info.symbols.sym_idx += 3;
 }
 
 void init_elf_header(int sections)
