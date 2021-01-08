@@ -38,9 +38,9 @@
 	regs[reg].used = 0
 
 enum Regs {
-	REG_RAX,
-	REG_RCX,
-	REG_RDX
+	REG_RAX, REG_RCX, REG_RDX,
+
+	REG_XMM0, REG_XMM1, REG_XMM2
 };
 
 enum OppIr_Opcode_Type {
@@ -60,13 +60,25 @@ enum OppIr_Opcode_Type {
 	OPCODE_END,
 };
 
+enum OppIr_Const_Type {
+	IMM_STR, IMM_LOC,
+	
+	IMM_U8,  IMM_I8, 
+	IMM_U16, IMM_I16,
+	IMM_U32, IMM_I32,
+	IMM_U64, IMM_I64,
+
+	IMM_F32, IMM_F64
+};
+
 struct Register {
 	enum Regs reg;
+	enum OppIr_Const_Type type;
 	int32_t loc;
 	bool used, spilled;
 };
 
-#define REG_COUNT 3
+#define REG_COUNT 6
 #define DEFAULT_REG_STACK 16
 
 struct Reg_Stack {
@@ -98,25 +110,23 @@ struct Bytecode {
 	size_t idx, allocated;
 };
 
-enum OppIr_Const_Type {
-	IMM_STR, IMM_LOC, IMM_BIT,
-	IMM_I64,
-	IMM_U32, IMM_I32,
-	IMM_I8, IMM_F64
+struct OppIr_Value {
+	enum OppIr_Const_Type type;
+
+	union {
+		char*	  imm_sym;
+		int64_t   imm_i64;
+		int32_t   imm_i32;
+		int8_t    imm_i8;
+		double    imm_f64;
+		float	  imm_f32;
+	};
 };
 
 struct OppIr_Const {
-	enum OppIr_Const_Type type;
+	struct OppIr_Value val;
+	enum OppIr_Const_Type loc_type;
 	bool global, nopush;
-	union {
-		char*	 imm_sym;
-		int64_t  imm_i64;
-		uint32_t imm_u32;
-		int32_t  imm_i32;
-		char     imm_i8;
-		double   imm_f64;
-	};
-	char extra;
 };
 
 struct OppIr_Var {
@@ -146,8 +156,9 @@ struct OppIr_Cmp {
 };
 
 struct OppIr_Set {
-	bool global, imm;
-	struct OppIr_Const val;
+	struct OppIr_Value val;
+	enum OppIr_Const_Type loc_type;
+	bool global;
 };
 
 struct OppIr_Arith {
@@ -156,7 +167,6 @@ struct OppIr_Arith {
 	struct OppIr_Const val;
 };
 
-// temp until parser
 enum {
 	BIT_AND, BIT_OR
 };
@@ -220,7 +230,7 @@ struct OppIr {
 #endif
 
 #ifdef MAC64
-#	include "ir-mac.h"
+// #	include "ir-mac.h"
 #endif
 
 struct OppIr* init_oppir();
@@ -234,13 +244,14 @@ void dump_bytes(struct OppIr* ir, OppIO* io);
 
 // Util
 void oppir_check_realloc(struct OppIr* ir, unsigned int bytes);
-static enum Regs oppir_push_reg(struct OppIr* ir);
+static enum Regs oppir_push_reg(struct OppIr* ir, enum OppIr_Const_Type type);
 static void oppir_push(struct OppIr* ir, enum Regs reg);
 static enum Regs oppir_pop_reg(struct OppIr* ir);
 static enum Regs oppir_reg_alloc(struct OppIr* ir);
-static void oppir_write_const(struct OppIr* ir, struct OppIr_Const* imm);
+static void oppir_write_const(struct OppIr* ir, struct OppIr_Value* imm);
 static int32_t oppir_get_spill(struct OppIr* ir);
 static void oppir_set_offsets(struct OppIr* ir);
+static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Set* set);
 
 // Opcodes
 static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm);

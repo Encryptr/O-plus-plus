@@ -165,12 +165,14 @@ static void opp_add_std_types(struct Opp_Parser* parser)
 
 	type1 = add_type(&parser->tree, "char");
 	type1->t_type = TYPE_I8;
+	char_type = type1;
 
 	type1 = add_type(&parser->tree, "short");
 	type1->t_type = TYPE_I16;
 
 	type1 = add_type(&parser->tree, "int");
 	type1->t_type = TYPE_I32;
+	int_type = type1;
 
 	type1 = add_type(&parser->tree, "long");
 	type1->t_type = TYPE_I64;
@@ -183,6 +185,7 @@ static void opp_add_std_types(struct Opp_Parser* parser)
 
 	type1 = add_type(&parser->tree, "double");
 	type1->t_type = TYPE_DOUBLE;
+	float_type = type1;
 }
 
 static void opp_expect_error(struct Opp_Parser* parser, char sym)
@@ -528,7 +531,16 @@ static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser, struct Opp
 	struct Opp_Node* var = opp_new_node(parser, STMT_VAR);
 
 	var->var_stmt.type = type;
-	var->var_stmt.vars = opp_parse_comma(parser);
+
+	opp_next(parser->lex);
+	while (parser->lex->t.id != TIDENT) {
+		var->var_stmt.type.depth++;
+		opp_next(parser->lex);
+	}
+	
+	var->var_stmt.var = opp_parse_allign(parser);
+	//try tree recursion logic with ptr to next
+	// var->var_stmt.vars = opp_parse_comma(parser);
 
 	if (parser->lex->t.id != TSEMICOLON)
 		opp_error(parser->lex, "Expected ';' after auto list initializaion");
@@ -794,7 +806,8 @@ static struct Opp_Node* opp_parse_relation(struct Opp_Parser* parser)
 
 static struct Opp_Node* opp_parse_comparison(struct Opp_Parser* parser)
 {
-	struct Opp_Node* left = opp_parse_order1(parser);
+	// struct Opp_Node* left = opp_parse_order1(parser);
+	struct Opp_Node* left = opp_parse_shifts(parser);
 	struct Opp_Node* right = NULL;
 	struct Opp_Node* comp = NULL;
 
@@ -804,7 +817,8 @@ static struct Opp_Node* opp_parse_comparison(struct Opp_Parser* parser)
 			operator == TGE || operator == TLE)
 	{
 		opp_next(parser->lex);
-		right = opp_parse_order1(parser);
+		// right = opp_parse_order1(parser);
+		right = opp_parse_shifts(parser);
 
 		comp = opp_new_node(parser, ELOGIC);
 		comp->logic_expr.tok = operator;
@@ -812,6 +826,32 @@ static struct Opp_Node* opp_parse_comparison(struct Opp_Parser* parser)
 		comp->logic_expr.right = right;
 
 		left = comp;
+
+		operator = parser->lex->t.id;
+	}
+
+	return left;
+}
+
+static struct Opp_Node* opp_parse_shifts(struct Opp_Parser* parser)
+{
+	struct Opp_Node* left = opp_parse_order1(parser);
+	struct Opp_Node* right = NULL;
+	struct Opp_Node* result = NULL;
+
+	int operator = parser->lex->t.id;
+
+	while (operator == TSHL || operator == TSHR)
+	{
+		opp_next(parser->lex);
+		right = opp_parse_order1(parser);
+
+		result = opp_new_node(parser, EBIT);
+		result->bin_expr.tok = operator;
+		result->bin_expr.left = left;
+		result->bin_expr.right = right;
+
+		left = result;
 
 		operator = parser->lex->t.id;
 	}

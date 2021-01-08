@@ -37,6 +37,10 @@ struct Opp_Parser {
 	struct Opp_Type_Tree tree;
 };
 
+struct Opp_Type_Entry* int_type;
+struct Opp_Type_Entry* char_type;
+struct Opp_Type_Entry* float_type; 
+
 struct Opp_Parser* opp_parser_init(struct Opp_Scan* s);
 void opp_parser_begin(struct Opp_Parser* parser);
 
@@ -69,6 +73,12 @@ static struct Opp_Node* opp_parse_case(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_break(struct Opp_Parser* parser);
 
 // Expressions
+static struct Opp_Node* opp_parse_shifts(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_and(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_or(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_bit_xor(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_bit_not(struct Opp_Parser* parser);
+
 static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser);
 static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_allign(struct Opp_Parser* parser);

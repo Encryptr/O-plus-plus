@@ -78,8 +78,8 @@ struct Opp_Info {
 	int32_t stack_offset;
 	char* fn_name;
 	unsigned int label_loc, sym_loc;
-	unsigned int goto_idx;
-	struct Opp_Link* goto_list;
+	// unsigned int goto_idx;
+	// struct Opp_Link* goto_list;
 	bool deref_assign;
 };
 
@@ -111,7 +111,6 @@ static struct Opp_Node* opp_compile_time_eval
 	(struct Opp_Context* opp, struct Opp_Node* expr);
 static void opp_set_offsets(struct Opp_Context* opp);
 static void opp_generate_ret(struct Opp_Context* opp);
-static void opp_check_label(struct Opp_Context* opp, unsigned int idx);
 
 // Expr
 static struct Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unary);

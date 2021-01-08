@@ -279,96 +279,135 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 {
 	switch (*s->src)
 	{
-		case '(': return TOPENP;
-		case ')': return TCLOSEP;
-		case ',': return TCOMMA; 
-		case '[': return TOPENB;
-		case ']': return TCLOSEB;
-		case ';': return TSEMICOLON; 
-		case '{': return TOPENC;
-		case '}': return TCLOSEC;
-		case '.': return TDOT;
-		case ':': return TCOLON;
+		case '(':  
+			return TOPENP;
 
-		case '-':
+		case ')': 
+			return TCLOSEP;
+
+		case ',': 
+			return TCOMMA; 
+
+		case '[': 
+			return TOPENB;
+		
+		case ']':
+			return TCLOSEB;
+
+		case ';': 
+			return TSEMICOLON; 
+
+		case '{': 
+			return TOPENC;
+
+		case '}': 
+			return TCLOSEC;
+
+		case '.': 
+			return TDOT;
+
+		case ':': 
+			return TCOLON;
+
+		case '~':
+			return TBITNOT;
+
+		case '^':
+			return TBITXOR;
+
+		case '-': {
 			INCR;
 			if (*s->src == '-') 
 				return TDECR;
 			DECR;
 			return TMIN;
+		}
 
-		case '+':
+		case '+': {
 			INCR;
 			if (*s->src == '+') 
 				return TINCR;
 			DECR;
 			return TADD;
+		}
 			
-		case '>': 
+		case '>': {
 			INCR; 
 			if (*s->src == '=') 
-				return TGE; 
+				return TGE;
+			else if (*s->src == '>')
+				return TSHR;
 			DECR; 
 			return TGT;
+		}
 
-		case '<': 
+		case '<': {
 			INCR; 
 			if (*s->src == '=') 
-				return TLE; 
+				return TLE;
+			else if (*s->src == '<')
+				return TSHL;
 			DECR; 
 			return TLT;
+		}
 		
-		case '&': 
+		case '&': {
 			INCR; 
 			if (*s->src == '&') 
 				return TAND; 
 			DECR; 
 			return TADDR;
+		}
 
-		case '|': 
+		case '|': {
 			INCR; 
 			if (*s->src == '|') 
 				return TOR; 
 			DECR; 
-			break;
+			return TBITOR;
+		}
 
-		case '=': 
+		case '=': {
 			INCR; 
 			if (*s->src == '=') 
 				return TEQEQ; 
 			DECR; 
 			return TEQ;
+		}
 
-		case '!': 
+		case '!': {
 			INCR; 
 			if (*s->src == '=') 
 				return TNOTEQ; 
 			DECR; 
 			return TNOT;
+		}
 
-		case '/': 
+		case '/': {
 			INCR;
 			 if (*s->src == '=') 
 				return TDIVEQ; 
 			DECR; 
 			return TDIV;
+		}
 
-		case '*': 
+		case '*': {
 			INCR; 
 			if (*s->src == '=') 
 				return TMULEQ; 
 			DECR; 
 			return TMUL;
+		}
 
-		case '%': 
+		case '%': {
 			INCR; 
 			if (*s->src == '=') 
 				return TMODEQ; 
 			DECR; 
 			return TMOD;
+		}
 
 		default: break;
-		
 	}
 	return INVALID;
 }

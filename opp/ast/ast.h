@@ -23,18 +23,10 @@
 #include <inttypes.h>
 #include "../lexer/lexer.h"
 
-enum Value_Type {
-	VINT, VDOUBLE, VSTR,
-	VFUNC, VPTR
-};
-
-struct Opp_Value {
-	enum Value_Type vtype;
-	union {
-		int64_t i64val;
-		double  f64val;
-		char*   strval;
-	};
+union Opp_Value {
+	int64_t i64val;
+	double  f64val;
+	char*   strval;
 };
 
 enum Opp_Node_Type {
@@ -43,7 +35,7 @@ enum Opp_Node_Type {
 	EASSIGN, EUNARY, ESUB,
 	EELEMENT, EDEREF, EADJUST,
 	EADDR, ESIZEOF, EBITFIELD,
-	EDOT,
+	EDOT, EBIT,
 
 	STMT_LABEL, STMT_GOTO, STMT_IF,
 	STMT_BLOCK, STMT_VAR,
@@ -64,7 +56,7 @@ typedef struct Opp_Debug OppDebug;
 
 struct Opp_Type_Decl {
 	struct Opp_Type_Entry* decl;
-	unsigned int depth, size;
+	unsigned short depth, size;
 	bool unsign;
 };
 
@@ -81,7 +73,8 @@ struct Opp_Expr_Bin {
 
 struct Opp_Expr_Unary {
 	enum Opp_Token type;
-	struct Opp_Value val;
+	union Opp_Value val;
+	bool global;
 };
 
 struct Opp_Expr_Assign {
@@ -174,7 +167,9 @@ struct Opp_Stmt_Block {
 
 struct Opp_Stmt_Var {
 	struct Opp_Type_Decl type;
-	struct Opp_List* vars;
+	// struct Opp_List* vars;
+	struct Opp_Node* var;
+	bool global;
 };
 
 struct Opp_Stmt_Import {

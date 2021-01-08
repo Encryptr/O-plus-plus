@@ -92,11 +92,11 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 	pend = clock();
 	ptime = ((double) (pend - pstart)) / CLOCKS_PER_SEC;
 
-	struct Opp_Analize* ctx = opp_init_analize(parser);
+	struct Opp_Analize* ctx = opp_init_analize(parser, opts);
 	analize_tree(ctx);
 
-	// struct Opp_Context* context = opp_init_compile(parser, opts);
-	// opp_compile(context);
+	struct Opp_Context* context = opp_init_compile(parser, opts);
+	opp_compile(context);
 
 	cstart = clock();
 	// context->oppir = init_oppir();

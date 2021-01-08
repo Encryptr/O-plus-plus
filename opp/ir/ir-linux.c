@@ -21,7 +21,6 @@
 
 #ifdef LINUX64
 
-
 struct Elf_Info {
 	int sect_amount;
 

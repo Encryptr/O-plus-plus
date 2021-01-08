@@ -1,0 +1,889 @@
+/** @file ir.c
+ * 
+ * @brief Opp IR
+ *      
+ * Copyright (c) 2020 Maks S
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ 
+
+#include "ir.h"
+
+static struct Register regs[] = {
+	{.reg = REG_RAX, .used = 0},
+	{.reg = REG_RCX, .used = 0},
+	{.reg = REG_RDX, .used = 0},
+
+	{.reg = REG_XMM0, .used = 0},
+	{.reg = REG_XMM1, .used = 0},
+	{.reg = REG_XMM2, .used = 0},
+};
+
+struct OppIr* init_oppir()
+{
+	struct OppIr* ir = (struct OppIr*)malloc(sizeof(struct OppIr));
+
+	if (ir == NULL)
+		goto err;
+
+	// Bytecode
+	ir->code.bytes = (unsigned char*)malloc(INIT_BYTECODE_SIZE);
+
+	if (ir->code.bytes == NULL)
+		goto err;
+
+	ir->code.idx = 0;
+	ir->code.allocated = INIT_BYTECODE_SIZE;
+
+	// Local Stack
+	ir->local_stack.size = 0;
+	ir->local_stack.pos = 0;
+	ir->local_stack.frame_ptr = 0;
+
+	// Offset Tables 
+	ir->offsets.offset_table = (int32_t*)malloc(sizeof(int32_t)*DEFAULT_OFFSET_TABLE);
+	ir->offsets.jmp_table = (struct Jmp_Item*)malloc(sizeof(struct Jmp_Item)*DEFAULT_OFFSET_TABLE);
+
+	if (ir->offsets.offset_table == NULL || ir->offsets.jmp_table == NULL)
+		goto err;
+
+	ir->offsets.allocated = DEFAULT_OFFSET_TABLE;
+	ir->offsets.jmp_idx = 0;
+	memset(ir->offsets.offset_table, 0, sizeof(int32_t)*DEFAULT_OFFSET_TABLE);
+	memset(ir->offsets.jmp_table, 0, sizeof(struct Jmp_Item)*DEFAULT_OFFSET_TABLE);
+
+	// Register Allocation
+	ir->regalloc.amount = 0;
+	ir->regalloc.allocated = DEFAULT_SPILL;
+	ir->regalloc.spills = (struct Spill*)
+		malloc(sizeof(struct Spill)*DEFAULT_SPILL);
+	memset(ir->regalloc.spills, 0, sizeof(struct Spill)*DEFAULT_SPILL);
+
+	if (ir->regalloc.spills == NULL)
+		goto err;
+
+	// Reg Stack
+	ir->reg_stack.stack = (struct Register*)
+		malloc(sizeof(struct Register)*DEFAULT_REG_STACK);
+	memset(ir->reg_stack.stack, 0, sizeof(struct Register)*DEFAULT_REG_STACK);
+
+	if (ir->reg_stack.stack == NULL)
+		goto err;
+
+	ir->reg_stack.top = ir->reg_stack.stack;
+	ir->reg_stack.allocated = DEFAULT_REG_STACK;
+	ir->instr = NULL;
+
+	// Data
+	ir->data_seg.data = (unsigned char*)
+		malloc(INIT_BYTECODE_SIZE);
+
+	if (ir->data_seg.data == NULL)
+		goto err;
+
+	ir->data_seg.allocated = INIT_BYTECODE_SIZE;
+	ir->data_seg.idx = 0;
+
+	// End
+	return ir;
+
+	err:
+		INTERNAL_ERROR("Malloc Fail");
+		return NULL;
+}
+
+void oppir_free(struct OppIr* ir)
+{
+	free(ir->code.bytes);
+	free(ir->offsets.offset_table);
+	free(ir->offsets.jmp_table);
+	free(ir->regalloc.spills);
+	free(ir->reg_stack.stack);
+	free(ir);
+}
+
+void dump_bytes(struct OppIr* ir, OppIO* io)
+{
+	if (io == NULL) {
+		for (size_t i = 0; i < ir->code.idx; i++) { 
+			if ((i+1) % 16 == 0) printf("\n");
+			else printf("%X ", ir->code.bytes[i]);
+		}
+		printf("\n");
+	}
+	else {
+		fwrite(ir->code.bytes, sizeof(unsigned char), ir->code.idx, io->file);
+		fclose(io->file);
+	}
+}
+
+void oppir_get_opcodes(struct OppIr *ir, struct OppIr_Instr* instr)
+{
+	if (instr == NULL)
+		return;
+
+	ir->instr = instr;
+}
+
+void oppir_setup(OppIO* io)
+{
+	// #ifdef LINUX64
+	// init_strtab();
+	// init_elf_syms(io);
+	// #endif
+}
+
+void oppir_eval(struct OppIr* ir)
+{
+	for (size_t index = 0; index < ir->instr->instr_idx; index++) {
+		oppir_eval_opcode(ir, &ir->instr->opcodes[index]);
+	}
+}
+
+// void oppir_emit_obj(struct OppIr* ir, OppIO* out)
+// {
+// 	#ifdef LINUX64
+// 	init_elf_header(DEFAULT_SECT);
+// 	init_text_sect(ir);
+// 	init_data_sect(ir);
+// 	init_symtab_sect();
+// 	init_shstrtab_sect();
+// 	init_strtab_sect();
+
+// 	elf_offsets(ir);
+
+// 	write_elf64(ir, out);
+// 	#endif
+// }
+
+void oppir_check_realloc(struct OppIr* ir, unsigned int bytes)
+{
+	if ((ir->code.idx + bytes) >= ir->code.allocated) {
+
+		ir->code.bytes = (unsigned char*)
+				realloc(ir->code.bytes, (64+ir->code.allocated));
+
+		if (ir->code.bytes == NULL)
+			INTERNAL_ERROR("Malloc Fail");
+
+		ir->code.allocated += 64;
+	}
+}
+
+static void oppir_check_regstack(struct OppIr* ir)
+{
+	if (ir->reg_stack.top >= (ir->reg_stack.stack + ir->reg_stack.allocated)) {
+		ir->reg_stack.stack = (struct Register*)
+				realloc(ir->reg_stack.stack, (16+ir->reg_stack.allocated));
+
+		if (ir->reg_stack.stack == NULL)
+			INTERNAL_ERROR("Malloc fail");
+
+		ir->reg_stack.allocated += 16;
+	}
+}
+
+static int32_t oppir_get_spill(struct OppIr* ir)
+{
+	for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+		if (!ir->regalloc.spills[i].use && ir->regalloc.spills[i].made) {
+			ir->regalloc.spills[i].use = 1;
+			return ir->regalloc.spills[i].loc;
+		}
+	}
+
+	if (ir->regalloc.amount == ir->regalloc.allocated)
+		INTERNAL_ERROR("OppIR spill limit met");
+
+	ir->local_stack.size += 8;
+	ir->local_stack.pos -= 8;
+	
+	ir->regalloc.spills[ir->regalloc.amount].loc = ir->local_stack.pos;
+	ir->regalloc.spills[ir->regalloc.amount].use = 1;
+	ir->regalloc.spills[ir->regalloc.amount].made = 1;
+	ir->regalloc.amount++;
+
+	return ir->local_stack.pos;
+}
+
+static enum Regs oppir_push_reg(struct OppIr* ir)
+{
+	for (int i = 0; i < REG_COUNT; i++) {
+		if (!regs[i].used) {
+			regs[i].used = 1;
+			oppir_check_regstack(ir);
+			ir->reg_stack.top->reg = regs[i].reg;
+			ir->reg_stack.top->used = 1;
+			ir->reg_stack.top->loc = 0; 
+			ir->reg_stack.top->spilled = 0;
+			ir->reg_stack.top++;
+			return regs[i].reg;
+		}
+	}
+
+	return oppir_reg_alloc(ir);
+}
+
+static void oppir_push(struct OppIr* ir, enum Regs reg)
+{
+	if (regs[reg].used == 0) {
+		regs[reg].used = 1;
+		oppir_check_regstack(ir);
+		ir->reg_stack.top->reg = reg;
+		ir->reg_stack.top->used = 1;
+		ir->reg_stack.top->loc = 0;
+		ir->reg_stack.top->spilled = 0;
+		ir->reg_stack.top++;
+	}
+	else
+		printf("Internal error oppir_push\n");
+}
+
+static enum Regs oppir_reg_alloc(struct OppIr* ir)
+{
+	struct Register spill_reg = {0};
+	struct OppIr_Const val = {0};
+	unsigned char reg_op = 0;
+
+	for (struct Register* i = ir->reg_stack.stack; i < ir->reg_stack.top; i++) {
+		if (i->used && !i->spilled) {
+			i->spilled = 1;
+			i->loc = oppir_get_spill(ir);
+			spill_reg.loc = i->loc;
+			spill_reg.reg = i->reg;
+
+			oppir_check_regstack(ir);
+			ir->reg_stack.top->reg = i->reg;
+			ir->reg_stack.top->used = 1;
+			ir->reg_stack.top->loc = 0;
+			ir->reg_stack.top->spilled = 0;
+			ir->reg_stack.top++;
+			break;
+		}
+	}
+
+	oppir_check_realloc(ir, 3);
+	ir->code.bytes[ir->code.idx++] = 0x48;
+	ir->code.bytes[ir->code.idx++] = 0x89;
+	val.type = IMM_I8;
+	val.imm_i8 = (char)spill_reg.loc;
+
+	reg_op = 0x45 + (spill_reg.reg*8);
+
+	if (spill_reg.loc < -255) {
+		val.type = IMM_I32;
+		val.imm_i32 = spill_reg.loc;
+		reg_op = 0x85 + (spill_reg.reg*8);
+	}
+
+	ir->code.bytes[ir->code.idx++] = reg_op;
+	oppir_write_const(ir, &val);
+
+	return spill_reg.reg;
+}
+
+static enum Regs oppir_pop_reg(struct OppIr* ir)
+{
+	enum Regs pop_reg;
+	ir->reg_stack.top--;
+
+	if (ir->reg_stack.top < ir->reg_stack.stack || !ir->reg_stack.top->used)
+		printf("Error reg_stack pop overflow\n");
+
+	if (ir->reg_stack.top->spilled) {
+		oppir_check_realloc(ir, 3);
+		struct OppIr_Const val = {
+			.type = IMM_I8
+		};
+		ir->reg_stack.top->used = 0;
+		ir->reg_stack.top->spilled = 0;
+		IR_EMIT(0x48); IR_EMIT(0x8b);
+
+		ir->reg_stack.top++;
+		enum Regs new_reg = oppir_push_reg(ir);
+		pop_reg = oppir_pop_reg(ir);
+		ir->reg_stack.top--;
+
+		if (ir->reg_stack.top->loc < -255) {
+			IR_EMIT(0x85 + (new_reg*8));
+			val.type = IMM_I32;
+			val.imm_i32 = ir->reg_stack.top->loc;
+		}
+		else {
+			IR_EMIT(0x45 + (new_reg*8));
+			val.imm_i8 = ir->reg_stack.top->loc;
+		}
+		oppir_write_const(ir, &val);
+
+		for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+			if (ir->regalloc.spills[i].loc == ir->reg_stack.top->loc) {
+				ir->regalloc.spills[i].use = 0;
+				break;
+			}
+		}
+	}
+	else {
+		ir->reg_stack.top->used = 0;
+		pop_reg = ir->reg_stack.top->reg;
+		regs[pop_reg].used = 0;
+	}
+
+	return pop_reg;
+}
+
+static void oppir_write_const(struct OppIr* ir, struct OppIr_Const* imm)
+{
+	switch (imm->type)
+	{
+		case IMM_I64: {
+			oppir_check_realloc(ir, 8); 
+			ir->code.bytes[ir->code.idx++] = imm->imm_i64 & 0xFF;
+			for (int i = 8; i <= 56; i += 8) 
+				ir->code.bytes[ir->code.idx++] = (imm->imm_i64 >> i) & 0xFF;
+			break;
+		}
+
+		case IMM_I32: {
+			oppir_check_realloc(ir, 4); 
+			ir->code.bytes[ir->code.idx++] = imm->imm_i32 & 0xFF;
+			for (int i = 8; i <= 24; i += 8) 
+				ir->code.bytes[ir->code.idx++] = (imm->imm_i32 >> i) & 0xFF;
+			break;
+		}
+
+		case IMM_U32: {
+			oppir_check_realloc(ir, 4); 
+			ir->code.bytes[ir->code.idx++] = imm->imm_u32 & 0xFF;
+			for (int i = 8; i <= 24; i += 8) 
+				ir->code.bytes[ir->code.idx++] = (imm->imm_u32 >> i) & 0xFF;
+			break;
+		}
+
+		case IMM_I8: {
+			oppir_check_realloc(ir, 1);
+			ir->code.bytes[ir->code.idx++] = imm->imm_i8;
+			break;
+		}
+
+		default: break;
+	}
+}
+
+void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op) 
+{
+	switch (op->type)
+	{
+		case OPCODE_CONST:
+			oppir_eval_const(ir, &op->constant);
+			break;
+
+		case OPCODE_FUNC:
+			oppir_eval_func(ir, &op->func);
+			break;
+
+		case OPCODE_END:
+			oppir_eval_end(ir);
+			break;
+
+		case OPCODE_LABEL:
+			oppir_eval_label(ir, &op->constant);
+			break;
+
+		case OPCODE_JMP:
+			oppir_eval_jmp(ir, &op->jmp);
+			break;
+
+		case OPCODE_CMP:
+			oppir_eval_cmp(ir, &op->cmp);
+			break;
+
+		case OPCODE_VAR:
+			oppir_eval_var(ir, &op->var);
+			break;
+
+		case OPCODE_ASSIGN:
+			oppir_eval_set(ir, &op->set);
+			break;
+
+		case OPCODE_RET:
+			oppir_eval_ret(ir);
+			break;
+
+		case OPCODE_ARITH:
+			oppir_eval_arith(ir, &op->arith);
+			break;
+
+		case OPCODE_BIT:
+			oppir_eval_bitwise(ir, &op->bit);
+			break;
+
+		case OPCODE_CALL: break;
+			// oppir_eval_call(ir, &op->)
+
+		default: break;
+	}
+}
+
+static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
+{
+	enum Regs reg_type;
+	bool bit_field = false;
+	if (!imm->nopush)
+		reg_type = oppir_push_reg(ir);
+	else
+		reg_type = REG_RAX;
+
+	if (imm->type != IMM_STR && imm->type != IMM_LOC && imm->type != IMM_BIT) {
+		oppir_check_realloc(ir, 8+2);
+		ir->code.bytes[ir->code.idx++] = 0x48;
+		ir->code.bytes[ir->code.idx++] = 0xb8 + reg_type;
+	}
+	else if (imm->type == IMM_LOC || imm->type == IMM_BIT) {
+		if (imm->type == IMM_BIT) bit_field = true;
+		oppir_check_realloc(ir, 7);
+		IR_EMIT(0x48);
+		IR_EMIT(0x8b);
+
+		if (imm->imm_i32 < -255)
+			IR_EMIT(0x85 + (reg_type*8));
+		else {
+			imm->type = IMM_I8;
+			IR_EMIT(0x45 + (reg_type*8));
+		}
+	}
+
+	oppir_write_const(ir, imm);
+
+	if (bit_field) {
+		oppir_check_realloc(ir, 8);
+		IR_EMIT(0x48); IR_EMIT(0xc1);
+		IR_EMIT(0xe0 + (reg_type));
+		IR_EMIT(64 - imm->extra);
+		IR_EMIT(0x48); IR_EMIT(0xc1);
+		IR_EMIT(0xf8 + (reg_type));
+		IR_EMIT(64 - imm->extra);
+	}
+}
+
+static void oppir_emit_frame(struct OppIr* ir) 
+{
+	struct OppIr_Const frame = {
+		.type = IMM_I32,
+		.imm_i32 = 0x00000000
+	};
+
+	IR_EMIT(0x55); IR_EMIT(0x48); 
+	IR_EMIT(0x89); IR_EMIT(0xe5);
+
+	IR_EMIT(0x48); IR_EMIT(0x81); IR_EMIT(0xec);
+	ir->local_stack.frame_ptr = ir->code.idx;
+
+	oppir_write_const(ir, &frame);
+}
+
+static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn)
+{
+	oppir_check_realloc(ir, 11);
+
+	// Reset local func info
+	ir->local_stack.size = 0;
+	ir->local_stack.pos = 0;
+	ir->offsets.jmp_idx = 0;
+	ir->regalloc.amount = 0;
+	ir->reg_stack.top = ir->reg_stack.stack;
+	for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+		ir->regalloc.spills[i].made = 0;
+		ir->regalloc.spills[i].use = 0;
+	}
+
+	oppir_emit_frame(ir);
+	oppir_local_param(ir, fn->args);
+}
+
+static void oppir_set_offsets(struct OppIr* ir)
+{
+	struct OppIr_Const val = {
+		.type = IMM_I32,
+		.imm_i32 = 0
+	};
+
+	for (unsigned int i = 0; i < ir->offsets.jmp_idx; i++) {
+		size_t temp = ir->code.idx;
+
+		int32_t jmp_loc = ir->offsets.offset_table[ir->offsets.jmp_table[i].table_pos] 
+			- (ir->offsets.jmp_table[i].loc + 4);
+
+		ir->code.idx = ir->offsets.jmp_table[i].loc;
+		val.imm_i32 = jmp_loc;
+		oppir_write_const(ir, &val);
+
+		ir->code.idx = temp;
+	}
+}
+
+static void oppir_eval_end(struct OppIr* ir)
+{
+	struct OppIr_Const stack_size = {
+		.type = IMM_U32,
+		.imm_u32 = ir->local_stack.size
+	};
+
+	size_t temp = ir->code.idx;
+	ir->code.idx = ir->local_stack.frame_ptr;
+
+	stack_size.imm_u32 += stack_size.imm_u32 % 16;
+
+	oppir_write_const(ir, &stack_size);
+
+	ir->code.idx = temp;
+
+	IR_EMIT(0xc9); 
+	IR_EMIT(0xc3);
+
+	oppir_set_offsets(ir);
+}
+
+static void oppir_local_param(struct OppIr* ir, unsigned int args)
+{
+	oppir_check_realloc(ir, (args+1) * 3);
+
+	for (unsigned int i = 0; i < args; i++) {
+		if (i < 2) {
+			IR_EMIT(0x48);
+			IR_EMIT(0x89);
+			IR_EMIT(0x7d - (i*8));
+		}
+		else if (i >= 2 && i < 4) {
+			IR_EMIT(0x48);
+			IR_EMIT(0x89);
+			IR_EMIT(0x55 - (i-2)*8);
+		}
+		else {
+			IR_EMIT(0x4c);
+			IR_EMIT(0x89);
+			IR_EMIT(0x4d - ((i-4)*8));
+		}
+
+		ir->local_stack.size += 8;
+		ir->local_stack.pos -= 8;
+
+		IR_EMIT(ir->local_stack.pos);
+	}
+}
+
+static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc)
+{
+	if (loc->imm_u32 >= ir->offsets.allocated) {
+		printf("LABEL REALLOC NEEDED\n");
+	}
+
+	ir->offsets.offset_table[loc->imm_u32] = ir->code.idx;
+}
+
+static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp)
+{
+	if (ir->offsets.jmp_idx >= ir->offsets.allocated) {
+		printf("JMP REALLOC NEEDED\n");
+	}
+
+	if (jmp->type == PURE_JMP)
+		IR_EMIT(0xe9);
+	else
+		IR_EMIT(0x0f);
+
+	switch (jmp->type)
+	{
+		case TEQEQ:  IR_EMIT(0x84); break;
+		case TNOTEQ: IR_EMIT(0x85); break;
+		case TGT:    IR_EMIT(0x8f); break;
+		case TLE:    IR_EMIT(0x8e); break;
+		case TLT:    IR_EMIT(0x8c); break;
+		case TGE:    IR_EMIT(0x8d); break;
+	}
+	ir->offsets.jmp_table[ir->offsets.jmp_idx].loc = ir->code.idx;
+	ir->offsets.jmp_table[ir->offsets.jmp_idx].table_pos = jmp->loc;
+	IR_EMIT(0x00);
+	IR_EMIT(0x00);
+	IR_EMIT(0x00);
+	IR_EMIT(0x00);
+
+	ir->offsets.jmp_idx++;
+}
+
+static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var)
+{
+	if (var->global) {
+		// make the symbol
+	}
+	else {
+		ir->local_stack.size += var->size;
+		ir->local_stack.pos  -= var->size;
+	}
+}
+
+static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp)
+{
+	// TODO: IMM 
+	enum Regs rhs = oppir_pop_reg(ir);
+	BLOCK_REG(rhs);
+	enum Regs lhs = oppir_pop_reg(ir);
+	UNBLOCK_REG(rhs);
+
+	oppir_check_realloc(ir, 3);
+	
+	IR_EMIT(0x48); IR_EMIT(0x39);
+
+	switch (lhs)
+	{
+		case REG_RAX:
+			IR_EMIT(0xc0 + (rhs*8));
+			break;
+
+		case REG_RCX:
+			IR_EMIT(0xc1 + (rhs*8));
+			break;
+
+		case REG_RDX:
+			IR_EMIT(0xc2 + (rhs*8));
+			break;
+	}
+}
+
+static void oppir_eval_set_bits(struct OppIr* ir, struct OppIr_Set* set)
+{
+	struct OppIr_Const val = {
+		.type = IMM_LOC,
+		.imm_i32 = set->val.imm_i32,
+		.nopush = 0,
+		.global = 0
+	};
+
+	oppir_eval_const(ir, &val);
+
+}
+
+static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set)
+{
+	enum Regs reg_type = oppir_pop_reg(ir);
+
+	struct OppIr_Const val = {
+		.type = IMM_I32, 
+		.imm_i32 = 0
+	};
+
+	oppir_check_realloc(ir, 3);
+
+	if (!set->global) {
+
+		if (set->val.type == IMM_BIT)
+			oppir_eval_set_bits(ir, set);
+
+		else if (set->val.type == IMM_LOC) {
+			IR_EMIT(0x48); IR_EMIT(0x89);
+			if (set->val.imm_i32 < -255) {
+				IR_EMIT(0x85 + (reg_type*8));
+				val.imm_i32 = set->val.imm_i32;
+			}
+			else {
+				IR_EMIT(0x45 + (reg_type*8));
+				val.type = IMM_I8;
+				val.imm_i8 = (char)set->val.imm_i32;
+			}
+			oppir_write_const(ir, &val);
+		}
+
+	}
+}
+
+static void oppir_eval_ret(struct OppIr* ir)
+{
+	enum Regs res_reg = oppir_pop_reg(ir);
+
+	if (res_reg != REG_RAX) {
+		oppir_check_realloc(ir, 3);
+		IR_EMIT(0x48);
+		IR_EMIT(0x89);
+		IR_EMIT(0xc8 + ((res_reg-1)*8));
+	}
+}
+
+static void oppir_emit_reg_comb(struct OppIr* ir, enum Regs lhs, enum Regs rhs)
+{
+	switch (lhs)
+	{
+		case REG_RAX: IR_EMIT(0xc0 + (rhs*8)); break;
+		case REG_RCX: IR_EMIT(0xc1 + (rhs*8)); break;
+		case REG_RDX: IR_EMIT(0xc2 + (rhs*8)); break;
+	}
+}
+
+static void oppir_eval_arith(struct OppIr* ir, struct OppIr_Arith* arith)
+{
+	enum Regs rhs = oppir_pop_reg(ir);
+	BLOCK_REG(rhs);
+	enum Regs lhs;
+
+	if (!arith->imm)
+		lhs = oppir_pop_reg(ir);
+	else
+		lhs = rhs;
+
+	UNBLOCK_REG(rhs);
+
+	oppir_check_realloc(ir, 7);
+	IR_EMIT(0x48);
+
+	switch (arith->type)
+	{
+		case TADD: {
+			if (arith->imm) {
+				if (arith->val.type == IMM_I8) {
+					IR_EMIT(0x83);
+					IR_EMIT(0xc0 + rhs);
+				}
+				else {
+					if (rhs == REG_RAX)
+						IR_EMIT(0x05);
+					else {
+						IR_EMIT(0x81);
+						IR_EMIT(0xc0 + rhs);
+					}
+				}
+			}
+			else
+				IR_EMIT(0x1);
+			break;
+		}
+
+		case TMIN: {
+			if (arith->imm) {
+				if (arith->val.type == IMM_I8) {
+					IR_EMIT(0x83);
+					IR_EMIT(0xe8 + rhs);
+				}
+				else {
+					if (rhs == REG_RAX)
+						IR_EMIT(0x2d);
+					else {
+						IR_EMIT(0x81);
+						IR_EMIT(0xe8 + rhs);
+					}
+				}
+			}
+			else
+				IR_EMIT(0x29);
+			break;
+		}
+
+		case TMUL: {
+			if (arith->imm) {
+				if (arith->val.imm_i8 == -1) {
+					IR_EMIT(0xf7);
+					IR_EMIT(0xd8 + rhs);
+					goto skip;
+				}
+				else {
+					IR_EMIT(0xc1);
+					IR_EMIT(0xe0 + rhs);
+					char b = 0;
+					while (arith->val.imm_i8 != 1)
+						arith->val.imm_i8 >>= 1, b++;
+					arith->val.imm_i8 = b;
+				}
+			}
+			else {
+				IR_EMIT(0x0f);
+				IR_EMIT(0xaf);
+				oppir_emit_reg_comb(ir, rhs, lhs);
+				goto skip;
+			}
+			break;
+		}
+
+		case TDIV: {
+			break;
+		}
+	}
+
+	if (arith->imm)
+		oppir_write_const(ir, &arith->val);
+	else 
+		oppir_emit_reg_comb(ir, lhs, rhs);
+
+	skip:
+	oppir_push(ir, lhs);
+}
+
+static void oppir_eval_bitwise(struct OppIr* ir, struct OppIr_Bit* bit)
+{
+	enum Regs rhs = oppir_pop_reg(ir);
+	BLOCK_REG(rhs);
+	enum Regs lhs;
+
+	if (!bit->imm)
+		lhs = oppir_pop_reg(ir);
+	else
+		lhs = rhs;
+
+	UNBLOCK_REG(rhs);
+
+	enum Regs temp = 0;
+	if (bit->lookback) {
+		temp = lhs;
+		lhs = oppir_pop_reg(ir);
+	}
+
+	oppir_check_realloc(ir, 7);
+	IR_EMIT(0x48);
+
+	switch (bit->type)
+	{
+		case BIT_AND: {
+			if (bit->imm) {
+				if (rhs == REG_RAX)
+					IR_EMIT(0x25);
+				else {
+					IR_EMIT(0x81);
+					IR_EMIT(0xe0 + rhs);
+				}
+			}
+			else
+				IR_EMIT(0x21);
+			break;
+		}
+
+		case BIT_OR: {
+			if (bit->imm) {
+				if (rhs == REG_RAX)
+					IR_EMIT(0x0d);
+				else {
+					IR_EMIT(0x81);
+					IR_EMIT(0xc8 + rhs);
+				}
+			}
+			else
+				IR_EMIT(0x09);
+			break;
+		}
+	}
+
+	if (bit->imm)
+		oppir_write_const(ir, &bit->val);
+	else 
+		oppir_emit_reg_comb(ir, lhs, rhs);
+
+
+	oppir_push(ir, lhs);
+	if (bit->lookback)
+		oppir_push(ir, temp);
+}

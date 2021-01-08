@@ -4,29 +4,47 @@
 // struct OppIr_Opcode ops[] = {
 // 	{
 // 		.type = OPCODE_CONST,
-// 		.constant.type = IMM_I64,
-// 		.constant.imm_i64 = 3
+// 		.constant.val.type = IMM_LOC,
+// 		.constant.val.imm_i32 = -26,
+// 		.constant.loc_type = IMM_I8,
+// 		.constant.nopush = 0
 // 	},
 // 	{
 // 		.type = OPCODE_CONST,
-// 		.constant.type = IMM_I64,
-// 		.constant.imm_i64 = 1
+// 		.constant.val.type = IMM_LOC,
+// 		.constant.val.imm_i32 = -26,
+// 		.constant.loc_type = IMM_I8,
+// 		.constant.nopush = 0
 // 	},
 // 	{
 // 		.type = OPCODE_CONST,
-// 		.constant.type = IMM_I64,
-// 		.constant.imm_i64 = 2
+// 		.constant.val.type = IMM_LOC,
+// 		.constant.val.imm_i32 = -26,
+// 		.constant.loc_type = IMM_I8,
+// 		.constant.nopush = 0
 // 	},
 // 	{
 // 		.type = OPCODE_CONST,
-// 		.constant.type = IMM_I64,
-// 		.constant.imm_i64 = 9
+// 		.constant.val.type = IMM_LOC,
+// 		.constant.val.imm_i32 = -26,
+// 		.constant.loc_type = IMM_I8,
+// 		.constant.nopush = 0
 // 	},
-// 	{
-// 		.type = OPCODE_CONST,
-// 		.constant.type = IMM_I64,
-// 		.constant.imm_i64 = 9
-// 	},
+// 	// {
+// 	// 	.type = OPCODE_ASSIGN,
+// 	// 	.set.val.type = IMM_I32,
+// 	// 	.set.val.imm_i32 = -26,
+// 	// 	.set.loc_type = IMM_I8,
+// 	// 	.set.global = 0
+// 	// },
+// 	// {
+// 	// 	.type = OPCODE_ASSIGN,
+// 	// 	.set.val.type = IMM_I32,
+// 	// 	.set.val.imm_i32 = -26,
+// 	// 	.set.loc_type = IMM_F64,
+// 	// 	.set.global = 0
+// 	// },
+
 // };
 
 // int main() 

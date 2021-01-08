@@ -34,12 +34,6 @@ struct Opp_Debug_Func {
 	bool ret;
 };
 
-#define DEFAULT_ANALYZER_OPS 64
-struct Opp_Analyzer_Op {
-	struct Analyzer_Node** tree;
-	size_t allocated, idx;
-};
-
 struct Opp_Analize {
 	struct Opp_Options* opts;
 	struct Opp_Parser* parser;
@@ -49,7 +43,7 @@ struct Opp_Analize {
 	struct Opp_Debug_Func debug;
 };
 
-struct Opp_Analize* opp_init_analize(struct Opp_Parser* parser);
+struct Opp_Analize* opp_init_analize(struct Opp_Parser* parser, struct Opp_Options* opts);
 void analize_tree(struct Opp_Analize* ctx);
 
 
