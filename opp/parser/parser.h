@@ -40,6 +40,7 @@ struct Opp_Parser {
 struct Opp_Type_Entry* int_type;
 struct Opp_Type_Entry* char_type;
 struct Opp_Type_Entry* float_type; 
+struct Opp_Type_Entry* void_type; 
 
 struct Opp_Parser* opp_parser_init(struct Opp_Scan* s);
 void opp_parser_begin(struct Opp_Parser* parser);

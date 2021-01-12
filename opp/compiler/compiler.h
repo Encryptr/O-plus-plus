@@ -30,12 +30,6 @@
 
 #define UINT_MAX 4294967295
 
-enum Opp_State {
-	STATE_DEFAULT,
-	STATE_LOOP,
-	STATE_SWITCH
-};
-
 struct Opp_Options {
 	bool dump_toks,
 		run_output,
@@ -44,17 +38,6 @@ struct Opp_Options {
 		warning,
 		debug,
 		wall;
-};
-
-struct Opp_Type {
-	enum Opp_Var_Type type; 
-	unsigned int ptr_depth;
-};
-
-struct Opp_Link {
-	struct OppIr_Opcode* op;
-	struct Opp_Node* goto_node;
-	char* label;
 };
 
 enum Opp_Cond_Type {
@@ -73,18 +56,24 @@ struct Opp_Cond {
 };
 
 struct Opp_Info {
-	enum Opp_State state;
-	struct Opp_Namespace* cur_ns;
 	int32_t stack_offset;
-	char* fn_name;
 	unsigned int label_loc, sym_loc;
-	// unsigned int goto_idx;
-	// struct Opp_Link* goto_list;
 	bool deref_assign;
 };
 
+struct Opp_Elem {
+	enum Opp_Bucket_Type type;
+	struct Opp_Type_Decl decl;
+	unsigned int sym_tab_loc;
+};
+
+struct Opp_Env {
+	struct Opp_Elem* global_table;
+	struct Opp_Elem* local_table;
+	size_t allocated;
+};
+
 #define DEFAULT_OPCODE_SIZE 64
-#define FUNC_END_LABEL "__fn_end"
 
 struct Opp_Context {
 	struct Opp_Parser* parser;
@@ -92,23 +81,17 @@ struct Opp_Context {
 	struct Opp_Info info;
 	struct OppIr_Instr ir;
 	struct OppIr* oppir;
-	struct Opp_Namespace* global_ns;
 	struct Opp_Cond cond_state;
+	struct Opp_Env comp_env;
 };
 
 struct Opp_Context* opp_init_compile(struct Opp_Parser* parser, 
 									struct Opp_Options* opts);
 void opp_free_compiler(struct Opp_Context* opp);
 void opp_compile(struct Opp_Context* opp);
-// static void opp_compile_error(struct Opp_Context* opp, 
-// 		struct Opp_Node* node, const char* str, ...);
-// static void opp_warning(struct Opp_Context* opp, 
-// 		struct Opp_Node* node, const char* str, ...);
 
 static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt);
 static struct Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);
-static struct Opp_Node* opp_compile_time_eval
-	(struct Opp_Context* opp, struct Opp_Node* expr);
 static void opp_set_offsets(struct Opp_Context* opp);
 static void opp_generate_ret(struct Opp_Context* opp);
 

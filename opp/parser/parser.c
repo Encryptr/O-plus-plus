@@ -179,6 +179,7 @@ static void opp_add_std_types(struct Opp_Parser* parser)
 
 	type1 = add_type(&parser->tree, "void");
 	type1->t_type = TYPE_VOID;
+	void_type = type1;
 
 	type1 = add_type(&parser->tree, "float");
 	type1->t_type = TYPE_FLOAT;
@@ -268,6 +269,7 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 	func_node->fn_stmt.type = type; 
 
 	opp_next(parser->lex);
+
 	while (parser->lex->t.id != TIDENT) {
 		func_node->fn_stmt.type.depth++;
 		opp_next(parser->lex);
@@ -283,8 +285,6 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 
 	func_node->fn_stmt.args = (struct Opp_Func_Args*)
 		malloc(sizeof(struct Opp_Func_Args)*DEFAULT_LIST_SIZE);
-
-	memset(func_node->fn_stmt.args, 0, sizeof(struct Opp_Func_Args)*DEFAULT_LIST_SIZE);
 
 	if (func_node->fn_stmt.args == NULL)
 		INTERNAL_ERROR("Malloc fail");
@@ -317,12 +317,15 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 			func_node->fn_stmt.args[i].type.depth++;
 			opp_next(parser->lex);
 		}
+		
+		func_node->fn_stmt.args[i].name = opp_parse_unary(parser);
 
 		opp_next(parser->lex);
 
 		i++;
 
 	} while (parser->lex->t.id == TCOMMA);
+
 
 	func_node->fn_stmt.len = i;
 
@@ -348,7 +351,70 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 	if (parser->lex->t.id != TIDENT)
 		opp_error(parser->lex, "Expected a identifier after struct");
 
+	struct_node->struct_stmt.name = (char*)malloc(strlen(parser->lex->t.buffer.buf)+1);
+	strcpy(struct_node->struct_stmt.name, parser->lex->t.buffer.buf);
 
+	struct Opp_Type_Entry* entry = add_type(&parser->tree, struct_node->struct_stmt.name);
+	if (entry == NULL)
+		opp_error(parser->lex, "Redefinition of type '%s'", struct_node->struct_stmt.name);
+	entry->t_type = TYPE_STRUCT;
+	entry->s_type = &struct_node->struct_stmt;
+
+	opp_next(parser->lex);
+
+	if (parser->lex->t.id != TOPENC)
+		opp_error(parser->lex, "Expected a '{' after 'struct %s'", struct_node->struct_stmt.name);
+
+	struct_node->struct_stmt.elems = (struct Opp_Func_Args*)
+		malloc(sizeof(struct Opp_Func_Args)*16);
+
+	memset(struct_node->struct_stmt.elems, 0, sizeof(struct Opp_Func_Args)*16);
+
+	unsigned int i = 0;
+	do {
+		opp_next(parser->lex);
+		if (parser->lex->t.id == FEND || parser->lex->t.id == TCLOSEC)
+			break;
+
+		if (i == 16)
+			opp_error(parser->lex, "TODO REALLOC STRUCT");
+
+		if (parser->lex->t.id == TUNSIGNED) {
+			struct_node->struct_stmt.elems[i].type.unsign = 1;
+			opp_next(parser->lex);
+		}
+		
+		struct_node->struct_stmt.elems[i].type.decl = get_type(&parser->tree, parser->lex->t.buffer.buf);
+		struct_node->struct_stmt.elems[i].type.depth = 0;
+
+		if (struct_node->struct_stmt.elems[i].type.decl == NULL)
+			opp_error(parser->lex, 
+				"Use of undeclared type '%s' in struct element #%d", 
+				parser->lex->t.buffer.buf, i+1);
+
+		opp_next(parser->lex);
+
+		while (parser->lex->t.id != TIDENT) {
+			if (parser->lex->t.id != TMUL)
+				opp_error(parser->lex, "Unexpected token in struct element declaration");
+
+			struct_node->struct_stmt.elems[i].type.depth++;
+			opp_next(parser->lex);
+		}
+
+		struct_node->struct_stmt.elems[i].name = opp_parse_allign(parser);
+
+		if (parser->lex->t.id != TSEMICOLON)
+			opp_error(parser->lex, "Expected ';' after struct element #%d", i+1);
+		i++;
+
+	} while (parser->lex->t.id != TCLOSEP);
+
+	opp_next(parser->lex);
+	if (parser->lex->t.id != TSEMICOLON)
+		opp_error(parser->lex, "Expected ';' after struct '%s' declaration", struct_node->struct_stmt.name);
+
+	struct_node->struct_stmt.len = i;
 
 }
 
@@ -682,6 +748,10 @@ static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser)
 			opp_error(parser->lex, "Max auto list variable declaration limit met (8)");
 
 		opp_next(parser->lex);
+
+		if (parser->lex->t.id == FEND || parser->lex->t.id == TCLOSEP)
+			break;
+
 		list->list[i] = opp_parse_allign(parser);
 
 		i++;
@@ -928,7 +998,7 @@ static struct Opp_Node* opp_parse_before(struct Opp_Parser* parser)
 	{
 		value = opp_new_node(parser, EDEREF);
 		opp_next(parser->lex);
-		value->defer_expr.defer = opp_parse_order2(parser);
+		value->deref_expr.deref = opp_parse_order2(parser);
 
 		return value;
 	}
@@ -967,14 +1037,16 @@ static struct Opp_Node* opp_parse_prefix(struct Opp_Parser* parser)
 		switch (operator)
 		{
 			case TOPENP: {
-				printf("ADD THIS\n");
-				result = opp_new_node(parser, ECALL); // use opp_parse_comma
+				result = opp_new_node(parser, ECALL);
 				result->call_expr.callee = left;
-				// result->call_expr.args = opp_parse_args(parser);
+
+				result->call_expr.args = opp_parse_comma(parser);
+
+				if (parser->lex->t.id != TCLOSEP)
+					opp_error(parser->lex, "Expected ')' in function call");
 
 				opp_next(parser->lex);
 				left = result;
-
 				break;
 			}
 
@@ -994,8 +1066,6 @@ static struct Opp_Node* opp_parse_prefix(struct Opp_Parser* parser)
 				result->dot_expr.left = left;
 				opp_next(parser->lex);
 				result->dot_expr.right = opp_parse_allign(parser);
-
-				opp_next(parser->lex);
 				left = result;
 				break;
 			}

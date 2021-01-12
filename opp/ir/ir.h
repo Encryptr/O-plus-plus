@@ -47,12 +47,14 @@ enum OppIr_Opcode_Type {
 	OPCODE_CONST,
 	OPCODE_CALL,
 	OPCODE_FUNC,
+	OPCODE_ARG,
 	OPCODE_VAR,
 	OPCODE_ARITH,
 	OPCODE_CMP,
 	OPCODE_JMP,
 	OPCODE_RET,
 	OPCODE_LABEL,
+	OPCODE_CAST,
 	OPCODE_DEREF,
 	OPCODE_BIT,
 	OPCODE_ADDR,
@@ -138,7 +140,12 @@ struct OppIr_Var {
 struct OppIr_Func {
 	char* fn_name;
 	bool private;
-	unsigned int args, sym;
+	unsigned int sym;
+};
+
+struct OppIr_Arg {
+	enum OppIr_Const_Type type;
+	unsigned int idx;
 };
 
 enum {
@@ -177,6 +184,10 @@ struct OppIr_Bit {
 	struct OppIr_Const val;
 };
 
+struct OppIr_Cast {
+	enum OppIr_Const_Type type;
+};
+
 struct OppIr_Opcode {
 	enum OppIr_Opcode_Type type;
 
@@ -189,6 +200,8 @@ struct OppIr_Opcode {
 		struct OppIr_Arith arith;
 		struct OppIr_Set   set;
 		struct OppIr_Bit   bit;
+		struct OppIr_Arg   arg;
+		struct OppIr_Cast  cast;
 	};
 };
 
@@ -252,17 +265,20 @@ static void oppir_write_const(struct OppIr* ir, struct OppIr_Value* imm);
 static int32_t oppir_get_spill(struct OppIr* ir);
 static void oppir_set_offsets(struct OppIr* ir);
 static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Set* set);
+static void oppir_write_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Const* imm);
 
 // Opcodes
 static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm);
 static void oppir_local_param(struct OppIr* ir, unsigned int args);
 static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn);
+static void oppir_eval_arg(struct OppIr* ir, struct OppIr_Arg* arg);
 static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc);
 static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp);
 static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var);
 static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp);
 static void oppir_eval_arith(struct OppIr* ir, struct OppIr_Arith* arith);
 static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set);
+static void oppir_eval_cast(struct OppIr* ir, struct OppIr_Cast* cast);
 static void oppir_eval_bitwise(struct OppIr* ir, struct OppIr_Bit* bit);
 static void oppir_eval_end(struct OppIr* ir);
 static void oppir_eval_ret(struct OppIr* ir);

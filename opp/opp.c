@@ -99,14 +99,14 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 	opp_compile(context);
 
 	cstart = clock();
-	// context->oppir = init_oppir();
+	context->oppir = init_oppir();
 	// oppir_setup(&scan.io);
-	// oppir_get_opcodes(context->oppir, &context->ir);
-	// oppir_eval(context->oppir);
-	// OppIO io = {
-	// 	.file = fopen("out.bin", "wb")
-	// };
-	// dump_bytes(context->oppir, &io);
+	oppir_get_opcodes(context->oppir, &context->ir);
+	oppir_eval(context->oppir);
+	OppIO io = {
+		.file = fopen("out.bin", "wb")
+	};
+	dump_bytes(context->oppir, &io);
 	// run_main(context->oppir);
 	// oppir_emit_obj(context->oppir, &io);
 	cend = clock();
@@ -147,7 +147,7 @@ static void opp_help()
 	printf("\t-lc             | Link C's standard library\n");
 	printf("\t-nostd          | Don't link Opp stdlib\n");
 	printf("\t-w              | Hide warnings\n");
-	printf("\t-debug          | Debug compiler stats\n");
+	printf("\t-debug          | Debug compiler statistics\n");
 	printf("\t-Wall           | Turn warnings to errors\n");
 	printf("\n");
 }

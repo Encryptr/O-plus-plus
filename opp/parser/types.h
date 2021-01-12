@@ -29,19 +29,13 @@ enum Opp_Std_Type {
 	TYPE_FLOAT,
 	TYPE_DOUBLE,
 	TYPE_BITFIELD,
-	TYPE_ARRAY,
 	TYPE_STRUCT,
-};
-
-struct Opp_Struct {
-	enum Opp_Std_Type* elems;
-	unsigned int count;
 };
 
 struct Opp_Type_Entry {
 	char* id;
 	enum Opp_Std_Type t_type;
-	struct Opp_Struct s_type;
+	struct Opp_Stmt_Struct* s_type;
 	struct Opp_Type_Entry* next;
 };
 

@@ -31,11 +31,10 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 
 	opp->parser = parser;
 	opp->opts = opts;
-	opp->global_ns = init_namespace(NULL, malloc);
 	opp->oppir = NULL;
 
 	// Info
-	// check whats needed
+	memset(&opp->info, 0, sizeof(struct Opp_Info));
 
 	// Cond
 	memset(&opp->cond_state, 0, sizeof(struct Opp_Cond));
@@ -51,6 +50,13 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 
 	memset(opp->ir.opcodes, 0, sizeof(struct OppIr_Opcode)*DEFAULT_OPCODE_SIZE);
 
+	// Tables
+	// FIX THIS
+	opp->comp_env.global_table = (struct Opp_Elem*)malloc(sizeof(struct Opp_Elem)*12);
+	memset(opp->comp_env.global_table, 0, sizeof(struct Opp_Elem)*12);
+
+	allocator_reset();
+
 	return opp;
 
 	err:
@@ -60,8 +66,8 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 
 void opp_free_compiler(struct Opp_Context* opp)
 {
-	free(opp->global_ns); // free the ns last
 	free(opp->ir.opcodes);
+	free(opp->comp_env.global_table);
 	free(opp);
 }
 
@@ -105,7 +111,37 @@ void opp_compile(struct Opp_Context* opp)
 
 static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 {
+	// Resets
+	opp->info.stack_offset = 0;
+	opp->info.label_loc = 1;
 
+	struct Opp_Elem* elem = &opp->comp_env.global_table[func->fn_stmt.idx];
+	elem->type = TYPE_FUNC;
+	elem->sym_tab_loc = opp->info.sym_loc++;
+	elem->decl = func->fn_stmt.type;
+
+	// FILL THIS NUMBER (32) IN WITH SOMEHITNG BETTER
+	opp->comp_env.local_table = (struct Opp_Elem*)alloc(sizeof(struct Opp_Elem)*32);
+
+	opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_FUNC;
+		opp->ir.opcodes[opp->ir.instr_idx].func.fn_name = func->fn_stmt.name->unary_expr.val.strval;
+		opp->ir.opcodes[opp->ir.instr_idx].func.sym = elem->sym_tab_loc;
+	opp->ir.instr_idx++;
+
+	// for (unsigned int i = 0; i < func->fn_stmt.len; i++) 
+	// {
+	// 	opp_realloc_instrs(opp);
+	// 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARG;
+	// 		// THIS WONT WORK WITH MIXING
+	// 		opp->ir.opcodes[opp->ir.instr_idx].arg.idx = i;
+	// 		// MAKE FUNC TO CONVER TYPES
+	// 	opp->ir.instr_idx++;
+	// }
+
+	opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_END;
+	opp->ir.instr_idx++;
 }
 
 // static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)

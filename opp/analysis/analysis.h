@@ -26,6 +26,8 @@
 #include "../ast/ast.h"
 #include "nodes.h"
 
+// add states ex swtich
+
 struct Opp_Debug_Func {
 	unsigned int loc_global;
 	unsigned int loc_var;

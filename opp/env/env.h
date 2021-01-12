@@ -22,7 +22,6 @@
 
 #include <stdint.h>
 #include "../lexer/lexer.h"
-#include "../memory/memory.h"
 #include "../ast/ast.h"
 
 #define STACK_SIZE 8
@@ -30,35 +29,25 @@
 
 enum Opp_Bucket_Type {
 	TYPE_GLOBAL, TYPE_LOCAL,
-	TYPE_FUNC, TYPE_LABEL
-};
-
-enum Opp_Var_Type {
-	TYPE_NONE, TYPE_NUM, 
-	TYPE_PTR, TYPE_BIT
+	TYPE_FUNC, TYPE_LABEL,
+	TYPE_EXTERN
 };
 
 struct Opp_Function {
-	// unsigned int args;
-	// enum Opp_Var_Type ret_type;
-	// enum Opp_Bucket_Type* types;
+	struct Opp_Stmt_Func* args;
 };
 
-struct Opp_Var {
-	// enum Opp_Var_Type type;
-	// int32_t offset;
-	
-	// unsigned int ptr_depth;
+struct Opp_Struct {
+
 };
 
 struct Opp_Bucket {
 	char* key;
 	enum Opp_Bucket_Type type;
-	struct Opp_Type_Decl t_type;
 	unsigned int sym_idx;
+	struct Opp_Type_Decl sym_type;
 	union {
-		struct Opp_Var var;
-		struct Opp_Function func;
+		struct Opp_Stmt_Func* args;
 	};
 	struct Opp_Bucket* next;
 };

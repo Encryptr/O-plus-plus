@@ -109,7 +109,7 @@ struct Opp_Expr_Adjust {
 };	
 
 struct Opp_Expr_Deref {
-	struct Opp_Node* defer;
+	struct Opp_Node* deref;
 };
 
 struct Opp_Expr_Addr {
@@ -170,6 +170,7 @@ struct Opp_Stmt_Var {
 	// struct Opp_List* vars;
 	struct Opp_Node* var;
 	bool global;
+	unsigned int idx;
 };
 
 struct Opp_Stmt_Import {
@@ -190,7 +191,7 @@ struct Opp_Stmt_Func {
 	struct Opp_Type_Decl type;
 	struct Opp_Node* name;
 	struct Opp_Node* body;
-	unsigned int len;
+	unsigned int len, idx;
 	struct Opp_Func_Args* args;
 };
 
@@ -220,7 +221,7 @@ struct Opp_Node {
 		struct Opp_Expr_Logic logic_expr;
 		struct Opp_Expr_Sub sub_expr;
 		struct Opp_Expr_Adjust adjust_expr;
-		struct Opp_Expr_Deref defer_expr;
+		struct Opp_Expr_Deref deref_expr;
 		struct Opp_Expr_Addr addr_expr;
 		struct Opp_Expr_Element elem_expr;
 		struct Opp_Expr_Sizeof sizeof_expr;
@@ -238,6 +239,7 @@ struct Opp_Node {
 		struct Opp_Stmt_Ret ret_stmt;
 		struct Opp_Stmt_Goto goto_stmt;
 		struct Opp_Stmt_Extrn extrn_stmt;
+		struct Opp_Stmt_Struct struct_stmt;
 	};
 };
 

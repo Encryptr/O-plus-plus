@@ -140,6 +140,9 @@ void oppir_eval(struct OppIr* ir)
 {
 	for (size_t index = 0; index < ir->instr->instr_idx; index++)
 		oppir_eval_opcode(ir, &ir->instr->opcodes[index]);
+
+	for (int i =0 ; i < 4; i++)
+		oppir_pop_reg(ir);
 }
 
 
@@ -265,43 +268,31 @@ static enum Regs oppir_reg_alloc(struct OppIr* ir)
 
 static enum Regs oppir_pop_reg(struct OppIr* ir)
 {
-	enum Regs pop_reg;
+	enum Regs pop_reg = 0;
 	ir->reg_stack.top--;
 
 	if (ir->reg_stack.top < ir->reg_stack.stack || !ir->reg_stack.top->used)
 		printf("Error reg_stack pop overflow\n");
 
 	if (ir->reg_stack.top->spilled) {
-		// oppir_check_realloc(ir, 3);
-		// struct OppIr_Const val = {
-		// 	.type = IMM_I8
-		// };
-		// ir->reg_stack.top->used = 0;
-		// ir->reg_stack.top->spilled = 0;
-		// IR_EMIT(0x48); IR_EMIT(0x8b);
+		ir->reg_stack.top->used = 0;
+		ir->reg_stack.top->spilled = 0;
+		struct OppIr_Const val = {
+			.global = 0,
+			.loc_type = ir->reg_stack.top->type,
+			.val.type = IMM_LOC,
+			.val.imm_i32 = ir->reg_stack.top->loc
+		};
+		
+		oppir_eval_const(ir, &val);
+		pop_reg = oppir_pop_reg(ir);
 
-		// ir->reg_stack.top++;
-		// enum Regs new_reg = oppir_push_reg(ir);
-		// pop_reg = oppir_pop_reg(ir);
-		// ir->reg_stack.top--;
-
-		// if (ir->reg_stack.top->loc < -255) {
-		// 	IR_EMIT(0x85 + (new_reg*8));
-		// 	val.type = IMM_I32;
-		// 	val.imm_i32 = ir->reg_stack.top->loc;
-		// }
-		// else {
-		// 	IR_EMIT(0x45 + (new_reg*8));
-		// 	val.imm_i8 = ir->reg_stack.top->loc;
-		// }
-		// oppir_write_const(ir, &val);
-
-		// for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
-		// 	if (ir->regalloc.spills[i].loc == ir->reg_stack.top->loc) {
-		// 		ir->regalloc.spills[i].use = 0;
-		// 		break;
-		// 	}
-		// }
+		for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+			if (ir->regalloc.spills[i].loc == ir->reg_stack.top->loc) {
+				ir->regalloc.spills[i].use = 0;
+				break;
+			}
+		}
 	}
 	else {
 		ir->reg_stack.top->used = 0;
@@ -316,15 +307,15 @@ static void oppir_write_const(struct OppIr* ir, struct OppIr_Value* imm)
 {
 	switch (imm->type)
 	{
-		// case IMM_U64:
-		// case IMM_I64: 
-		// {
-		// 	oppir_check_realloc(ir, 8); 
-		// 	ir->code.bytes[ir->code.idx++] = imm->val.imm_64 & 0xFF;
-		// 	for (int i = 8; i <= 56; i += 8) 
-		// 		ir->code.bytes[ir->code.idx++] = (imm->val.imm_64 >> i) & 0xFF;
-		// 	break;
-		// }
+		case IMM_U64:
+		case IMM_I64: 
+		{
+			oppir_check_realloc(ir, 8); 
+			ir->code.bytes[ir->code.idx++] = imm->imm_i64 & 0xFF;
+			for (int i = 8; i <= 56; i += 8) 
+				ir->code.bytes[ir->code.idx++] = (imm->imm_i64 >> i) & 0xFF;
+			break;
+		}
 
 		case IMM_I32: {
 			oppir_check_realloc(ir, 4); 
@@ -364,13 +355,21 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 			oppir_eval_set(ir, &op->set);
 			break;
 
-		// case OPCODE_FUNC:
-		// 	oppir_eval_func(ir, &op->func);
-		// 	break;
+		case OPCODE_FUNC:
+			oppir_eval_func(ir, &op->func);
+			break;
 
-		// case OPCODE_END:
-		// 	oppir_eval_end(ir);
-		// 	break;
+		case OPCODE_ARG:
+			oppir_eval_arg(ir, &op->arg);
+			break;
+
+		case OPCODE_END:
+			oppir_eval_end(ir);
+			break;
+
+		case OPCODE_CAST:
+			oppir_eval_cast(ir, &op->cast);
+			break;
 
 		// case OPCODE_LABEL:
 		// 	oppir_eval_label(ir, &op->constant);
@@ -413,12 +412,12 @@ static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 	enum Regs reg_type;
 
 	if (!imm->nopush) {
-		enum OppIr_Const_Type t = IMM_I64;
+		enum OppIr_Const_Type t;
 
-		if (imm->val.type == IMM_F32 || imm->loc_type == IMM_F32)
-			t = IMM_F32;
-		else if (imm->val.type == IMM_F64 || imm->loc_type == IMM_F64)
-			t = IMM_F64;
+		if (imm->loc_type == 0)
+			t = imm->val.type;
+		else
+			t = imm->loc_type;
 
 		reg_type = oppir_push_reg(ir, t);
 	}
@@ -427,79 +426,86 @@ static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 
 	if (imm->val.type > IMM_LOC && imm->val.type < IMM_F32) {
 		oppir_check_realloc(ir, 2);
+		imm->val.type = IMM_I64;
 		ir->code.bytes[ir->code.idx++] = 0x48;
 		ir->code.bytes[ir->code.idx++] = 0xb8 + reg_type;
 	}
 	else if (imm->val.type > IMM_I64) {
 		// call func for floats
 	}
-	else if (imm->val.type == IMM_LOC) {
-		bool small = imm->val.imm_i32 > -255;
-
-		if (small)
-			imm->val.type = IMM_I8;
-		else
-			imm->val.type = IMM_I32;
-
-		oppir_check_realloc(ir, 8);
-		switch (imm->loc_type)
-		{
-			case IMM_F32:
-			case IMM_F64:
-				if (imm->loc_type == IMM_F32)
-					IR_EMIT(0xf3);
-				else
-					IR_EMIT(0xf2);
-				IR_EMIT(0x0f);
-				IR_EMIT(0x10);
-				reg_type -= 3;
-				break;
-
-			case IMM_U8:
-			case IMM_U16:
-			case IMM_I8:
-			case IMM_I16:
-			case IMM_I32:
-				IR_EMIT(0x48);
-				if (imm->loc_type != IMM_I32)
-					IR_EMIT(0x0f);
-				else
-					IR_EMIT(0x63);
-
-				switch (imm->loc_type) {
-						break;
-					case IMM_I8: 
-						IR_EMIT(0xbe); 
-						break;
-					case IMM_U8:
-						IR_EMIT(0xb7);
-						break;
-					case IMM_I16:
-						IR_EMIT(0xbf);
-						break;
-					case IMM_U16:
-						IR_EMIT(0xb7);
-						break;
-				}
-				break;
-
-			case IMM_U64:
-			case IMM_I64:
-				IR_EMIT(0x48);
-				IR_EMIT(0x8b);
-				break;
-
-			case IMM_U32:
-				IR_EMIT(0x8b);
-				break;
-
-			default: break;
-		}
-		if (small) IR_EMIT(0x45 + (reg_type*8));
-		else IR_EMIT(0x85 + (reg_type*8));
-	}
+	else if (imm->val.type == IMM_LOC)
+		oppir_write_reg(ir, reg_type, imm);
 
 	oppir_write_const(ir, &imm->val);
+}
+
+static void oppir_write_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Const* imm)
+{
+	bool small = imm->val.imm_i32 > -255;
+
+	if (small)
+		imm->val.type = IMM_I8;
+	else
+		imm->val.type = IMM_I32;
+
+	oppir_check_realloc(ir, 8);
+	switch (imm->loc_type)
+	{
+		case IMM_F32:
+		case IMM_F64:
+			if (imm->loc_type == IMM_F32)
+				IR_EMIT(0xf3);
+			else
+				IR_EMIT(0xf2);
+			IR_EMIT(0x0f);
+			IR_EMIT(0x10);
+			reg_type -= 3;
+			break;
+
+		case IMM_U8:
+		case IMM_U16:
+		case IMM_I8:
+		case IMM_I16:
+		case IMM_I32:
+			IR_EMIT(0x48);
+			if (imm->loc_type != IMM_I32)
+				IR_EMIT(0x0f);
+			else
+				IR_EMIT(0x63);
+
+			switch (imm->loc_type) {
+					break;
+				case IMM_I8: 
+					IR_EMIT(0xbe); 
+					break;
+				case IMM_U8:
+					IR_EMIT(0xb7);
+					break;
+				case IMM_I16:
+					IR_EMIT(0xbf);
+					break;
+				case IMM_U16:
+					IR_EMIT(0xb7);
+					break;
+			}
+			break;
+
+		case IMM_U64:
+		case IMM_I64:
+			IR_EMIT(0x48);
+			IR_EMIT(0x8b);
+			break;
+
+		case IMM_U32:
+			IR_EMIT(0x8b);
+			break;
+
+		default: break;
+	}
+	if (small) 
+		IR_EMIT(0x45 + (reg_type*8));
+	else 
+		IR_EMIT(0x85 + (reg_type*8));
 }
 
 static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Set* set)
@@ -550,10 +556,9 @@ static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Se
 	}
 
 	if (small)
-		IR_EMIT(0x44 + (reg_type*8));
+		IR_EMIT(0x45 + (reg_type*8));
 	else
-		IR_EMIT(0x84 + (reg_type*8));
-	IR_EMIT(0x24);
+		IR_EMIT(0x85 + (reg_type*8));
 
 	oppir_write_const(ir, &set->val);
 }
@@ -564,4 +569,155 @@ static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set)
 	bool small = set->val.imm_i32 > -255;
 
 	oppir_save_reg(ir, reg_type, set);
+}
+
+static void oppir_emit_frame(struct OppIr* ir) 
+{
+	struct OppIr_Value frame = {
+		.type = IMM_I32,
+		.imm_i32 = 0x00000000
+	};
+
+	IR_EMIT(0x55); IR_EMIT(0x48); 
+	IR_EMIT(0x89); IR_EMIT(0xe5);
+
+	IR_EMIT(0x48); IR_EMIT(0x81); IR_EMIT(0xec);
+	ir->local_stack.frame_ptr = ir->code.idx;
+
+	oppir_write_const(ir, &frame);
+}
+
+static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn)
+{
+	oppir_check_realloc(ir, 11);
+
+	// Reset local func info
+	ir->local_stack.size = 0;
+	ir->local_stack.pos = 0;
+	ir->offsets.jmp_idx = 0;
+	ir->regalloc.amount = 0;
+	ir->reg_stack.top = ir->reg_stack.stack;
+
+	for (unsigned int i = 0; i < ir->regalloc.allocated; i++) {
+		ir->regalloc.spills[i].made = 0;
+		ir->regalloc.spills[i].use = 0;
+	}
+
+	oppir_emit_frame(ir);
+}
+
+static void oppir_eval_arg(struct OppIr* ir, struct OppIr_Arg* arg)
+{
+
+}
+
+static void oppir_eval_end(struct OppIr* ir)
+{
+	struct OppIr_Value stack_size = {
+		.type = IMM_U32,
+		.imm_i32 = ir->local_stack.size
+	};
+
+	size_t temp = ir->code.idx;
+	ir->code.idx = ir->local_stack.frame_ptr;
+
+	// FIX THIS
+	// stack_size.imm_u32 += stack_size.imm_u32 % 16;
+
+	oppir_write_const(ir, &stack_size);
+
+	ir->code.idx = temp;
+
+	IR_EMIT(0xc9); 
+	IR_EMIT(0xc3);
+
+	oppir_set_offsets(ir);
+}
+
+static void oppir_set_offsets(struct OppIr* ir)
+{
+	// struct OppIr_Const val = {
+	// 	.type = IMM_I32,
+	// 	.imm_i32 = 0
+	// };
+
+	// for (unsigned int i = 0; i < ir->offsets.jmp_idx; i++) {
+	// 	size_t temp = ir->code.idx;
+
+	// 	int32_t jmp_loc = ir->offsets.offset_table[ir->offsets.jmp_table[i].table_pos] 
+	// 		- (ir->offsets.jmp_table[i].loc + 4);
+
+	// 	ir->code.idx = ir->offsets.jmp_table[i].loc;
+	// 	val.imm_i32 = jmp_loc;
+	// 	oppir_write_const(ir, &val);
+
+	// 	ir->code.idx = temp;
+	// }
+}
+
+static void oppir_cast_to_f32(struct OppIr* ir, enum Regs reg)
+{
+	enum Regs new_reg = oppir_push_reg(ir, IMM_F32);
+	switch (reg)
+	{
+		case REG_RAX...REG_RDX:
+			oppir_check_realloc(ir, 5);
+
+			IR_EMIT(0xf3); IR_EMIT(0x48);
+			IR_EMIT(0x0f); IR_EMIT(0x2a);
+			IR_EMIT((0xc0 + ((new_reg-3)*8)) + reg);
+			break;
+
+		case REG_XMM0...REG_XMM2:
+			oppir_check_realloc(ir, 4);
+
+			IR_EMIT(0xf2); IR_EMIT(0x0f);
+			IR_EMIT(0x5a);
+			IR_EMIT(0xc0 + ((new_reg-3)*8) + (reg-3));
+			break;
+	}
+}
+
+static void oppir_cast_to_f64(struct OppIr* ir, enum Regs reg)
+{
+	enum Regs new_reg = oppir_push_reg(ir, IMM_F64);
+	switch (reg)
+	{
+		case REG_RAX...REG_RDX:
+			oppir_check_realloc(ir, 5);
+
+			IR_EMIT(0xf2); IR_EMIT(0x48);
+			IR_EMIT(0x0f); IR_EMIT(0x2a);
+
+			IR_EMIT((0xc0 + ((new_reg-3)*8)) + (reg));
+			break;
+
+		case REG_XMM0...REG_XMM2:
+			oppir_check_realloc(ir, 4);
+
+			IR_EMIT(0xf3); IR_EMIT(0x0f);
+			IR_EMIT(0x5a);
+			IR_EMIT(0xc0 + ((new_reg-3)*8) + (reg-3));
+			break;
+	}
+}
+
+static void oppir_eval_cast(struct OppIr* ir, struct OppIr_Cast* cast)
+{
+	enum Regs reg = oppir_pop_reg(ir);
+
+	switch (cast->type)
+	{
+		case IMM_F32:
+			oppir_cast_to_f32(ir, reg);
+			break;
+
+		case IMM_F64:
+			oppir_cast_to_f64(ir, reg);
+			break;
+
+		default:
+			break;
+	}
+
 }
