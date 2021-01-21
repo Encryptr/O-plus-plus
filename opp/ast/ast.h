@@ -74,7 +74,6 @@ struct Opp_Expr_Bin {
 struct Opp_Expr_Unary {
 	enum Opp_Token type;
 	union Opp_Value val;
-	bool global;
 };
 
 struct Opp_Expr_Assign {
@@ -117,7 +116,7 @@ struct Opp_Expr_Addr {
 };
 
 struct Opp_Expr_Sizeof {
-	struct Opp_Node* size;
+	struct Opp_Type_Decl size;
 };
 
 struct Opp_Stmt_Label {
@@ -169,8 +168,6 @@ struct Opp_Stmt_Var {
 	struct Opp_Type_Decl type;
 	// struct Opp_List* vars;
 	struct Opp_Node* var;
-	bool global;
-	unsigned int idx;
 };
 
 struct Opp_Stmt_Import {
@@ -191,8 +188,9 @@ struct Opp_Stmt_Func {
 	struct Opp_Type_Decl type;
 	struct Opp_Node* name;
 	struct Opp_Node* body;
-	unsigned int len, idx;
-	struct Opp_Func_Args* args;
+	unsigned int len;
+	struct Opp_Node* args;
+	struct Opp_Namespace* scope;
 };
 
 struct Opp_Stmt_Ret {
@@ -202,11 +200,8 @@ struct Opp_Stmt_Ret {
 struct Opp_Stmt_Struct {
 	char* name;
 	unsigned int len;
-	struct Opp_Func_Args* elems; 
-};
-
-struct Opp_Stmt_Enum {
-
+	struct Opp_Node** elems; 
+	struct Opp_Namespace* ns;
 };
 
 struct Opp_Node {

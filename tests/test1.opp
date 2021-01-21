@@ -1,4 +1,9 @@
-//0
+/// Doc About function
+/// More Doc. Next line expects where to read output from. 
+// @name: main
+// @desc: Test main func
+// @output: stdout
+// @result: 1
 main() {
 	return 0;
 }	// return (a * b) + ((a*b) + (a*b));

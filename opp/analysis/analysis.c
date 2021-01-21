@@ -27,18 +27,28 @@ static struct Opp_Node* opp_analize_time_eval(struct Opp_Analize* ctx, struct Op
 static void opp_analize_global(struct Opp_Analize* ctx, struct Opp_Node* node);
 static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn);
 static void opp_analize_args(struct Opp_Analize* ctx, struct Opp_Node* fn, struct Opp_Bucket* bucket);
+static void opp_analize_struct(struct Opp_Analize* ctx, struct Opp_Node* node);
+static void opp_analize_extern(struct Opp_Analize* ctx, struct Opp_Node* node);
 
 // Stmt
 static void opp_analize_stmt(struct Opp_Analize* ctx, struct Opp_Node* node);
 static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node);
 
 // Expr
-static struct Opp_Type_Decl opp_analize_expr(struct Opp_Analize* ctx, struct Opp_Node* node);
-static struct Opp_Type_Decl opp_analize_unary(struct Opp_Analize* ctx, struct Opp_Node* node);
-static struct Opp_Type_Decl opp_analize_bin(struct Opp_Analize* ctx, struct Opp_Node* node);
-static struct Opp_Type_Decl opp_analize_logic(struct Opp_Analize* ctx, struct Opp_Node* node);
-static struct Opp_Type_Decl opp_analize_assign(struct Opp_Analize* ctx, struct Opp_Node* node);
-static struct Opp_Type_Decl opp_analize_call(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_expr(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_unary(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_bin(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_logic(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_assign(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_call(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_dot(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_deref(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_sub(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_elem(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_addr(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_adjust(struct Opp_Analize* ctx, struct Opp_Node* node);
+static Opp_Obj opp_analize_sizeof(struct Opp_Analize* ctx, struct Opp_Node* node);
+
 
 struct Opp_Analize* opp_init_analize(struct Opp_Parser* parser, struct Opp_Options* opts)
 {
@@ -52,12 +62,11 @@ struct Opp_Analize* opp_init_analize(struct Opp_Parser* parser, struct Opp_Optio
 	ctx->parser = parser;
 	ctx->debug.scope = NULL;
 	ctx->debug.ret = 0;
-	ctx->debug.loc_var = 0;
-	ctx->debug.loc_global = 0;
 
 	// Namespace
 	ctx->ns = init_namespace(NULL, (void*)alloc);
 	ctx->curr_ns = ctx->ns;
+	ctx->parser->scope = ctx->ns;
 
 	return ctx;
 
@@ -169,16 +178,32 @@ static void opp_analize_global(struct Opp_Analize* ctx, struct Opp_Node* node)
 			opp_analize_func(ctx, node);
 			break;
 
-		// case STMT_EXTERN:
-		// 	opp_compile_extern(opp, opp->parser->statments[stmt]);
-		// 	break;
+		case STMT_EXTERN:
+			opp_analize_extern(ctx, node);
+			break;
 
 		case STMT_VAR:
 			opp_analize_var(ctx, node);
 			break;
 
+		case STMT_STRUCT:
+			opp_analize_struct(ctx, node);
+			break;
+
 		default: break;
 	}
+}
+
+static void opp_analize_extern(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	struct Opp_Bucket* b;
+	opp_analize_global(ctx, node->extrn_stmt.stmt);
+
+	b = env_get_item(ctx->curr_ns, (char*)ctx->debug.res_name);
+
+	assert(b != NULL);
+
+	b->type = TYPE_EXTERN;
 }
 
 static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn)
@@ -192,20 +217,23 @@ static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn)
 
 	bucket->type = TYPE_FUNC;
 	bucket->sym_type = func->type;
-	bucket->sym_idx = ctx->debug.loc_global++;
 	bucket->args = &fn->fn_stmt;
-	func->idx = bucket->sym_idx;
+
+	ctx->debug.res_name = func->name->unary_expr.val.strval;
+
+	if (func->body == NULL)
+		return;
 
 	// Resets
 	ctx->debug.scope = func->name->unary_expr.val.strval;
 	ctx->debug.ret = 0;
 	ctx->debug.ret_type = func->type;
-	ctx->debug.loc_var = 0;
 
 	struct Opp_Namespace* temp = ctx->curr_ns;
 	ctx->curr_ns = init_namespace(temp, (void*)alloc);
+	func->scope = ctx->curr_ns;
 
-	// opp_analize_args(ctx, fn, bucket);
+	opp_analize_args(ctx, fn, bucket);
 
 	if (func->body->type != STMT_BLOCK)
 		opp_semantics_error(ctx, fn, "Expected block after function '%s'", 
@@ -220,10 +248,33 @@ static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn)
 
 static void opp_analize_args(struct Opp_Analize* ctx, struct Opp_Node* fn, struct Opp_Bucket* bucket)
 {
-	// for now dont support a[3] type even though they behave like ptr add THIS later
-	// for (unsigned int i = 0; i < fn->fn_stmt.len; i++) {
+	for (unsigned int i = 0; i < fn->fn_stmt.len; i++) {
+		switch (fn->fn_stmt.args[i].var_stmt.var->type)
+		{
+			case EUNARY:
+			case EELEMENT:
+			break;
 
-	// }
+			default:
+				opp_semantics_error(ctx, fn, "Unexpected function argument declaration #%d", i+1);
+		}
+
+		opp_analize_stmt(ctx, &fn->fn_stmt.args[i]);
+	}
+}
+
+static void opp_analize_struct(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	struct Opp_Namespace* temp = ctx->curr_ns;
+	ctx->curr_ns = node->struct_stmt.ns;
+	for (unsigned int i = 0; i < node->struct_stmt.len; i++) {
+		if (node->struct_stmt.elems[i]->type != STMT_VAR)
+			opp_semantics_error(ctx, node, 
+				"'%s' struct elements can only be var declarations", node->struct_stmt.name);
+
+		opp_analize_var(ctx, node->struct_stmt.elems[i]);
+	}
+	ctx->curr_ns = temp;
 }
 
 static void opp_analize_stmt(struct Opp_Analize* ctx, struct Opp_Node* node)
@@ -234,7 +285,11 @@ static void opp_analize_stmt(struct Opp_Analize* ctx, struct Opp_Node* node)
 			opp_analize_var(ctx, node);
 			break;
 
-		default :
+		default:
+			// opp_warning(ctx, node, "Unused expression found");
+			// node->type = IGNORE;
+	
+			// TESTING
 			opp_analize_expr(ctx, node);
 			break;
 	}
@@ -244,9 +299,8 @@ static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
 	struct Opp_Stmt_Var* var = &node->var_stmt;
 	struct Opp_Node* name = NULL;
-	struct Opp_Type_Decl rhs;
+	bool assign = false;
 
-	var->global = ctx->ns == ctx->curr_ns;
 	int size = get_type_size(&var->type);
 	if (size == 0)
 		opp_semantics_error(ctx, node, 
@@ -283,27 +337,13 @@ static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node)
 			break;
 		}
 
-		case EASSIGN: { // add rule for global var assign / move to assign
+		case EASSIGN: {
 			name = var->var->assign_expr.ident;
-			rhs = opp_analize_expr(ctx, var->var->assign_expr.val);
-
-			if (var->var->assign_expr.ident->type == EELEMENT)
-				opp_semantics_error(ctx, node, 
-					"Cannot assign a array in a array declaration");
-			if (rhs.size > 0 && var->type.size == 0) // check this
-				opp_semantics_error(ctx, node, "Invalid array assigment in assigment of '%s'",
-					name->unary_expr.val.strval);
-
-			if (rhs.depth != var->type.depth)
-				opp_warning(ctx, node, "Assigning var '%s' to incompatible pointer depth of type '%s'",
-					name->unary_expr.val.strval, rhs.decl->id);
-
-			if ((rhs.decl->t_type == TYPE_STRUCT || var->type.decl->t_type == TYPE_STRUCT)
-				&& strcmp(rhs.decl->id, var->type.decl->id))
-				opp_semantics_error(ctx, node, "Assigning var '%s' to a incompatile type struct",
-					name->unary_expr.val.strval);
+			assign = true;
 			break;
 		}
+
+		default: break;
 	}
 
 	struct Opp_Bucket* bucket = env_add_item(ctx->curr_ns, name->unary_expr.val.strval);
@@ -312,14 +352,17 @@ static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node)
 		opp_semantics_error(ctx, node, "Redeclaration of variable '%s'",
 			name->unary_expr.val.strval);
 
+	ctx->debug.res_name = name->unary_expr.val.strval;
+
 	bucket->key = name->unary_expr.val.strval;
-	bucket->type = var->global ? TYPE_GLOBAL : TYPE_LOCAL;
+	bucket->type = ctx->curr_ns == ctx->ns ? TYPE_GLOBAL : TYPE_LOCAL;
 	bucket->sym_type = var->type;
-	bucket->sym_idx = ctx->debug.loc_var++;
-	var->idx = bucket->sym_idx;
+
+	if (assign)
+		opp_analize_expr(ctx, var->var);
 }
 
-static struct Opp_Type_Decl opp_analize_expr(struct Opp_Analize* ctx, struct Opp_Node* node)
+static Opp_Obj opp_analize_expr(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
 	switch (node->type)
 	{
@@ -335,22 +378,29 @@ static struct Opp_Type_Decl opp_analize_expr(struct Opp_Analize* ctx, struct Opp
 		case EUNARY:
 			return opp_analize_unary(ctx, node);
 
-		// case EDEREF:
-		// 	type = opp_compile_deref(opp, expr);
-		// 	break;
+		case EDOT:
+			return opp_analize_dot(ctx, node);
 
-		// case EADDR:
-		// 	type = opp_compile_addr(opp, expr);
-		// 	break;
+		case EDEREF:
+			return opp_analize_deref(ctx, node);
+
+		case EELEMENT:
+			return opp_analize_elem(ctx, node);
+
+		case EADDR:
+			return opp_analize_addr(ctx, node);
 
 		case ELOGIC:
 			return opp_analize_logic(ctx, node);
 
-		// case ESUB:
-		// 	type = opp_compile_sub(opp, expr);
-		// 	break;
+		case ESUB:
+			return opp_analize_sub(ctx, node);
 
-		//case EADJUST:
+		case EADJUST:
+			return opp_analize_adjust(ctx, node);
+
+		case ESIZEOF:
+			return opp_analize_sizeof(ctx, node);
 
 		default: break;
 	}
@@ -358,16 +408,56 @@ static struct Opp_Type_Decl opp_analize_expr(struct Opp_Analize* ctx, struct Opp
 
 static struct Opp_Node* opp_analize_time_eval(struct Opp_Analize* ctx, struct Opp_Node* expr)
 {
+	#define CLEAR_NODE(node, lhs) { \
+		temp.line = node->debug.line;\
+		temp.colum = node->debug.colum; \
+		memset(node, 0, sizeof(struct Opp_Node)); \
+		node->type = EUNARY; \
+		node->debug = temp; \
+		if (lhs->unary_expr.type == TSTR || lhs->unary_expr.type == TINTEGER) \
+			node->unary_expr.type = TINTEGER; \
+		else \
+			node->unary_expr.type = TFLOAT; \
+	}
+
+	#define NUM_OP(op) { \
+		if (lhs->unary_expr.type == TINTEGER || lhs->unary_expr.type == TSTR) { \
+			if (rhs->unary_expr.type == TFLOAT) \
+				expr->unary_expr.val.i64val = lhs->unary_expr.val.i64val op (int64_t)rhs->unary_expr.val.f64val; \
+			else \
+				expr->unary_expr.val.i64val = lhs->unary_expr.val.i64val op rhs->unary_expr.val.i64val; \
+		} \
+		else { \
+			if (rhs->unary_expr.type == TINTEGER) \
+				expr->unary_expr.val.f64val = lhs->unary_expr.val.f64val op (double)rhs->unary_expr.val.i64val; \
+			else \
+				expr->unary_expr.val.f64val = lhs->unary_expr.val.f64val op rhs->unary_expr.val.f64val; \
+		} \
+	}
+
+	#define CMP_OP(op) { \
+		if (lhs->unary_expr.type == TINTEGER || lhs->unary_expr.type == TSTR) { \
+			if (rhs->unary_expr.type == TFLOAT) \
+				expr->unary_expr.val.i64val = lhs->unary_expr.val.i64val op (int64_t)rhs->unary_expr.val.f64val; \
+			else \
+				expr->unary_expr.val.i64val = lhs->unary_expr.val.i64val op rhs->unary_expr.val.i64val; \
+		} \
+		else { \
+			if (rhs->unary_expr.type == TINTEGER) \
+				expr->unary_expr.val.i64val = lhs->unary_expr.val.f64val op (double)rhs->unary_expr.val.i64val; \
+			else \
+				expr->unary_expr.val.i64val = lhs->unary_expr.val.f64val op rhs->unary_expr.val.f64val; \
+		} \
+	}
+
 	struct Opp_Node* lhs = NULL;
 	struct Opp_Node* rhs = NULL;
+	struct Opp_Debug temp;
 
 	switch (expr->type)
 	{
 		case EUNARY: {
-			if (expr->unary_expr.type == TSTR)
-				opp_semantics_error(ctx, expr,
-					"Unexpected '%s' string in expression", expr->unary_expr.val.strval);
-			else if (expr->unary_expr.type == TIDENT)
+			if (expr->unary_expr.type == TIDENT)
 				return NULL;
 			return expr;
 		}
@@ -375,138 +465,72 @@ static struct Opp_Node* opp_analize_time_eval(struct Opp_Analize* ctx, struct Op
 		case EBIN: {
 			lhs = opp_analize_time_eval(ctx, expr->bin_expr.left);
 			rhs = opp_analize_time_eval(ctx, expr->bin_expr.right);
-	
-			if (lhs == NULL || rhs == NULL)
-				return NULL;
-
-			if (lhs->unary_expr.type != TINTEGER || rhs->unary_expr.type != TINTEGER)
-				return NULL;
+			
+			if (lhs == NULL || rhs == NULL) return NULL;
 
 			const int op = expr->bin_expr.tok;
-			struct Opp_Debug temp = {.line = expr->debug.line, .colum = expr->debug.colum};
-			memset(expr, 0, sizeof(struct Opp_Node));
-
-			expr->type = EUNARY;
-			expr->unary_expr.type = TINTEGER;
-			expr->debug = temp;
+			CLEAR_NODE(expr, lhs);
 
 			switch (op)
 			{
-				case TADD: expr->unary_expr.val.i64val = 
-						lhs->unary_expr.val.i64val + rhs->unary_expr.val.i64val;
+				case TADD: NUM_OP(+=); break;
+				case TMIN: NUM_OP(-=); break;
+				case TMUL: NUM_OP(*=); break;
+				case TDIV: NUM_OP(/=); break;
+				case TMOD: 
+					if (lhs->unary_expr.type != TINTEGER && lhs->unary_expr.type != TSTR)
+						opp_semantics_error(ctx, expr, "Mod operation can only be preformed on integers");
+					lhs->unary_expr.val.i64val %= rhs->unary_expr.val.i64val;
 					break;
 
-				case TMIN: expr->unary_expr.val.i64val = 
-						lhs->unary_expr.val.i64val - rhs->unary_expr.val.i64val;
-					break;
-
-				case TMUL:
-					expr->unary_expr.val.i64val =
-						lhs->unary_expr.val.i64val * rhs->unary_expr.val.i64val;
-					break;
-
-				case TDIV:
-					expr->unary_expr.val.i64val =
-						lhs->unary_expr.val.i64val / rhs->unary_expr.val.i64val;
-					break;
-
-				case TMOD:
-					expr->unary_expr.val.i64val =
-						lhs->unary_expr.val.i64val % rhs->unary_expr.val.i64val;
-					break;
+				default: break;
 			}
 
 			return expr;
-
-			break;
 		}
 
 		case ELOGIC: {
-		lhs = opp_analize_time_eval(ctx, expr->logic_expr.left);
-		rhs = opp_analize_time_eval(ctx, expr->logic_expr.right);
-		
-		if (lhs == NULL || rhs == NULL) 
-			return NULL;
+			lhs = opp_analize_time_eval(ctx, expr->logic_expr.left);
+			rhs = opp_analize_time_eval(ctx, expr->logic_expr.right);
+			
+			if (lhs == NULL || rhs == NULL) return NULL;
 
-		if (lhs->unary_expr.type != TINTEGER || rhs->unary_expr.type != TINTEGER)
-				return NULL;
+			const int op = expr->logic_expr.tok;
+			CLEAR_NODE(expr, lhs);
+			expr->unary_expr.type = TINTEGER;
 
-		const int op = expr->logic_expr.tok;
-		struct Opp_Debug temp = {.line = expr->debug.line, .colum = expr->debug.colum};
-		memset(expr, 0, sizeof(struct Opp_Node));
-
-		expr->type = EUNARY;
-		expr->unary_expr.type = TINTEGER;
-		expr->debug = temp;
-
-		switch (op)
-		{
-			case TEQEQ:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val == rhs->unary_expr.val.i64val;
-				break;
-
-			case TNOTEQ:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val != rhs->unary_expr.val.i64val;
-				break;
-
-			case TLT:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val < rhs->unary_expr.val.i64val;
-				break;
-
-			case TLE:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val <= rhs->unary_expr.val.i64val;
-				break;
-
-			case TGT:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val > rhs->unary_expr.val.i64val;
-				break;
-
-			case TGE:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val >= rhs->unary_expr.val.i64val;
-				break;
-
-			case TOR:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val || rhs->unary_expr.val.i64val;
-				break;
-
-			case TAND:
-				expr->unary_expr.val.i64val = 
-					lhs->unary_expr.val.i64val && rhs->unary_expr.val.i64val;
-				break;
+			switch (op)
+			{
+				case TEQEQ:  CMP_OP(==); break;
+				case TNOTEQ: CMP_OP(!=); break;
+				case TLT:    CMP_OP(<);  break;
+				case TLE:    CMP_OP(<=); break;
+				case TGT:    CMP_OP(>);  break;
+				case TGE:    CMP_OP(>=); break;
+				case TOR:    CMP_OP(||); break;
+				case TAND:   CMP_OP(&&); break;
+				default: break;
 			}
 
 			return expr;
-
-			break;
 		}
 
 		case ESUB: {
 			lhs = opp_analize_time_eval(ctx, expr->sub_expr.unary);
 			
-			if (lhs == NULL) 
-				return NULL;
-
-			if (lhs->unary_expr.type != TINTEGER)
-				return NULL;
+			if (lhs == NULL) return NULL;
 			
-			int64_t neg = -lhs->unary_expr.val.i64val;
-			struct Opp_Debug temp = {.line = expr->debug.line, .colum = expr->debug.colum};
-			memset(expr, 0, sizeof(struct Opp_Node));
-			expr->type = EUNARY;
-			expr->unary_expr.type = TINTEGER;
-			expr->debug = temp;
-			expr->unary_expr.val.i64val = neg;
+			CLEAR_NODE(expr, lhs);
+			if (lhs->unary_expr.type == TSTR)
+				opp_semantics_error(ctx, expr, "Attempting to negate str '%s'",
+					lhs->unary_expr.val.strval);
+
+			if (lhs->unary_expr.type == TINTEGER)
+				expr->unary_expr.val.i64val = -lhs->unary_expr.val.i64val;
+			else
+				expr->unary_expr.val.f64val = -lhs->unary_expr.val.f64val;
 
 			return expr;
-
-			break;
 		}
 
 		default: break;
@@ -514,9 +538,9 @@ static struct Opp_Node* opp_analize_time_eval(struct Opp_Analize* ctx, struct Op
 	return NULL;
 }
 
-static struct Opp_Type_Decl opp_analize_unary(struct Opp_Analize* ctx, struct Opp_Node* node)
+static Opp_Obj opp_analize_unary(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	struct Opp_Type_Decl type;
+	Opp_Obj type;
 
 	switch (node->unary_expr.type)
 	{
@@ -552,13 +576,7 @@ static struct Opp_Type_Decl opp_analize_unary(struct Opp_Analize* ctx, struct Op
 			if (bucket->type == TYPE_LABEL)
 				opp_semantics_error(ctx, node, "Invalid use of label '%s'",
 					bucket->key);
-
-			node->unary_expr.global = 0;
-
-			if (bucket->type == TYPE_GLOBAL || bucket->type == TYPE_FUNC)
-				node->unary_expr.global = 1;
-
-			opp_set_sym_idx(node, bucket->sym_idx);
+			ctx->debug.res_name = bucket->key;
 
 			return bucket->sym_type;
 		}
@@ -567,96 +585,190 @@ static struct Opp_Type_Decl opp_analize_unary(struct Opp_Analize* ctx, struct Op
 	return type;
 }
 
-static struct Opp_Type_Decl opp_analize_bin(struct Opp_Analize* ctx, struct Opp_Node* node)
+static Opp_Obj opp_analize_bin(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	// switch node sides
-
 	opp_analize_time_eval(ctx, node);
 
-	if (node->type == EUNARY) {
-		return opp_analize_unary(ctx, node);
-	}
+	if (node->type == EUNARY) return opp_analize_unary(ctx, node);
 
-	struct Opp_Type_Decl lhs = opp_analize_expr(ctx, node->bin_expr.left);
-	struct Opp_Type_Decl rhs = opp_analize_expr(ctx, node->bin_expr.right);
+	Opp_Obj lhs = opp_analize_expr(ctx, node->bin_expr.left);
+	Opp_Obj rhs = opp_analize_expr(ctx, node->bin_expr.right);
 
-	if (lhs.decl->t_type != rhs.decl->t_type)
-		opp_warning(ctx, node, "Preforming bin operation of two different types '%s' '%s'",
+	if (lhs.depth != rhs.depth)
+		opp_warning(ctx, node, "Preforming bin operation mixing with ptr '%s' '%s'",
 			lhs.decl->id, rhs.decl->id);
 
 	return lhs;
 }
 
-static struct Opp_Type_Decl opp_analize_logic(struct Opp_Analize* ctx, struct Opp_Node* node)
+static Opp_Obj opp_analize_logic(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
 	opp_analize_time_eval(ctx, node);
 
-	if (node->type == EUNARY) {
-		return opp_analize_unary(ctx, node);
-	}
+	if (node->type == EUNARY) return opp_analize_unary(ctx, node);
 
-	struct Opp_Type_Decl lhs = opp_analize_expr(ctx, node->logic_expr.left);
-	struct Opp_Type_Decl rhs = opp_analize_expr(ctx, node->logic_expr.right);
+	Opp_Obj lhs = opp_analize_expr(ctx, node->logic_expr.left);
+	Opp_Obj rhs = opp_analize_expr(ctx, node->logic_expr.right);
 
-	if (lhs.decl->t_type != rhs.decl->t_type)
-		opp_warning(ctx, node, "Preforming compare operation of two different types '%s' '%s'",
+	if (lhs.depth != rhs.depth)
+		opp_warning(ctx, node, "Preforming compare operation mixing with ptr '%s' '%s'",
 			lhs.decl->id, rhs.decl->id);
 
 	return lhs;
 }
 
-static struct Opp_Type_Decl opp_analize_assign(struct Opp_Analize* ctx, struct Opp_Node* node)
+static Opp_Obj opp_analize_assign(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	// struct Opp_Type_Decl var = opp_analize_expr(ctx, node->assign_expr.ident);
-	// struct Opp_Type_Decl val = opp_analize_expr(ctx, node->assign_expr.val);
+	if ((node->assign_expr.ident->type != EUNARY 
+		|| node->assign_expr.ident->unary_expr.type != TIDENT)
+		&& (node->assign_expr.ident->type != EDEREF) 
+		&& (node->assign_expr.ident->type != EELEMENT)
+		&& (node->assign_expr.ident->type != EDOT))
+		opp_semantics_error(ctx, node, "Unexpected expression on lhs of '='");
 
-	// if (val.size > 0 && var.size == 0)
-	// 	opp_semantics_error(ctx, node, "Invalid array assigment in assigment");
+	Opp_Obj lhs = opp_analize_expr(ctx, node->assign_expr.ident);
 
-	// if (val.depth != var.depth)
-	// 	opp_warning(ctx, node, "Assigning var to incompatible pointer depth of type '%s'",
-	// 		val.decl->id);
+	if (lhs.size > 0)
+		opp_semantics_error(ctx, node, "Attempting to assign a value to array '%s'", ctx->debug.res_name);
 
-	// if ((rhs.decl->t_type == TYPE_STRUCT || var->type.decl->t_type == TYPE_STRUCT)
-	// 	&& rhs.decl->t_type != var->type.decl->t_type)
-	// 	opp_semantics_error(ctx, node, "Assigning var '%s' to a incompatile type struct",
-	// 		name->unary_expr.val.strval);
+	Opp_Obj rhs = opp_analize_expr(ctx, node->assign_expr.val);
+
+	if (rhs.size > 0 && lhs.depth == 0) 
+		opp_semantics_error(ctx, node, "Attempting to assign a array type to var '%s'",
+			ctx->debug.res_name);
+
+	if (rhs.depth != lhs.depth)
+		opp_warning(ctx, node, "Assigning var '%s' to incompatible pointer depth of type '%s'",
+			ctx->debug.res_name, rhs.decl->id);
+
+	if ((rhs.decl->t_type == TYPE_STRUCT || lhs.decl->t_type == TYPE_STRUCT)
+		&& strcmp(rhs.decl->id, lhs.decl->id))
+		opp_semantics_error(ctx, node, "Assigning var '%s' to a incompatible struct type",
+			ctx->debug.res_name);
+
+	return lhs;
 }
 
-static struct Opp_Type_Decl opp_analize_call(struct Opp_Analize* ctx, struct Opp_Node* node)
+static Opp_Obj opp_analize_call(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	struct Opp_Type_Decl ret_type;
+	Opp_Obj ret_type;
 
-	if (node->call_expr.callee->type != EUNARY 
-		|| node->call_expr.callee->unary_expr.type != TIDENT)
-		opp_semantics_error(ctx, node, "Expected identifier in function call");
+	ret_type = opp_analize_expr(ctx, node->call_expr.callee);
 
-	char* fn_name = node->call_expr.callee->unary_expr.val.strval;
+	if (node->call_expr.callee->type == EUNARY) {
+		if (node->call_expr.callee->unary_expr.type != TIDENT)
+			opp_semantics_error(ctx, node, "Expected identifier before '()' for a call expr");
 
-	struct Opp_Bucket* bucket = env_get_item(ctx->curr_ns, fn_name);
+		struct Opp_Bucket* bucket = env_get_item(ctx->curr_ns, 
+			node->call_expr.callee->unary_expr.val.strval);
 
-	if (bucket == NULL)
-		opp_semantics_error(ctx, node, "Attempting to call a undefined func '%s'", fn_name);
+		char* fn_name = bucket->key;
 
-	// check if func or func pointer
+		if (bucket->type == TYPE_FUNC) {
+			if (bucket->args->len != node->call_expr.args->length)
+				opp_semantics_error(ctx, node, 
+					"Invalid amount of args provided in function call to '%s' (expected %d)", 
+					fn_name, bucket->args->len);
+		}
 
-	if (bucket->args->len != node->call_expr.args->length)
-		opp_semantics_error(ctx, node, 
-			"Invalid amount of args provided in function call to '%s' (expected %d)", 
-			fn_name, bucket->args->len);
+		for (unsigned int i = 0; i < node->call_expr.args->length; i++) 
+		{
+			ret_type = opp_analize_expr(ctx, node->call_expr.args->list[i]);
 
-	for (unsigned int i = 0; i < node->call_expr.args->length; i++) 
-	{
-		ret_type = opp_analize_expr(ctx, node->call_expr.args->list[i]);
-
-		// if ((ret_type.decl->t_type != bucket->args->args[i].type.decl->t_type)
-		// 	|| ret_type.depth != bucket->args->args[i].type.depth)
-		// 	opp_warning(ctx, node, 
-		// 		"Invalid argument type provided '%s' to function call '%s'",
-		// 		ret_type.decl->id, fn_name);
+			if (ret_type.depth != bucket->args->args[i].var_stmt.type.depth)
+				opp_warning(ctx, node, 
+					"Invalid pointer argument provided to function call '%s'", fn_name);
+		}
+		return bucket->sym_type;
 	}
-
-	ret_type = bucket->sym_type;
 
 	return ret_type;
+}
+
+static Opp_Obj opp_analize_dot(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	Opp_Obj lhs = opp_analize_expr(ctx, node->dot_expr.left);
+
+	if (lhs.decl->t_type != TYPE_STRUCT || lhs.depth > 0)
+		opp_semantics_error(ctx, node, "Attempting to access element on a non object type '%s'",
+			ctx->debug.res_name);
+
+	const char* left = ctx->debug.res_name;
+
+	if (node->dot_expr.right->type != EUNARY || node->dot_expr.right->unary_expr.type != TIDENT)
+		opp_semantics_error(ctx, node, "Expected element on right side of '%s' dot expr", left);
+
+	struct Opp_Namespace* temp = ctx->curr_ns;
+	ctx->curr_ns = lhs.decl->s_type;
+
+	Opp_Obj rhs = opp_analize_expr(ctx, node->dot_expr.right);
+	
+	ctx->curr_ns = temp;
+
+	return rhs;
+}
+
+static Opp_Obj opp_analize_deref(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	if (
+		(node->deref_expr.deref->type != EUNARY || node->deref_expr.deref->unary_expr.type != TIDENT)
+		&& (node->deref_expr.deref->type != EBIN) && (node->deref_expr.deref->type != EADDR)
+		&& (node->deref_expr.deref->type != EDEREF) && (node->deref_expr.deref->type != EDOT)
+	   )
+		opp_semantics_error(ctx, node, "Attempt to dereference invalid expression");
+
+	Opp_Obj lhs = opp_analize_expr(ctx, node->deref_expr.deref);
+
+	if (lhs.depth == 0)
+		opp_semantics_error(ctx, node, 
+			"Attempting to dereference a non pointer type '%s'", ctx->debug.res_name);
+
+	lhs.depth--;
+
+	return lhs;
+}
+
+static Opp_Obj opp_analize_sub(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	opp_analize_time_eval(ctx, node);
+
+	if (node->type == EUNARY) return opp_analize_unary(ctx, node);
+}
+
+static Opp_Obj opp_analize_elem(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	Opp_Obj lhs = opp_analize_expr(ctx, node->elem_expr.name);
+
+	if (node->elem_expr.name->type == EELEMENT)
+		return lhs;
+
+	// if (lhs.depth == 0)
+	// 	opp_semantics_error(ctx, node, "Attemping to get element of non pointer / array type '%s'",
+	// 		ctx->debug.res_name);
+
+	Opp_Obj rhs = opp_analize_expr(ctx, node->elem_expr.loc);
+
+	lhs.size = 0;
+	if (lhs.depth > 0)
+		lhs.depth--;
+
+	return lhs;
+}
+
+static Opp_Obj opp_analize_addr(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	Opp_Obj lhs = opp_analize_expr(ctx, node->addr_expr.addr);
+	lhs.depth++;
+
+	return lhs;
+}
+
+static Opp_Obj opp_analize_adjust(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+
+}
+
+static Opp_Obj opp_analize_sizeof(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	// Opp_Obj type = 
 }

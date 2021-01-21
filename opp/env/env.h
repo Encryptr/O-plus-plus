@@ -33,21 +33,13 @@ enum Opp_Bucket_Type {
 	TYPE_EXTERN
 };
 
-struct Opp_Function {
-	struct Opp_Stmt_Func* args;
-};
-
-struct Opp_Struct {
-
-};
-
 struct Opp_Bucket {
 	char* key;
 	enum Opp_Bucket_Type type;
-	unsigned int sym_idx;
 	struct Opp_Type_Decl sym_type;
 	union {
 		struct Opp_Stmt_Func* args;
+		int32_t offset;
 	};
 	struct Opp_Bucket* next;
 };

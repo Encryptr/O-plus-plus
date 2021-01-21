@@ -115,7 +115,8 @@ static struct Opp_Type_Entry* add_type(struct Opp_Type_Tree* tree, char* name)
 					INTERNAL_ERROR("Malloc fail");
 
 				pos->next->id = name;
-				return pos;
+				pos->next->next = NULL;
+				return pos->next;
 			}
 			else 
 				pos = pos->next;
@@ -138,7 +139,7 @@ static struct Opp_Type_Entry* add_type(struct Opp_Type_Tree* tree, char* name)
 	return NULL;
 }
 
-static struct Opp_Type_Entry* get_type(struct Opp_Type_Tree* tree, char* name)
+struct Opp_Type_Entry* get_type(struct Opp_Type_Tree* tree, char* name)
 {
 	unsigned int loc = hash_str(name, tree->size);
 
@@ -187,6 +188,30 @@ static void opp_add_std_types(struct Opp_Parser* parser)
 	type1 = add_type(&parser->tree, "double");
 	type1->t_type = TYPE_DOUBLE;
 	float_type = type1;
+}
+
+static bool opp_parse_atype(struct Opp_Parser* parser, struct Opp_Type_Decl* decl)
+{
+	opp_next(parser->lex);
+
+	if (parser->lex->t.id == TUNSIGNED) {
+		decl->unsign = 1;
+		opp_next(parser->lex);
+	}
+
+	struct Opp_Type_Entry* t = get_type(&parser->tree, parser->lex->t.buffer.buf);
+
+	if (t == NULL)
+		return false;
+
+	decl->decl = t;
+	opp_next(parser->lex);
+	while (parser->lex->t.id == TMUL) {
+		decl->depth++;
+		opp_next(parser->lex);
+	}
+
+	return true;
 }
 
 static void opp_expect_error(struct Opp_Parser* parser, char sym)
@@ -241,8 +266,12 @@ static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser)
 	if (type.decl == NULL)
 		opp_error(parser->lex, "Use of undeclared type '%s'", parser->lex->t.buffer.buf);
 
-	type.decl->id = (char*)malloc(strlen(parser->lex->t.buffer.buf)+1);
-	strcpy(type.decl->id, parser->lex->t.buffer.buf);
+	if (type.decl->t_type == TYPE_STRUCT && type.unsign) {
+		// printf("===>%s\n", type.decl->id);
+		opp_error(parser->lex, "Struct '%s' type cannot have unsigned attribute", type.decl->id);
+	}
+	// type.decl->id = (char*)malloc(strlen(parser->lex->t.buffer.buf)+1);
+	// strcpy(type.decl->id, parser->lex->t.buffer.buf);
 
 	int lookahead = 1;
 	do {
@@ -283,8 +312,8 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 		opp_error(parser->lex, "Expected '(' after function identifier '%s'",
 			name->unary_expr.val.strval);
 
-	func_node->fn_stmt.args = (struct Opp_Func_Args*)
-		malloc(sizeof(struct Opp_Func_Args)*DEFAULT_LIST_SIZE);
+	func_node->fn_stmt.args = (struct Opp_Node*)
+		malloc(sizeof(struct Opp_Node)*DEFAULT_LIST_SIZE);
 
 	if (func_node->fn_stmt.args == NULL)
 		INTERNAL_ERROR("Malloc fail");
@@ -300,27 +329,28 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 		if (i == DEFAULT_LIST_SIZE)
 			opp_error(parser->lex, "Max function parameters met");
 		
-		func_node->fn_stmt.args[i].type.decl = get_type(&parser->tree, parser->lex->t.buffer.buf);
-		func_node->fn_stmt.args[i].type.depth = 0;
-
-		if (func_node->fn_stmt.args[i].type.decl == NULL)
-			opp_error(parser->lex, 
-				"Use of undeclared type '%s' in function parameter declaration #%d", 
-				parser->lex->t.buffer.buf, i+1);
-
-		opp_next(parser->lex);
-
-		while (parser->lex->t.id != TIDENT) {
-			if (parser->lex->t.id != TMUL)
-				opp_error(parser->lex, "Unexpected token in function parameter declaration");
-
-			func_node->fn_stmt.args[i].type.depth++;
+		if (parser->lex->t.id == TUNSIGNED) {
+			func_node->fn_stmt.args[i].var_stmt.type.unsign = 1;
 			opp_next(parser->lex);
 		}
-		
-		func_node->fn_stmt.args[i].name = opp_parse_unary(parser);
+
+		func_node->fn_stmt.args[i].type = STMT_VAR;
+		func_node->fn_stmt.args[i].debug = func_node->debug;
+		struct Opp_Type_Entry* type = get_type(&parser->tree, parser->lex->t.buffer.buf);
+
+		if (type == NULL)
+			opp_error(parser->lex, "Use of undefined type '%s' in function argument #%d",
+				parser->lex->t.buffer.buf, i+1);
+
+		func_node->fn_stmt.args[i].var_stmt.type.decl = type;
 
 		opp_next(parser->lex);
+		while (parser->lex->t.id != TIDENT) {
+			func_node->fn_stmt.args[i].var_stmt.type.depth++;
+			opp_next(parser->lex);
+		}
+	
+		func_node->fn_stmt.args[i].var_stmt.var = opp_parse_allign(parser);
 
 		i++;
 
@@ -355,20 +385,24 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 	strcpy(struct_node->struct_stmt.name, parser->lex->t.buffer.buf);
 
 	struct Opp_Type_Entry* entry = add_type(&parser->tree, struct_node->struct_stmt.name);
+
 	if (entry == NULL)
 		opp_error(parser->lex, "Redefinition of type '%s'", struct_node->struct_stmt.name);
 	entry->t_type = TYPE_STRUCT;
-	entry->s_type = &struct_node->struct_stmt;
+	entry->s_type = init_namespace(NULL, malloc);
+	entry->s_elems = &struct_node->struct_stmt;
+	struct_node->struct_stmt.ns = entry->s_type;
 
 	opp_next(parser->lex);
+	// add peek to see if non typedef declaration aka struct test a; for example
 
 	if (parser->lex->t.id != TOPENC)
 		opp_error(parser->lex, "Expected a '{' after 'struct %s'", struct_node->struct_stmt.name);
 
-	struct_node->struct_stmt.elems = (struct Opp_Func_Args*)
-		malloc(sizeof(struct Opp_Func_Args)*16);
+	struct_node->struct_stmt.elems = (struct Opp_Node**)
+		malloc(sizeof(struct Opp_Node*)*16);
 
-	memset(struct_node->struct_stmt.elems, 0, sizeof(struct Opp_Func_Args)*16);
+	memset(struct_node->struct_stmt.elems, 0, sizeof(struct Opp_Node*)*16);
 
 	unsigned int i = 0;
 	do {
@@ -379,33 +413,8 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 		if (i == 16)
 			opp_error(parser->lex, "TODO REALLOC STRUCT");
 
-		if (parser->lex->t.id == TUNSIGNED) {
-			struct_node->struct_stmt.elems[i].type.unsign = 1;
-			opp_next(parser->lex);
-		}
-		
-		struct_node->struct_stmt.elems[i].type.decl = get_type(&parser->tree, parser->lex->t.buffer.buf);
-		struct_node->struct_stmt.elems[i].type.depth = 0;
+		struct_node->struct_stmt.elems[i] = opp_parse_type(parser);
 
-		if (struct_node->struct_stmt.elems[i].type.decl == NULL)
-			opp_error(parser->lex, 
-				"Use of undeclared type '%s' in struct element #%d", 
-				parser->lex->t.buffer.buf, i+1);
-
-		opp_next(parser->lex);
-
-		while (parser->lex->t.id != TIDENT) {
-			if (parser->lex->t.id != TMUL)
-				opp_error(parser->lex, "Unexpected token in struct element declaration");
-
-			struct_node->struct_stmt.elems[i].type.depth++;
-			opp_next(parser->lex);
-		}
-
-		struct_node->struct_stmt.elems[i].name = opp_parse_allign(parser);
-
-		if (parser->lex->t.id != TSEMICOLON)
-			opp_error(parser->lex, "Expected ';' after struct element #%d", i+1);
 		i++;
 
 	} while (parser->lex->t.id != TCLOSEP);
@@ -416,6 +425,7 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 
 	struct_node->struct_stmt.len = i;
 
+	return struct_node;
 }
 
 static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser)
@@ -461,6 +471,8 @@ static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser)
 
 			if (get_type(&parser->tree, parser->lex->t.buffer.buf) != NULL)
 				return opp_parse_type(parser);
+			else 
+				return opp_parse_expr(parser);
 
 		default:
 			return opp_parse_expr(parser);
@@ -1012,9 +1024,26 @@ static struct Opp_Node* opp_parse_before(struct Opp_Parser* parser)
 	}
 	else if (parser->lex->t.id == TSIZEOF)
 	{
-		value = opp_new_node(parser, ESIZEOF);
-		opp_next(parser->lex);
-		value->sizeof_expr.size = opp_parse_order2(parser);
+		assert(0);
+		// value = opp_new_node(parser, ESIZEOF);
+		// value->sizeof_expr.size.depth = 0;
+		// value->sizeof_expr.size.size = 0;
+		// value->sizeof_expr.size.unsign = 0;
+		// opp_next(parser->lex);
+
+		// if (parser->lex->t.id == TUNSIGNED) {
+		// 	value->sizeof_expr.size.unsign = 1;
+		// 	opp_next(parser->lex);
+		// }
+
+		// struct Opp_Type_Entry* t = get_type(&parser->tree, parser->lex->buffer.buf);
+
+		// if (t == NULL)
+		// 	opp_error(parser->lex, "Expected valid type after sizeof instead got '%s'",
+		// 		parser->lex->buffer.buf);
+
+		// value->sizeof_expr.size.decl = t;
+		// value->sizeof_expr.size = opp_parse_order2(parser);
 
 		return value;
 	}
@@ -1065,7 +1094,9 @@ static struct Opp_Node* opp_parse_prefix(struct Opp_Parser* parser)
 				result = opp_new_node(parser, EDOT);
 				result->dot_expr.left = left;
 				opp_next(parser->lex);
-				result->dot_expr.right = opp_parse_allign(parser);
+				result->dot_expr.right = opp_parse_unary(parser);
+				opp_next(parser->lex);
+
 				left = result;
 				break;
 			}
@@ -1115,8 +1146,13 @@ static struct Opp_Node* opp_parse_unary(struct Opp_Parser* parser)
 			opp_parse_str(parser, unary);
 			break;
 
+		case TCH:
+			unary->unary_expr.type = TINTEGER;
+			unary->unary_expr.val.i64val = (int64_t)parser->lex->t.buffer.buf[0];
+			break;
+			
 		default:
-			unary = NULL;
+			opp_error(parser->lex, "Expected unary value but got unexpected");
 			break;
 	}
 

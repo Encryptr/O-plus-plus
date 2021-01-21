@@ -49,7 +49,7 @@ static void opp_debug_info(double ptime, double ctime, struct Opp_Context* opp)
 	printf("File: %s\n", opp->parser->lex->io.fname);
 	printf("Size: %ld\n", opp->parser->lex->io.fsize);
 	printf("Parser time: %lf\n", ptime);
-	printf("Compile time: %lf\n", ctime);
+	printf("Compile / CodeGen time: %lf\n", ctime);
 	#ifdef X86_CPU
 	printf("CPU: x86-64\n");
 	#else
@@ -76,7 +76,6 @@ void run_main(struct OppIr* ir)
 	munmap(mem, 4096);
 }
 
-
 void opp_init_module(const char* fname, struct Opp_Options* opts)
 {
 	struct Opp_Scan scan = {0};
@@ -100,7 +99,6 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 
 	cstart = clock();
 	context->oppir = init_oppir();
-	// oppir_setup(&scan.io);
 	oppir_get_opcodes(context->oppir, &context->ir);
 	oppir_eval(context->oppir);
 	OppIO io = {
@@ -156,7 +154,7 @@ static void opp_args(int argc, const char** argv, struct Opp_Options* opts)
 {
 	// Defaults
 	opts->warning = true;
-	for (int i = 1; i < argc; i++) {
+	for (int i = 1; i < argc - 1; i++) {
 		if (CMP("run")) opts->run_output = true;
 		else if (CMP("build")) opts->run_output = false;
 		else if (CMP("-d")) opts->dump_toks  = true;
@@ -165,6 +163,7 @@ static void opp_args(int argc, const char** argv, struct Opp_Options* opts)
 		else if (CMP("-w")) opts->warning    = false;
 		else if (CMP("-debug")) opts->debug  = true;
 		else if (CMP("-Wall")) opts->wall    = true;
+		else printf("Invalid argument '%s'\n", argv[i]);
 	}
 }
 

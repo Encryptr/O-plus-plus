@@ -26,13 +26,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <assert.h>
 #include "../header/os.h"
 #include "io.h"
 
 enum Opp_Token {
 	INVALID,
 
-	TIDENT, TINTEGER, TFLOAT, THEX, TSTR,
+	TIDENT, TINTEGER, TFLOAT, THEX, TSTR, TCH,
 
 	// || && > < >= <= 
 	TOR, TAND, TGT, TLE, TLT, TGE,

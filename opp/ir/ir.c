@@ -95,6 +95,8 @@ struct OppIr* init_oppir()
 	ir->data_seg.allocated = INIT_BYTECODE_SIZE;
 	ir->data_seg.idx = 0;
 
+	memset(ir->data_seg.data, 0, INIT_BYTECODE_SIZE);
+
 	// End
 	return ir;
 
@@ -138,13 +140,32 @@ void oppir_get_opcodes(struct OppIr *ir, struct OppIr_Instr* instr)
 
 void oppir_eval(struct OppIr* ir)
 {
+	// #ifdef LINUX64
+	// init_strtab();
+	// init_elf_syms();
+	// #endif
+
 	for (size_t index = 0; index < ir->instr->instr_idx; index++)
 		oppir_eval_opcode(ir, &ir->instr->opcodes[index]);
 
-	for (int i =0 ; i < 4; i++)
-		oppir_pop_reg(ir);
+	// #ifdef LINUX64
+	// init_elf_header(DEFAULT_SECT);
+	// init_text_sect(ir);
+	// init_data_sect(ir);
+	// init_symtab_sect();
+	// init_shstrtab_sect();
+	// init_strtab_sect();
+	// init_rela_text_sect();
+	// elf_offsets(ir);
+	// #endif
 }
 
+void oppir_emit_obj(struct OppIr* ir, OppIO* out)
+{
+	#ifdef LINUX64
+	write_elf64(ir, out);
+	#endif
+}
 
 void oppir_check_realloc(struct OppIr* ir, unsigned int bytes)
 {
@@ -157,6 +178,20 @@ void oppir_check_realloc(struct OppIr* ir, unsigned int bytes)
 			INTERNAL_ERROR("Malloc Fail");
 
 		ir->code.allocated += 64;
+	}
+}
+
+void oppir_check_data(struct OppIr* ir, unsigned int bytes)
+{
+	if ((ir->data_seg.idx + bytes) >= ir->data_seg.allocated) {
+
+		ir->data_seg.data = (unsigned char*)
+				realloc(ir->data_seg.data, (64+ir->data_seg.allocated));
+
+		if (ir->data_seg.data == NULL)
+			INTERNAL_ERROR("Malloc Fail");
+
+		ir->data_seg.allocated += 64;
 	}
 }
 
@@ -218,12 +253,12 @@ static enum Regs oppir_push_reg(struct OppIr* ir, enum OppIr_Const_Type type)
 	return oppir_reg_alloc(ir);
 }
 
-static void oppir_push(struct OppIr* ir, enum Regs reg)
+static void oppir_push(struct OppIr* ir, struct Register reg)
 {
-	if (regs[reg].used == 0) {
-		regs[reg].used = 1;
+	if (regs[reg.reg].used == 0) {
+		regs[reg.reg].used = 1;
 		oppir_check_regstack(ir);
-		ir->reg_stack.top->reg = reg;
+		*ir->reg_stack.top = reg;
 		ir->reg_stack.top->used = 1;
 		ir->reg_stack.top->loc = 0;
 		ir->reg_stack.top->spilled = 0;
@@ -266,9 +301,10 @@ static enum Regs oppir_reg_alloc(struct OppIr* ir)
 	return spill_reg.reg;
 }
 
-static enum Regs oppir_pop_reg(struct OppIr* ir)
+static struct Register oppir_pop_reg(struct OppIr* ir)
 {
-	enum Regs pop_reg = 0;
+	// enum Regs pop_reg = 0;
+	struct Register pop_reg = {0};
 	ir->reg_stack.top--;
 
 	if (ir->reg_stack.top < ir->reg_stack.stack || !ir->reg_stack.top->used)
@@ -296,8 +332,8 @@ static enum Regs oppir_pop_reg(struct OppIr* ir)
 	}
 	else {
 		ir->reg_stack.top->used = 0;
-		pop_reg = ir->reg_stack.top->reg;
-		regs[pop_reg].used = 0;
+		pop_reg = *ir->reg_stack.top;
+		regs[pop_reg.reg].used = 0;
 	}
 
 	return pop_reg;
@@ -324,14 +360,6 @@ static void oppir_write_const(struct OppIr* ir, struct OppIr_Value* imm)
 				ir->code.bytes[ir->code.idx++] = (imm->imm_i32 >> i) & 0xFF;
 			break;
 		}
-
-		// case IMM_U32: {
-		// 	oppir_check_realloc(ir, 4); 
-		// 	ir->code.bytes[ir->code.idx++] = imm->imm_u32 & 0xFF;
-		// 	for (int i = 8; i <= 24; i += 8) 
-		// 		ir->code.bytes[ir->code.idx++] = (imm->imm_u32 >> i) & 0xFF;
-		// 	break;
-		// }
 
 		case IMM_I8: {
 			oppir_check_realloc(ir, 1);
@@ -371,6 +399,18 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 			oppir_eval_cast(ir, &op->cast);
 			break;
 
+		case OPCODE_ADDR:
+			oppir_eval_addr(ir, &op->constant);
+			break;
+
+		case OPCODE_DEREF:
+			oppir_eval_deref(ir, &op->cast);
+			break;
+
+		case OPCODE_PTR_ASSIGN:
+			oppir_eval_ptr_assign(ir, &op->cast);
+			break;
+
 		// case OPCODE_LABEL:
 		// 	oppir_eval_label(ir, &op->constant);
 		// 	break;
@@ -383,18 +423,18 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 		// 	oppir_eval_cmp(ir, &op->cmp);
 		// 	break;
 
-		// case OPCODE_VAR:
-		// 	oppir_eval_var(ir, &op->var);
-		// 	break;
+		case OPCODE_VAR:
+			oppir_eval_var(ir, &op->var);
+			break;
 
 
 		// case OPCODE_RET:
 		// 	oppir_eval_ret(ir);
 		// 	break;
 
-		// case OPCODE_ARITH:
-		// 	oppir_eval_arith(ir, &op->arith);
-		// 	break;
+		case OPCODE_ARITH:
+			oppir_eval_arith(ir, &op->arith);
+			break;
 
 		// case OPCODE_BIT:
 		// 	oppir_eval_bitwise(ir, &op->bit);
@@ -405,6 +445,21 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 
 		default: break;
 	}
+}
+
+static void oppir_eval_sym(struct OppIr* ir, struct OppIr_Const* imm)
+{
+
+	// add types put in separet func
+	// oppir_check_realloc(ir, 7);
+	// IR_EMIT(0x48); IR_EMIT(0x8b);
+	// IR_EMIT(0x05 + (reg_type*8));
+	// IR_EMIT(0x00); IR_EMIT(0x00);
+	// IR_EMIT(0x00); IR_EMIT(0x00);
+
+
+	// after this make deref of reg with size
+	// add reallocation to ir_linxu module
 }
 
 static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
@@ -424,7 +479,10 @@ static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 	else
 		reg_type = REG_RAX;
 
-	if (imm->val.type > IMM_LOC && imm->val.type < IMM_F32) {
+	if (imm->val.type == IMM_SYM) {
+		oppir_eval_sym(ir, imm);
+	}
+	else if (imm->val.type > IMM_LOC && imm->val.type < IMM_F32) {
 		oppir_check_realloc(ir, 2);
 		imm->val.type = IMM_I64;
 		ir->code.bytes[ir->code.idx++] = 0x48;
@@ -565,10 +623,10 @@ static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Se
 
 static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set)
 {
-	enum Regs reg_type = oppir_pop_reg(ir);
+	struct Register reg_type = oppir_pop_reg(ir);
 	bool small = set->val.imm_i32 > -255;
 
-	oppir_save_reg(ir, reg_type, set);
+	oppir_save_reg(ir, reg_type.reg, set);
 }
 
 static void oppir_emit_frame(struct OppIr* ir) 
@@ -603,26 +661,73 @@ static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn)
 		ir->regalloc.spills[i].use = 0;
 	}
 
+	#ifdef LINUX64
+		// struct Elf_Pair* sym = get_sym(fn->sym);
+		// sym->syms.st_name = get_str_idx();
+		// sym->syms.st_value = 0;
+		// sym->syms.st_size = 0;
+		// sym->syms.st_info = 16;
+		// sym->syms.st_other = 0;
+		// sym->syms.st_shndx = 1;
+		// strtable_write(strlen(fn->fn_name), fn->fn_name);
+	#endif
+
 	oppir_emit_frame(ir);
 }
 
 static void oppir_eval_arg(struct OppIr* ir, struct OppIr_Arg* arg)
 {
+	// Ignore size type for now all are treated as 64 bit regs
 
+	switch (arg->type)
+	{
+		case IMM_U8...IMM_I64:
+			oppir_check_realloc(ir, 4);
+			if (arg->idx < 4)
+				IR_EMIT(0x48);
+			else
+				IR_EMIT(0x4c);
+
+			IR_EMIT(0x89);
+
+			if (arg->idx <= 1)
+				IR_EMIT(0x7d - (arg->idx*8));
+			else if (arg->idx <= 3)
+				IR_EMIT(0x55 - ((arg->idx-2)*8));
+			else
+				IR_EMIT(0x45 + ((arg->idx-4)*8));
+			break;
+
+		case IMM_F32...IMM_F64:
+			oppir_check_realloc(ir, 5);
+			if (arg->type == IMM_F64)
+				IR_EMIT(0xf2);
+			else
+				IR_EMIT(0xf3);
+
+			IR_EMIT(0x0f);
+			IR_EMIT(0x11);
+			IR_EMIT(0x45 + (arg->idx*8));
+			break;
+		default: break;
+	}
+	ir->local_stack.size += 8;
+	ir->local_stack.pos -= 8;
+	IR_EMIT((char)ir->local_stack.pos);
 }
 
 static void oppir_eval_end(struct OppIr* ir)
 {
 	struct OppIr_Value stack_size = {
-		.type = IMM_U32,
+		.type = IMM_I32,
 		.imm_i32 = ir->local_stack.size
 	};
 
 	size_t temp = ir->code.idx;
 	ir->code.idx = ir->local_stack.frame_ptr;
 
-	// FIX THIS
-	// stack_size.imm_u32 += stack_size.imm_u32 % 16;
+	while ((stack_size.imm_i32 % 16) != 0)
+		stack_size.imm_i32 += 1;
 
 	oppir_write_const(ir, &stack_size);
 
@@ -704,20 +809,178 @@ static void oppir_cast_to_f64(struct OppIr* ir, enum Regs reg)
 
 static void oppir_eval_cast(struct OppIr* ir, struct OppIr_Cast* cast)
 {
-	enum Regs reg = oppir_pop_reg(ir);
+	struct Register reg = oppir_pop_reg(ir);
 
 	switch (cast->type)
 	{
 		case IMM_F32:
-			oppir_cast_to_f32(ir, reg);
+			oppir_cast_to_f32(ir, reg.reg);
 			break;
 
 		case IMM_F64:
-			oppir_cast_to_f64(ir, reg);
+			oppir_cast_to_f64(ir, reg.reg);
 			break;
 
 		default:
 			break;
 	}
+}
 
+static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var)
+{
+	if (var->global) {
+		// add sym to symtab
+
+		oppir_check_data(ir, var->size);
+		ir->data_seg.idx += var->size;
+	}
+	else {
+		ir->local_stack.size += var->size;
+		ir->local_stack.pos -= var->size;
+	}
+}
+
+static void oppir_eval_addr(struct OppIr* ir, struct OppIr_Const* addr)
+{
+	enum Regs reg = oppir_push_reg(ir, IMM_U64);
+
+	assert(addr->global == 0);
+
+	oppir_check_realloc(ir, 7);
+
+	bool small = addr->val.imm_i32 > -255;
+	if (small)
+		addr->val.type = IMM_I8;
+	else
+		addr->val.type = IMM_I32;
+
+	IR_EMIT(0x48);
+	IR_EMIT(0x8d);
+
+	if (small)
+		IR_EMIT(0x45 + (reg*8));
+	else 
+		IR_EMIT(0x85 + (reg*8));
+
+	oppir_write_const(ir, &addr->val);
+}
+
+static void oppir_eval_arith(struct OppIr* ir, struct OppIr_Arith* arith)
+{
+	assert(arith->type == TADD);
+
+	oppir_check_realloc(ir, 4);
+	// just a test
+	IR_EMIT(0x48);
+	IR_EMIT(0x83);
+	IR_EMIT(0xc0);
+	IR_EMIT(arith->val.imm_i8);
+}
+
+static void oppir_eval_deref(struct OppIr* ir, struct OppIr_Cast* cast)
+{
+	struct Register reg = oppir_pop_reg(ir);
+
+	oppir_check_realloc(ir, 4);
+
+	assert(cast->type != IMM_F32 && cast->type != IMM_F64);
+
+	switch (cast->type)
+	{
+		case IMM_I8:
+			IR_EMIT(0x48);
+			IR_EMIT(0x0f);
+			IR_EMIT(0xbe);
+			break;
+
+		case IMM_U8:
+			IR_EMIT(0x48);
+			IR_EMIT(0x0f);
+			IR_EMIT(0xb6);
+			break;
+
+		case IMM_I16:
+			IR_EMIT(0x48);
+			IR_EMIT(0x0f);
+			IR_EMIT(0xbf);
+			break;
+
+		case IMM_U16:
+			IR_EMIT(0x48);
+			IR_EMIT(0x0f);
+			IR_EMIT(0xb7);
+			break;
+
+		case IMM_I32:
+			IR_EMIT(0x48);
+			IR_EMIT(0x63);
+			break;
+
+		case IMM_U32:
+			IR_EMIT(0x8b);
+			break;
+
+		case IMM_I64:
+		case IMM_U64:
+			IR_EMIT(0x48);
+			IR_EMIT(0x8b);
+			break;
+
+		default: break;
+	}
+	IR_EMIT(0x9 * (reg.reg));
+
+	oppir_push(ir, reg);	
+}
+
+static void oppir_eval_ptr_assign(struct OppIr* ir, struct OppIr_Cast* cast)
+{
+	struct Register rhs = oppir_pop_reg(ir);
+	struct Register lhs = oppir_pop_reg(ir);
+
+	assert(cast->type != IMM_F32 && cast->type != IMM_F64);
+
+	oppir_check_realloc(ir, 3);
+
+	switch (cast->type)
+	{
+		case IMM_I8:
+		case IMM_U8:
+			IR_EMIT(0x88);
+			break;
+
+		case IMM_I16:
+		case IMM_U16:
+			IR_EMIT(0x66);
+			IR_EMIT(0x89);
+			break;
+
+		case IMM_I32:
+		case IMM_U32:
+			IR_EMIT(0x89);
+			break;
+
+		case IMM_I64:
+		case IMM_U64:
+			IR_EMIT(0x48);
+			IR_EMIT(0x89);
+			break;
+			
+		default: break;
+	}
+
+	switch (lhs.reg)
+	{
+		case REG_RAX:
+			IR_EMIT(0x08 * (rhs.reg));
+			break;
+
+		case REG_RCX:
+			IR_EMIT(rhs.reg==REG_RAX ? 0x1 : 0x11);
+			break;
+
+		case REG_RDX:
+			IR_EMIT(rhs.reg==REG_RAX ? 0x2 : 0xa);
+			break;
+	}
 }

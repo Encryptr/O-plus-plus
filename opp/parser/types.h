@@ -35,7 +35,11 @@ enum Opp_Std_Type {
 struct Opp_Type_Entry {
 	char* id;
 	enum Opp_Std_Type t_type;
-	struct Opp_Stmt_Struct* s_type;
+	struct {
+		unsigned int size;
+		struct Opp_Stmt_Struct* s_elems;
+		struct Opp_Namespace* s_type;
+	};
 	struct Opp_Type_Entry* next;
 };
 

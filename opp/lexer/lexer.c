@@ -407,6 +407,20 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 			return TMOD;
 		}
 
+		case '\'': { 
+			INCR;
+			// add espcaps
+			s->t.buffer.buf[0] = *s->src;
+			s->t.buffer.buf[1] = 0;
+			INCR;
+
+			if (*s->src != '\'')
+				opp_error(s, "Expected terminating ' next to '%s'",
+					s->t.buffer.buf);
+
+			return TCH;
+		}
+
 		default: break;
 	}
 	return INVALID;

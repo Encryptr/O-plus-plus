@@ -1,13 +1,16 @@
 global __oppio_println
 global __oppio_printnumb
+global __oppio_panic
+global _start
 
-; Flags
-global __oppio_READ
-global __oppio_WRITE
-global __oppio_RDWR
+extern main
 
 section .text
 
+; @Name: __oppio_strlen
+; @Desc: Return len of str
+; @Param: char* (str)
+; @Ret: int (length)
 __oppio_strlen:
     xor rax, rax
 start_len:
@@ -19,22 +22,37 @@ start_len:
 end_len:
     ret
 
+; @Name: __oppio_println
+; @Desc: Print zero terminated string
+; @Param: char* (str)
+; @Ret: None
 __oppio_println:
-
-	ret
+	mov r10, rdi
+    call __oppio_strlen
+    mov r9, rax
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, r10
+    mov rdx, r9
+    syscall
+    xor rax, rax
+    ret
 
 __oppio_printnumb:
 	ret
 
-__oppio_open_io:
-	ret
+; @Name: __oppio_panic
+; @Desc: Panic
+; @Param: int
+; @Ret: None
+__oppio_panic:
+	mov rax, 60
+	syscall
 
-__oppio_read_io:
-	
-	ret
-
+_start:
+    call main
+    mov rdi, rax
+    jmp __oppio_panic
 
 section .data
-__oppio_READ dq 0
-__oppio_WRITE dq 1
-__oppio_RDWR dq 2
+

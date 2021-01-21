@@ -20,12 +20,12 @@
 #ifndef IR_LINUX
 #define IR_LINUX
 
-#define DEFAULT_SECT 6
+#define DEFAULT_SECT 7
 
 enum Linux_Sections {
 	SECT_TEXT, SECT_DATA,
-	SECT_SYMTAB, SECT_SHSTRTAB, 
-	SECT_STRTAB, SECT_RELA_TEXT
+	SECT_SYMTAB, SECT_RELA_TEXT, 
+	SECT_SHSTRTAB, SECT_STRTAB
 };
 
 #define DEFAULT_SYMS 16
@@ -41,7 +41,11 @@ struct Elf_Syms {
 };
 
 void strtable_write(unsigned int len, char* bytes);
+void check_syms();
+
+
 struct Elf_Pair* get_sym(unsigned int idx);
+unsigned int get_str_idx();
 
 void init_elf_syms();
 void init_strtab();

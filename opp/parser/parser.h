@@ -23,6 +23,7 @@
 #include "../opp.h"
 #include "../lexer/lexer.h"
 #include "../ast/ast.h"
+#include <assert.h>
 #include "types.h"
 #include <ctype.h>
 
@@ -35,6 +36,7 @@ struct Opp_Parser {
 	size_t stmt_size;
 	unsigned int nstmts;
 	struct Opp_Type_Tree tree;
+	struct Opp_Namespace* scope;
 };
 
 struct Opp_Type_Entry* int_type;
@@ -53,6 +55,8 @@ static struct Opp_Node* opp_parse_global_def(struct Opp_Parser* parser);
 static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser);
 static struct Opp_List* opp_parse_args(struct Opp_Parser* parser);
 static bool opp_parse_peak(struct Opp_Parser* parser, char ch);
+struct Opp_Type_Entry* get_type(struct Opp_Type_Tree* tree, char* name);
+static bool opp_parse_atype(struct Opp_Parser* parser, struct Opp_Type_Decl* decl);
 
 // Statements
 static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser);

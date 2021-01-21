@@ -26,22 +26,20 @@
 #include "../ast/ast.h"
 #include "nodes.h"
 
-// add states ex swtich
-
 struct Opp_Debug_Func {
-	unsigned int loc_global;
-	unsigned int loc_var;
 	char* scope;
-	struct Opp_Type_Decl ret_type;
 	bool ret;
+	struct Opp_Type_Decl ret_type;
+	const char* res_name;
 };
+
+typedef struct Opp_Type_Decl Opp_Obj;
 
 struct Opp_Analize {
 	struct Opp_Options* opts;
 	struct Opp_Parser* parser;
 	struct Opp_Namespace* ns;
 	struct Opp_Namespace* curr_ns;
-	// struct Opp_Analyzer_Op ops;
 	struct Opp_Debug_Func debug;
 };
 

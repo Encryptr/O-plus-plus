@@ -72,7 +72,8 @@ struct Opp_Bucket* env_add_item(struct Opp_Namespace* ns, char* name)
 					INTERNAL_ERROR("Malloc fail");
 
 				pos->next->key = name;
-				return pos;
+				pos->next->next = NULL;
+				return pos->next;
 			}
 			else 
 				pos = pos->next;
@@ -113,8 +114,7 @@ struct Opp_Bucket* env_get_item(struct Opp_Namespace* ns, char* name)
 				else if (node->next != NULL)
 					node = node->next;
 				else 
-					return NULL;
-
+					break;
 			}
 		}
 		scope = scope->parent;

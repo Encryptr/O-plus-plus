@@ -4,13 +4,13 @@
 //  \___/| .__/ .__/___\___/ 
 //       |_|  |_|            
 
-// println
-// OppIO print string function
-// @param <pointer>
-// @return 0
-extern __oppio_println(*str);
+// @Name: println
+// @Desc: OppIO print string function
+// @Param: char* (str)
+// @Ret: 0
+extern __oppio_println(char* __str);
 
-println(*str) {
+void println(char* __str) {
 	return __oppio_println(str);
 }
 

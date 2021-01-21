@@ -1,6 +1,8 @@
 // #include "../ir.h"
 // #include "../../lexer/io.h"
 
+// //gcc ../../lexer/lexer.c ../ir-linux.c ../ir.c irtest.c 
+
 // struct OppIr_Opcode ops[] = {
 // 	{
 // 		.type = OPCODE_CONST,
@@ -8,28 +10,7 @@
 // 		.constant.val.imm_i32 = -26,
 // 		.constant.loc_type = IMM_U32,
 // 		.constant.nopush = 0
-// 	},
-// 	{
-// 		.type = OPCODE_CONST,
-// 		.constant.val.type = IMM_LOC,
-// 		.constant.val.imm_i32 = -26,
-// 		.constant.loc_type = IMM_I8,
-// 		.constant.nopush = 0
-// 	},
-// 	{
-// 		.type = OPCODE_CONST,
-// 		.constant.val.type = IMM_LOC,
-// 		.constant.val.imm_i32 = -26,
-// 		.constant.loc_type = IMM_I8,
-// 		.constant.nopush = 0
-// 	},
-// 	{
-// 		.type = OPCODE_CONST,
-// 		.constant.val.type = IMM_LOC,
-// 		.constant.val.imm_i32 = -26,
-// 		.constant.loc_type = IMM_I8,
-// 		.constant.nopush = 0
-// 	},
+// 	}
 // 	// {
 // 	// 	.type = OPCODE_CONST,
 // 	// 	.constant.val.type = IMM_LOC,
@@ -64,7 +45,7 @@
 // 	oppir_eval(ir);
 
 // 	OppIO io = {
-// 		.file = fopen("out.bin", "wb")
+// 		.file = fopen("out.o", "wb")
 // 	};
-// 	dump_bytes(ir, &io);
+// 	oppir_emit_obj(ir, &io);
 // }

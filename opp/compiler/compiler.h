@@ -55,22 +55,25 @@ struct Opp_Cond {
 	unsigned int jloc, hs;
 };
 
+typedef enum OppIr_Const_Type Opp_Type;
+
 struct Opp_Info {
 	int32_t stack_offset;
-	unsigned int label_loc, sym_loc;
-	bool deref_assign;
-};
+	unsigned int label_loc;
+	int32_t sym_loc;
 
-struct Opp_Elem {
-	enum Opp_Bucket_Type type;
-	struct Opp_Type_Decl decl;
-	unsigned int sym_tab_loc;
+	// Dot expr info
+	struct {
+		bool indot;
+		struct Opp_Stmt_Struct* s_ns;
+	} dot;
+
+	bool in_assign;
 };
 
 struct Opp_Env {
-	struct Opp_Elem* global_table;
-	struct Opp_Elem* local_table;
-	size_t allocated;
+	struct Opp_Namespace* global_ns;
+	struct Opp_Namespace* curr_ns;
 };
 
 #define DEFAULT_OPCODE_SIZE 64
@@ -82,7 +85,7 @@ struct Opp_Context {
 	struct OppIr_Instr ir;
 	struct OppIr* oppir;
 	struct Opp_Cond cond_state;
-	struct Opp_Env comp_env;
+	struct Opp_Env env;
 };
 
 struct Opp_Context* opp_init_compile(struct Opp_Parser* parser, 
@@ -91,27 +94,31 @@ void opp_free_compiler(struct Opp_Context* opp);
 void opp_compile(struct Opp_Context* opp);
 
 static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt);
-static struct Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);
+static Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);
 static void opp_set_offsets(struct Opp_Context* opp);
-static void opp_generate_ret(struct Opp_Context* opp);
+static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type);
+static unsigned int opp_type_to_size(struct Opp_Type_Decl* type);
+static void opp_try_cast(struct Opp_Context* opp, Opp_Type lhs, Opp_Type rhs);
 
 // Expr
-static struct Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unary);
-static struct Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin);
-static struct Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node* sub);
-static struct Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* assign);
-static struct Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call);
-static struct Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Node* logic);
-static struct Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct Opp_Node* logic);
+static Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unary);
+static Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin);
+static Opp_Type opp_compile_dot(struct Opp_Context* opp, struct Opp_Node* dot);
+static Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node* sub);
+static Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* assign);
+static Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call);
+static Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Node* logic);
+static Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct Opp_Node* logic);
 static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logic);
-static struct Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_Node* unary);
-static struct Opp_Type opp_compile_addr(struct Opp_Context* opp, struct Opp_Node* expr);
-static struct Opp_Type opp_compile_deref(struct Opp_Context* opp, struct Opp_Node* expr);
-static struct Opp_Type opp_compile_ptr_assign(struct Opp_Context* opp, struct Opp_Node* expr);
-static void opp_import_module(struct Opp_Context* opp, struct Opp_Node* module);
+static Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_Node* unary);
+static Opp_Type opp_compile_addr(struct Opp_Context* opp, struct Opp_Node* expr);
+static Opp_Type opp_compile_deref(struct Opp_Context* opp, struct Opp_Node* expr);
+static Opp_Type opp_compile_ptr_assign(struct Opp_Context* opp, struct Opp_Node* expr);
 
 // Stmts
+static void opp_import_module(struct Opp_Context* opp, struct Opp_Node* module);
 static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func);
+static void opp_compile_struct(struct Opp_Context* opp, struct Opp_Node* node);
 static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret);
 static void opp_compile_block(struct Opp_Context* opp, struct Opp_Node* block);
 static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var);
@@ -123,8 +130,5 @@ static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn);
 static void opp_compile_while(struct Opp_Context* opp, struct Opp_Node* loop);
 static void opp_compile_for(struct Opp_Context* opp, struct Opp_Node* loop);
 static void opp_compile_switch(struct Opp_Context* opp, struct Opp_Node* cond);
-
-// Debug
-void opp_debug_node(struct Opp_Node* base);
 
 #endif /* OPP_COMPILER */

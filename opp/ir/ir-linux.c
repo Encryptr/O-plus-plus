@@ -53,6 +53,10 @@ static unsigned char shstrtab[] = {
 	0x0
 };
 
+void check_syms()
+{
+}
+
 struct Elf_Pair* get_sym(unsigned int idx)
 {
 	if (idx >= elf_info.symbols.allocated) {
@@ -71,6 +75,11 @@ void strtable_write(unsigned int len, char* bytes)
 	elf_info.strtable.str[elf_info.strtable.str_idx++] = 0x0;
 	for (unsigned int i = 0; i < len; i++)
 		elf_info.strtable.str[elf_info.strtable.str_idx++] = bytes[i];
+}
+
+unsigned int get_str_idx()
+{
+	return elf_info.strtable.str_idx + 1;
 }
 
 void init_strtab()
@@ -94,6 +103,7 @@ void init_elf_syms(OppIO* io)
 		INTERNAL_ERROR("Malloc fail");
 
 	elf_info.symbols.allocated = DEFAULT_SYMS;
+	elf_info.symbols.sym_idx = 0;
 	memset(elf_info.symbols.pairs, 0, sizeof(struct Elf_Pair)*DEFAULT_SYMS);
 
 	struct Elf64_Symbol* sym = &elf_info.symbols.pairs[1].syms;
@@ -107,34 +117,34 @@ void init_elf_syms(OppIO* io)
 	sym->st_info = 4;
 	sym->st_other = 0;
 	sym->st_shndx = 65521;
-	sym = &elf_info.symbols.pairs[2].syms;
-	// Text section
-	sym->st_name = 0;
-	sym->st_value = 0;
-	sym->st_size = 0;
-	sym->st_info = 3;
-	sym->st_other = 0;
-	sym->st_shndx = 1;
-	// Data Section
-	sym = &elf_info.symbols.pairs[3].syms;
-	sym->st_name = 0;
-	sym->st_value = 0;
-	sym->st_size = 0;
-	sym->st_info = 3;
-	sym->st_other = 0;
-	sym->st_shndx = 2;
-	elf_info.symbols.sym_idx += 3;
+	// sym = &elf_info.symbols.pairs[2].syms;
+	// // Text section
+	// sym->st_name = 0;
+	// sym->st_value = 0;
+	// sym->st_size = 0;
+	// sym->st_info = 3;
+	// sym->st_other = 0;
+	// sym->st_shndx = 1;
+	// // Data Section
+	// sym = &elf_info.symbols.pairs[3].syms;
+	// sym->st_name = 0;
+	// sym->st_value = 0;
+	// sym->st_size = 0;
+	// sym->st_info = 3;
+	// sym->st_other = 0;
+	// sym->st_shndx = 2;
+	elf_info.symbols.sym_idx += 2;
 }
 
-void init_elf_header(int sections)
+void init_elf_header()
 {
 	elf_info.sect_list = (struct Elf64_SHDR*)
-		malloc(sizeof(struct Elf64_SHDR)*sections);
+		malloc(sizeof(struct Elf64_SHDR)*DEFAULT_SECT);
  	
 	if (elf_info.sect_list == NULL)
 		INTERNAL_ERROR("Malloc fail");
 
-	elf_info.sect_amount = sections;
+	elf_info.sect_amount = DEFAULT_SECT;
 
 	elf_info.elf64_hdr.e_ident[0] = EI_MAG0;
 	elf_info.elf64_hdr.e_ident[1] = EI_MAG1;
@@ -157,8 +167,8 @@ void init_elf_header(int sections)
 	elf_info.elf64_hdr.e_phentsize = 0x0;
 	elf_info.elf64_hdr.e_phnum = 0x0;
 	elf_info.elf64_hdr.e_shentsize = 64;
-	elf_info.elf64_hdr.e_shnum = sections;
-	elf_info.elf64_hdr.e_shstrndx = 4; /// 3 before
+	elf_info.elf64_hdr.e_shnum = DEFAULT_SECT;
+	elf_info.elf64_hdr.e_shstrndx = 5;
 }
 
 void init_text_sect(struct OppIr* ir)
@@ -210,8 +220,7 @@ void init_shstrtab_sect()
 	sect->sh_flags = 0;
 	sect->sh_addr = 0x0;
 	sect->sh_offset = 0x0;
-	sect->sh_size = 
-		elf_info.sect_amount == DEFAULT_SECT ? 39:50;
+	sect->sh_size = 50;
 	sect->sh_link = 0;
 	sect->sh_info = 0;
 	sect->sh_addralign = 1;
@@ -227,8 +236,8 @@ void init_symtab_sect()
 	sect->sh_addr = 0x0;
 	sect->sh_offset = 0x0;
 	sect->sh_size = sizeof(struct Elf64_Symbol)*elf_info.symbols.sym_idx;
-	sect->sh_link = 5; // Set this
-	sect->sh_info = 4; // Set this
+	sect->sh_link = 6;
+	sect->sh_info = 2; 
 	sect->sh_addralign = 4;
 	sect->sh_entsize = sizeof(struct Elf64_Symbol);
 }
@@ -250,7 +259,17 @@ void init_strtab_sect()
 
 void init_rela_text_sect()
 {
-
+	struct Elf64_SHDR* sect = &elf_info.sect_list[SECT_RELA_TEXT];
+	sect->sh_name = 39;
+	sect->sh_type = 4;
+	sect->sh_flags = 0;
+	sect->sh_addr = 0x0;
+	sect->sh_offset = 0x0;
+	sect->sh_size = 0; // Reloc size * amount
+	sect->sh_link = 3; 
+	sect->sh_info = 1;
+	sect->sh_addralign = 4;
+	sect->sh_entsize = 24;
 }
 
 void elf_offsets(struct OppIr* ir)
@@ -265,6 +284,7 @@ void elf_offsets(struct OppIr* ir)
 		(ir->code.idx - elf_info.sect_list[SECT_TEXT].sh_size);
 
 	elf_info.sect_list[SECT_DATA].sh_offset = offset;
+	// do data
 
 	for (int i = 2; i < elf_info.sect_amount-1; i++) {
 		elf_info.sect_list[i].sh_offset = offset;
@@ -288,10 +308,11 @@ void write_elf64(struct OppIr* ir, OppIO* io)
 	// Data
 	fwrite(ir->data_seg.data, 1, ir->data_seg.idx, io->file);
 
-
 	// Sym / Rela
 	for (unsigned int i = 0; i < elf_info.symbols.sym_idx; i++)
 		fwrite(&elf_info.symbols.pairs[i].syms, sizeof(struct Elf64_Symbol), 1, io->file);
+
+	// Rela Text
 
 	// Shstrtab
 	fwrite(shstrtab, 1, elf_info.sect_list[SECT_SHSTRTAB].sh_size, io->file);
