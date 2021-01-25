@@ -7,7 +7,7 @@
 [![Issues][issues-shield]][issues-url]
 [![License][license-shield]][license-url]
 
-Opp was created to be a simple but powerfull general purpose langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Opp also takes inspiration from the old B programming language as well as C. In the end Opp is being made to educate and experimant with creating standalone compilers.
+Opp was created to be a simple but powerfull general purpose compiled langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Opp also takes inspiration from the old B programming language as well as C, resulting in a simpler C. In the end Opp is being made to educate and experimant with creating standalone compilers.
 
 <img src="logo.png" width="350" height="350"/>
 
@@ -32,7 +32,7 @@ mingw32-make.exe
 Example of the opp language can be found under the examples folder. Opp can be also learned in the [wiki][wiki]!
 
 ```c
-main(argc, **argv) {
+int main(int argc, char** argv) {
 	println("Hello World!");
 	return 0;
 }
@@ -41,7 +41,7 @@ main(argc, **argv) {
 ## Development
 > Opp is being developed by **Encryptr**, a open-source organization. Becoming a dev/contributor is as easy as joining Encryptr's discord server. [Link](https://discord.gg/8tcf6sJ5Gq)
 
-Currently Opp is a compiler aimed for linux/mac x86-64 however opp will be able to compile to win in the future. Opp requires **ld** to link the generated obj file with opp's standart library alongside c's stdandart library. 
+Currently Opp is a compiler aimed for linux/mac x86-64 however opp will be able to compile to win in the future. Opp requires **ld** to link the generated obj file with opp's standard library alongside c's stdandart library. 
 
 ## Release History
 * 0.0.1
