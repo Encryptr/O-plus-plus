@@ -1,5 +1,5 @@
 # Opp Programming Language
-> Opp is a programming language / compiler inspired by the classic B programming language
+> Opp is a programming language / compiler inspired by the C programming language
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
@@ -7,7 +7,7 @@
 [![Issues][issues-shield]][issues-url]
 [![License][license-shield]][license-url]
 
-Opp was created to be a simple but powerfull general purpose compiled langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Opp also takes inspiration from the old B programming language as well as C, resulting in a simpler C. In the end Opp is being made to educate and experimant with creating standalone compilers.
+Opp was created to be a simple but powerfull general purpose compiled langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Opp also takes inspiration from the old B programming language as well as C, implementing the "minimum needed". In the end Opp is being made to educate and experimant with creating standalone compilers.
 
 <img src="logo.png" width="350" height="350"/>
 
