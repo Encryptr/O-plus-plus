@@ -84,6 +84,12 @@ struct Elf64_Symbol {
    uint64_t st_size;
 };
 
+struct Elf64_Reloc {
+	uint64_t r_offset;
+	uint64_t r_info;
+	int64_t  r_addend;
+};
+
 #define SHF_ALLOC 0x2
 #define SHF_EXECINSTR 0x4
 #define SHT_STRTAB 0x3
@@ -91,5 +97,6 @@ struct Elf64_Symbol {
 #define SHT_SYMTAB 0x2
 
 #define ELF64_ST_INFO(b,t) (((b)<<4)+((t)&0xf))
+#define ELF64_R_INFO(s,t) (((s)<<32)+((t)&0xffffffffL))
 
 #endif /* ELF_HEADER */

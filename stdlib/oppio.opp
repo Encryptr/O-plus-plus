@@ -8,10 +8,10 @@
 // @Desc: OppIO print string function
 // @Param: char* (str)
 // @Ret: 0
-extern __oppio_println(char* __str);
+extern void __oppio_println(char* __str);
 
 void println(char* __str) {
-	return __oppio_println(str);
+	__oppio_println(str);
 }
 
 

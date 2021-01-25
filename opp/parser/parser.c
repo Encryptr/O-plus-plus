@@ -266,10 +266,8 @@ static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser)
 	if (type.decl == NULL)
 		opp_error(parser->lex, "Use of undeclared type '%s'", parser->lex->t.buffer.buf);
 
-	if (type.decl->t_type == TYPE_STRUCT && type.unsign) {
-		// printf("===>%s\n", type.decl->id);
+	if (type.decl->t_type == TYPE_STRUCT && type.unsign)
 		opp_error(parser->lex, "Struct '%s' type cannot have unsigned attribute", type.decl->id);
-	}
 	// type.decl->id = (char*)malloc(strlen(parser->lex->t.buffer.buf)+1);
 	// strcpy(type.decl->id, parser->lex->t.buffer.buf);
 
@@ -432,9 +430,10 @@ static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser)
 {
 	switch (parser->lex->t.id)
 	{
-		case TSEMICOLON: // add pass through
-			return NULL;
-			
+		case TSEMICOLON:
+			opp_error(parser->lex, "Trailing ';' found");
+			break;
+
 		case TOPENC:
 			return opp_parse_block(parser);
 
@@ -661,6 +660,11 @@ static struct Opp_Node* opp_parse_extern(struct Opp_Parser* parser)
 	opp_next(parser->lex);
 
 	extrn->extrn_stmt.stmt = opp_parse_type(parser);
+
+	if (extrn->extrn_stmt.stmt->type == STMT_FUNC) {
+		if (extrn->extrn_stmt.stmt->fn_stmt.body != NULL)
+			opp_error(parser->lex, "Unexpected body in extern function declaration");
+	}
 
 	return extrn;
 }

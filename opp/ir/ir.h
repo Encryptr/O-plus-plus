@@ -48,6 +48,7 @@ enum OppIr_Opcode_Type {
 	OPCODE_CALL,
 	OPCODE_FUNC,
 	OPCODE_ARG,
+	OPCODE_MOV_ARG,
 	OPCODE_VAR,
 	OPCODE_ARITH,
 	OPCODE_CMP,
@@ -140,8 +141,7 @@ struct OppIr_Var {
 
 struct OppIr_Func {
 	char* fn_name;
-	bool private;
-	unsigned int sym;
+	bool private, ext;
 };
 
 struct OppIr_Arg {
@@ -189,6 +189,12 @@ struct OppIr_Cast {
 	enum OppIr_Const_Type type;
 };
 
+struct OppIr_Call {
+	enum OppIr_Const_Type ret_type;
+	bool imm, ret;
+	char* name;
+};
+
 struct OppIr_Opcode {
 	enum OppIr_Opcode_Type type;
 
@@ -203,6 +209,7 @@ struct OppIr_Opcode {
 		struct OppIr_Bit   bit;
 		struct OppIr_Arg   arg;
 		struct OppIr_Cast  cast;
+		struct OppIr_Call  call;
 	};
 };
 
@@ -270,12 +277,14 @@ static int32_t oppir_get_spill(struct OppIr* ir);
 static void oppir_set_offsets(struct OppIr* ir);
 static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Set* set);
 static void oppir_write_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Const* imm);
+static void oppir_write_data(struct OppIr* ir, const unsigned int len, unsigned char* d);
 
 // Opcodes
 static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm);
 static void oppir_local_param(struct OppIr* ir, unsigned int args);
 static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn);
 static void oppir_eval_arg(struct OppIr* ir, struct OppIr_Arg* arg);
+static void oppir_eval_mov_arg(struct OppIr* ir, struct OppIr_Arg* arg);
 static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc);
 static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp);
 static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var);
@@ -288,6 +297,7 @@ static void oppir_eval_bitwise(struct OppIr* ir, struct OppIr_Bit* bit);
 static void oppir_eval_addr(struct OppIr* ir, struct OppIr_Const* addr);
 static void oppir_eval_end(struct OppIr* ir);
 static void oppir_eval_ret(struct OppIr* ir);
+static void oppir_eval_call(struct OppIr* ir, struct OppIr_Call* call);
 static void oppir_eval_deref(struct OppIr* ir, struct OppIr_Cast* cast);
 
 #endif /* OPP_IR */

@@ -102,11 +102,11 @@ void opp_init_module(const char* fname, struct Opp_Options* opts)
 	oppir_get_opcodes(context->oppir, &context->ir);
 	oppir_eval(context->oppir);
 	OppIO io = {
-		.file = fopen("out.bin", "wb")
+		.file = fopen("out.o", "wb")
 	};
-	dump_bytes(context->oppir, &io);
+	// dump_bytes(context->oppir, &io);
 	// run_main(context->oppir);
-	// oppir_emit_obj(context->oppir, &io);
+	oppir_emit_obj(context->oppir, &io);
 	cend = clock();
 	ctime = ((double) (cend - cstart)) / CLOCKS_PER_SEC;
 

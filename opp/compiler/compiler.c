@@ -35,7 +35,6 @@ struct Opp_Context* opp_init_compile(struct Opp_Parser* parser,
 
 	// Info
 	memset(&opp->info, 0, sizeof(struct Opp_Info));
-	opp->info.sym_loc = 4; 
 
 	// Cond
 	memset(&opp->cond_state, 0, sizeof(struct Opp_Cond));
@@ -82,24 +81,29 @@ static void opp_realloc_instrs(struct Opp_Context* opp)
 
 static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type)
 {
-	Opp_Type ret_type = 0;
+	Opp_Type ret_type = {0};
 	bool sign = type->unsign;
 
-	if (type->depth > 0 || type->size != 0)
-		return IMM_U64;
 
 	switch (type->decl->t_type)
 	{
-		case TYPE_I8:  ret_type = sign ? IMM_U8: IMM_I8; break;
-		case TYPE_I16: ret_type = sign ? IMM_U16: IMM_I16; break;
-		case TYPE_I32: ret_type = sign ? IMM_U32: IMM_I32; break;
-		case TYPE_I64: ret_type = sign ? IMM_U64: IMM_I64; break; 
-		case TYPE_FLOAT: ret_type = IMM_F32; break;
-		case TYPE_DOUBLE: ret_type = IMM_F64; break;
+		case TYPE_I8:  ret_type.type = sign ? IMM_U8: IMM_I8; break;
+		case TYPE_I16: ret_type.type = sign ? IMM_U16: IMM_I16; break;
+		case TYPE_I32: ret_type.type = sign ? IMM_U32: IMM_I32; break;
+		case TYPE_I64: ret_type.type = sign ? IMM_U64: IMM_I64; break; 
+		case TYPE_FLOAT: ret_type.type = IMM_F32; break;
+		case TYPE_DOUBLE: ret_type.type = IMM_F64; break;
 		
 		default:
-		// 	printf("Error '%s'\n", __FUNCTION__);
+			ret_type.type = IMM_SYM;
+			ret_type.depth = type->decl->size;
 			break;
+	}
+	
+	if (type->depth > 0 || type->size > 0) {
+		ret_type.depth = type->depth;
+		ret_type.comp_type = ret_type.type;
+		ret_type.type = IMM_U64;
 	}
 
 	return ret_type;
@@ -144,8 +148,9 @@ static unsigned int opp_type_to_size(struct Opp_Type_Decl* type)
 
 static void opp_try_cast(struct Opp_Context* opp, Opp_Type lhs, Opp_Type rhs)
 {
-	if ((lhs >= IMM_F32 || rhs >= IMM_F32) && (lhs != rhs)) {
-		printf("NEED TO CAST\n");
+	if ((lhs.type >= IMM_F32 || rhs.type >= IMM_F32) && (lhs.type != rhs.type)) {
+		printf("CAST\n");
+		assert(false);
 	}
 }
 
@@ -205,7 +210,7 @@ static void opp_compile_args(struct Opp_Context* opp, struct Opp_Node* func)
 			}
 
 			opp->ir.opcodes[opp->ir.instr_idx].arg.type = 
-				opp_type_to_ir(&func->fn_stmt.args[i].var_stmt.type);
+				opp_type_to_ir(&func->fn_stmt.args[i].var_stmt.type).type;
 
 			switch (opp->ir.opcodes[opp->ir.instr_idx].arg.type)
 			{
@@ -235,12 +240,13 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 	opp->info.label_loc = 1;
 
 	struct Opp_Bucket* b = env_get_item(opp->env.global_ns, func->fn_stmt.name->unary_expr.val.strval);
-	b->offset = opp->info.sym_loc++;
+
+	opp->info.ret_type = opp_type_to_ir(&b->sym_type);
 
 	opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_FUNC;
 		opp->ir.opcodes[opp->ir.instr_idx].func.fn_name = func->fn_stmt.name->unary_expr.val.strval;
-		opp->ir.opcodes[opp->ir.instr_idx].func.sym = b->offset;
+		opp->ir.opcodes[opp->ir.instr_idx].func.ext = 0;
 	opp->ir.instr_idx++;
 
 	struct Opp_Namespace* temp = opp->env.curr_ns;
@@ -252,7 +258,6 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 		opp_compile_stmt(opp, func->fn_stmt.body->block_stmt.stmts[i]);
 
 	opp->env.curr_ns = temp;
-	// Generate end label
 
 	opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_END;
@@ -261,7 +266,15 @@ static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func)
 
 static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn)
 {
+	assert(extrn->extrn_stmt.stmt->type == STMT_FUNC);
+	opp_realloc_instrs(opp);
 
+	if (extrn->extrn_stmt.stmt->type == STMT_FUNC) {
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_FUNC;
+		opp->ir.opcodes[opp->ir.instr_idx].func.fn_name = extrn->extrn_stmt.stmt->fn_stmt.name->unary_expr.val.strval;
+		opp->ir.opcodes[opp->ir.instr_idx].func.ext = 1;
+	}
+	opp->ir.instr_idx++;
 }
 
 static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
@@ -313,7 +326,17 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 
 static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret)
 {
-	// need to know function ret type
+	assert(ret->ret_stmt.value != NULL);
+
+	Opp_Type rhs = opp_compile_expr(opp, ret->ret_stmt.value);
+	opp_try_cast(opp, opp->info.ret_type, rhs);
+
+	opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_RET;
+	opp->ir.instr_idx++;
+	
+
+	// no jump for now
 }
 
 static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
@@ -334,9 +357,7 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 		opp->ir.opcodes[opp->ir.instr_idx].var.name = b->key;
 	opp->ir.instr_idx++;
 
-	if (opp->env.curr_ns == opp->env.global_ns)
-		b->offset = opp->info.sym_loc++;
-	else {
+	if (opp->env.curr_ns != opp->env.global_ns) {
 		opp->info.stack_offset -= opp->ir.opcodes[opp->ir.instr_idx - 1].var.size;
 		b->offset = opp->info.stack_offset;
 	}
@@ -379,22 +400,58 @@ static Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr)
 {
 	switch (expr->type)
 	{
-		case EASSIGN:
-			return opp_compile_assign(opp, expr);
-
 		case EUNARY:
 			return opp_compile_unary(opp, expr);
 
 		case EDOT:
 			return opp_compile_dot(opp, expr);
 
+		case EADDR:
+			return opp_compile_addr(opp, expr);
+
+		case EBIN:
+			return opp_compile_bin(opp, expr);
+
+		case ECALL:
+			return opp_compile_call(opp, expr);
+
 		default: break;
 	}
 }
 
+static Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_Node* unary)
+{
+	Opp_Type ret_type = {0};
+
+	struct Opp_Bucket* b = env_get_item(opp->env.curr_ns, unary->unary_expr.val.strval);
+
+	if (b->sym_type.decl->t_type == TYPE_STRUCT) {
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ADDR;
+		opp->info.dot.s_ns = b->sym_type.decl->s_elems;
+	}
+
+	if (b->type == TYPE_GLOBAL || b->type == TYPE_FUNC)  {
+		assert(false);
+	}
+	else {
+		opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_LOC;
+	}
+
+	opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_i32 = b->offset;
+	ret_type = opp_type_to_ir(&b->sym_type);
+	opp->ir.opcodes[opp->ir.instr_idx].constant.loc_type = ret_type.type;
+
+	if (opp->info.in_addr) {
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ADDR;
+		ret_type.depth++;
+	}
+	
+	return ret_type;
+}
+
 static Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unary)
 {
-	Opp_Type ret_type = 0;
+	Opp_Type ret_type = {0};
 	opp_realloc_instrs(opp);
 	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CONST;
 	switch (unary->unary_expr.type)
@@ -402,44 +459,34 @@ static Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unar
 		case TINTEGER: { 
 			opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_I64;
 			opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_i64 = unary->unary_expr.val.i64val;
-			ret_type = IMM_I64;
+			ret_type.type = IMM_I64;
+			ret_type.comp_type = ret_type.type;
 			break;
 		}
 
 		case TFLOAT: {
 			opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_F64;
 			opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_f64 = unary->unary_expr.val.f64val;
-			ret_type = IMM_F64;
+			ret_type.type = IMM_F64;
+			ret_type.comp_type = IMM_F64;
 			break;
 		}
 
 		case TIDENT: {
-			struct Opp_Bucket* b = env_get_item(opp->env.curr_ns, unary->unary_expr.val.strval);
-
-			if (b->sym_type.decl->t_type == TYPE_STRUCT) {
-				opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ADDR;
-				opp->info.dot.s_ns = b->sym_type.decl->s_elems;
-			}
-
-			if (b->type == TYPE_GLOBAL || b->type == TYPE_FUNC)  {
-				opp->ir.opcodes[opp->ir.instr_idx].constant.global = 1;
-				opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_SYM;
-			}
-			else {
-				opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_LOC;
-			}
-			opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_i32 = b->offset;
-			ret_type = opp_type_to_ir(&b->sym_type);
-			opp->ir.opcodes[opp->ir.instr_idx].constant.loc_type = ret_type;
+			ret_type = opp_compile_literal(opp, unary);
 			break;
 		}
 
 		case TSTR: {
 			opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_STR;
 			opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_sym = unary->unary_expr.val.strval;
-			ret_type = IMM_U64;
+			ret_type.type = IMM_U64;
+			ret_type.comp_type = IMM_I8;
+			ret_type.depth = 1;
 			break;
 		}
+
+		default: break;
 	}
 	opp->ir.instr_idx++;
 
@@ -457,16 +504,16 @@ static Opp_Type opp_compile_dot(struct Opp_Context* opp, struct Opp_Node* dot)
 
 	unsigned int off = 0;
 	struct Opp_Stmt_Var* v = NULL;
-	for (unsigned int i = opp->info.dot.s_ns->len; i > 0; i--) {
+	for (unsigned int i = 0; i < opp->info.dot.s_ns->len; i++) {
 		if (!strcmp(dot->dot_expr.right->unary_expr.val.strval,
-			opp->info.dot.s_ns->elems[i-1]->var_stmt.var->unary_expr.val.strval))
+			opp->info.dot.s_ns->elems[i]->var_stmt.var->unary_expr.val.strval))
 		{
-			v = &opp->info.dot.s_ns->elems[i-1]->var_stmt;
+			v = &opp->info.dot.s_ns->elems[i]->var_stmt;
 			if (v->type.decl->t_type == TYPE_STRUCT)
 				opp->info.dot.s_ns = v->type.decl->s_elems;
 			break;
 		}
-		off += opp_type_to_size(&opp->info.dot.s_ns->elems[i-1]->var_stmt.type);
+		off += opp_type_to_size(&opp->info.dot.s_ns->elems[i]->var_stmt.type);
 	}
 
 	if (off > 0) {
@@ -474,25 +521,68 @@ static Opp_Type opp_compile_dot(struct Opp_Context* opp, struct Opp_Node* dot)
 			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
 			opp->ir.opcodes[opp->ir.instr_idx].arith.type = TADD;
 			opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 1;
-			opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = (off > 255) 
+			opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = (off > 128) 
 				? IMM_I8 : IMM_I32;
 			opp->ir.opcodes[opp->ir.instr_idx].arith.val.imm_i32 = (int32_t)off;
 		opp->ir.instr_idx++;
 	}
 
-	if (outer && !opp->info.in_assign) {
+	if (outer == 1 && opp->info.in_assign == 0) {
 		opp_realloc_instrs(opp);
 			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_DEREF;
-			opp->ir.opcodes[opp->ir.instr_idx].cast.type = opp_type_to_ir(&v->type);
+			opp->ir.opcodes[opp->ir.instr_idx].cast.type = opp_type_to_ir(&v->type).type;
+		assert(opp->ir.opcodes[opp->ir.instr_idx].cast.type != IMM_SYM);
 		opp->ir.instr_idx++;
 		opp->info.dot.indot = 0;
 	}
 	return opp_type_to_ir(&v->type);
 }
 
+static int opp_get_comp_type_size(struct Opp_Type* t)
+{
+	if (t->depth > 1) return 8;
+	switch (t->comp_type)
+	{
+		case IMM_U8: case IMM_I8:
+			return 1; 
+		case IMM_U16: case IMM_I16:
+			return 2;
+		case IMM_U32: case IMM_I32: case IMM_F32:
+			return 4;
+		case IMM_U64: case IMM_I64:  case IMM_F64:
+			return 8;
+		case IMM_SYM:
+			return t->depth;
+
+		default: break;
+	}
+	return -1;
+}
+
 static Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin)
 {
+	Opp_Type lhs = opp_compile_expr(opp, bin->bin_expr.left);
+	Opp_Type rhs = opp_compile_expr(opp, bin->bin_expr.right);
 
+	opp_try_cast(opp, lhs, rhs);
+
+	if (lhs.depth > 0) {
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
+		opp->ir.opcodes[opp->ir.instr_idx].arith.type = TMUL;
+		opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 1;
+		opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = IMM_I8;
+		opp->ir.opcodes[opp->ir.instr_idx].arith.val.imm_i8 = opp_get_comp_type_size(&lhs);
+		opp->ir.instr_idx++;
+	}
+
+	opp_realloc_instrs(opp);
+	opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
+	opp->ir.opcodes[opp->ir.instr_idx].arith.type = bin->bin_expr.tok;
+	opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 0; // add this
+	opp->ir.instr_idx++;
+
+	return lhs;
 }
 
 static Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node* sub)
@@ -505,15 +595,15 @@ static Opp_Type opp_compile_dot_assign(struct Opp_Context* opp, struct Opp_Node*
 	opp->info.in_assign = 1;
 	Opp_Type lhs = opp_compile_expr(opp, expr->assign_expr.ident);
 	opp->info.in_assign = 0;
+	opp->info.dot.indot = 0;
 
 	Opp_Type rhs = opp_compile_expr(opp, expr->assign_expr.val);
 
-	// CAST 
 	opp_try_cast(opp, lhs, rhs);
 
 	opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_PTR_ASSIGN;
-		opp->ir.opcodes[opp->ir.instr_idx].cast.type = lhs;
+		opp->ir.opcodes[opp->ir.instr_idx].cast.type = lhs.type;
 	opp->ir.instr_idx++;
 	return lhs;
 }
@@ -536,26 +626,60 @@ static Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* ass
 	Opp_Type rhs = opp_compile_expr(opp, assign->assign_expr.val);
 	Opp_Type lhs = opp_type_to_ir(&bucket->sym_type);
 
-	// opp_try_cast(opp, lhs, rhs);
-	// if (rhs != lhs)
-	// 	rhs = lhs;
+	opp_try_cast(opp, lhs, rhs);
 
 	opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ASSIGN;
-		opp->ir.opcodes[opp->ir.instr_idx].set.loc_type = lhs;
+		opp->ir.opcodes[opp->ir.instr_idx].set.loc_type = lhs.type;
 		opp->ir.opcodes[opp->ir.instr_idx].set.global = 
 			bucket->type == TYPE_GLOBAL || bucket->type == TYPE_EXTERN;
-		if (opp->ir.opcodes[opp->ir.instr_idx].set.global)
+		if (opp->ir.opcodes[opp->ir.instr_idx].set.global) {
 			opp->ir.opcodes[opp->ir.instr_idx].set.val.type = IMM_SYM;
-		else
+			opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_sym = 
+				assign->assign_expr.ident->unary_expr.val.strval;
+		}
+		else {
 			opp->ir.opcodes[opp->ir.instr_idx].set.val.type = IMM_I32;
-		opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_i32 = bucket->offset;
+			opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_i32 = bucket->offset;
+		}
 	opp->ir.instr_idx++;
 }
 
 static Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call)
 {
+	assert(call->call_expr.callee->type != EDOT);
+	Opp_Type ret = {0};
 
+	if (call->call_expr.callee->type == EUNARY) {
+		struct Opp_Bucket* b = env_get_item(opp->env.curr_ns, call->call_expr.callee->unary_expr.val.strval);
+		for (unsigned int i = 0; i < call->call_expr.args->length; i++) {
+			Opp_Type t = opp_compile_expr(opp, call->call_expr.args->list[i]);
+
+			// cast if needed
+			
+			opp_realloc_instrs(opp);
+				opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_MOV_ARG;
+				opp->ir.opcodes[opp->ir.instr_idx].arg.idx = i;
+				opp->ir.opcodes[opp->ir.instr_idx].arg.type = t.type;
+			opp->ir.instr_idx++;
+		}
+
+		opp_realloc_instrs(opp);
+			opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_CALL;
+			opp->ir.opcodes[opp->ir.instr_idx].call.name = call->call_expr.callee->unary_expr.val.strval;
+			opp->ir.opcodes[opp->ir.instr_idx].call.imm = 1;
+			if (b->sym_type.decl->t_type == TYPE_VOID) {
+				opp->ir.opcodes[opp->ir.instr_idx].call.ret = 0;
+			}
+			else {
+				opp->ir.opcodes[opp->ir.instr_idx].call.ret = 1;
+				opp->ir.opcodes[opp->ir.instr_idx].call.ret_type = opp_type_to_ir(&b->sym_type).type;
+			}
+		opp->ir.instr_idx++;
+
+		ret = opp_type_to_ir(&b->sym_type);
+	}
+	return ret;
 }
 
 static Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Node* logic)
@@ -573,14 +697,13 @@ static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logi
 
 }
 
-static Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_Node* unary)
-{
-
-}
-
 static Opp_Type opp_compile_addr(struct Opp_Context* opp, struct Opp_Node* expr)
 {
+	opp->info.in_addr = 1;
+	Opp_Type rhs = opp_compile_expr(opp, expr->deref_expr.deref);
+	opp->info.in_addr = 0;
 
+	return rhs;
 }
 
 static Opp_Type opp_compile_deref(struct Opp_Context* opp, struct Opp_Node* expr)

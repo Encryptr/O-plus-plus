@@ -55,12 +55,17 @@ struct Opp_Cond {
 	unsigned int jloc, hs;
 };
 
-typedef enum OppIr_Const_Type Opp_Type;
+typedef struct Opp_Type {
+	char type;
+	char comp_type;
+	unsigned int depth;
+} Opp_Type;
+
 
 struct Opp_Info {
+	Opp_Type ret_type;
 	int32_t stack_offset;
 	unsigned int label_loc;
-	int32_t sym_loc;
 
 	// Dot expr info
 	struct {
@@ -68,7 +73,7 @@ struct Opp_Info {
 		struct Opp_Stmt_Struct* s_ns;
 	} dot;
 
-	bool in_assign;
+	bool in_assign, in_addr;
 };
 
 struct Opp_Env {
@@ -97,6 +102,7 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt);
 static Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);
 static void opp_set_offsets(struct Opp_Context* opp);
 static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type);
+static void opp_comp_type(Opp_Type* t);
 static unsigned int opp_type_to_size(struct Opp_Type_Decl* type);
 static void opp_try_cast(struct Opp_Context* opp, Opp_Type lhs, Opp_Type rhs);
 

@@ -5,11 +5,20 @@
 
 // struct OppIr_Opcode ops[] = {
 // 	{
-// 		.type = OPCODE_CONST,
-// 		.constant.val.type = IMM_LOC,
-// 		.constant.val.imm_i32 = -26,
-// 		.constant.loc_type = IMM_U32,
-// 		.constant.nopush = 0
+// 		.type = OPCODE_VAR,
+// 		.var.global = 1,
+// 		.var.name = "test",
+// 		.var.size = 8,
+// 		.var.sym = 3
+// 	},
+// 	{
+// 		.type = OPCODE_FUNC,
+// 		.func.fn_name = "main",
+// 		.func.sym = 2
+// 	},
+
+// 	{
+// 		.type = OPCODE_END
 // 	}
 // 	// {
 // 	// 	.type = OPCODE_CONST,

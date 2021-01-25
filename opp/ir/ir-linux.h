@@ -40,16 +40,20 @@ struct Elf_Syms {
 	unsigned int sym_idx;
 };
 
+// Debug
+void dump_data(struct OppIr* ir);
+
+// Interface 
 void strtable_write(unsigned int len, char* bytes);
-void check_syms();
+void make_fn_sym(char* fname, size_t start);
+void make_global_sym(char* name, size_t loc, bool local);
+void make_reloc(unsigned int off, char* sym, int type);
+void make_extern(char* sym_name);
 
-
-struct Elf_Pair* get_sym(unsigned int idx);
-unsigned int get_str_idx();
-
+// Elf setup
 void init_elf_syms();
 void init_strtab();
-
+void init_reloc();
 void init_elf_header();
 void init_text_sect(struct OppIr* ir);
 void init_data_sect(struct OppIr* ir);

@@ -33,6 +33,12 @@ struct Elf_Info {
 		unsigned int str_idx;
 	} strtable;
 	struct Elf_Syms symbols;
+
+	struct {
+		struct Elf64_Reloc* relocs;
+		unsigned int r_idx;
+		size_t r_allocated;
+	};
 };
 
 static struct Elf_Info elf_info;
@@ -53,18 +59,19 @@ static unsigned char shstrtab[] = {
 	0x0
 };
 
-void check_syms()
+void dump_data(struct OppIr* ir)
 {
-}
-
-struct Elf_Pair* get_sym(unsigned int idx)
-{
-	if (idx >= elf_info.symbols.allocated) {
-		printf("REALLOC SYM\n");
+	printf("Data Dump\n");
+	printf("A: %ld S: %ld\n", ir->data_seg.allocated, ir->data_seg.idx);
+	for (unsigned int i = 0; i < ir->data_seg.idx; i++) {
+		if ((i+1) % 16 == 0) printf("\n");
+		else printf("%d ", ir->data_seg.data[i]);
 	}
+	printf("\n");
 
-	elf_info.symbols.sym_idx++;
-	return &elf_info.symbols.pairs[idx];
+	printf("Reloc Dump\n");
+	printf("A: %ld S: %u\n", elf_info.r_allocated, elf_info.r_idx);
+	printf("\n");
 }
 
 void strtable_write(unsigned int len, char* bytes)
@@ -77,9 +84,66 @@ void strtable_write(unsigned int len, char* bytes)
 		elf_info.strtable.str[elf_info.strtable.str_idx++] = bytes[i];
 }
 
-unsigned int get_str_idx()
+void make_extern(char* sym_name)
 {
-	return elf_info.strtable.str_idx + 1;
+	assert(elf_info.symbols.sym_idx != elf_info.symbols.allocated);
+	struct Elf64_Symbol* sym = &elf_info.symbols.pairs[elf_info.symbols.sym_idx].syms;
+	elf_info.symbols.pairs[elf_info.symbols.sym_idx].name = sym_name;
+	sym->st_name = elf_info.strtable.str_idx + 1;
+	sym->st_value = 0;
+	sym->st_size = 0;
+	sym->st_info = 16;
+	sym->st_other = 0;
+	sym->st_shndx = 0;
+	strtable_write(strlen(sym_name), sym_name);
+	elf_info.symbols.sym_idx++;
+}
+
+void make_fn_sym(char* fname, size_t start)
+{
+	assert(elf_info.symbols.sym_idx != elf_info.symbols.allocated);
+	struct Elf64_Symbol* sym = &elf_info.symbols.pairs[elf_info.symbols.sym_idx].syms;
+	elf_info.symbols.pairs[elf_info.symbols.sym_idx].name = fname;
+	sym->st_name = elf_info.strtable.str_idx + 1;
+	sym->st_value = start;
+	sym->st_size = 0;
+	sym->st_info = 16;
+	sym->st_other = 0;
+	sym->st_shndx = 1;
+	strtable_write(strlen(fname), fname);
+	elf_info.symbols.sym_idx++;
+}
+
+void make_global_sym(char* name, size_t loc, bool local)
+{
+	assert(elf_info.symbols.sym_idx != elf_info.symbols.allocated);
+	struct Elf64_Symbol* sym = &elf_info.symbols.pairs[elf_info.symbols.sym_idx].syms;
+	elf_info.symbols.pairs[elf_info.symbols.sym_idx].name = name;
+	sym->st_name = elf_info.strtable.str_idx + 1;
+	sym->st_value = loc;
+	sym->st_size = 0;
+	sym->st_info = local == 1 ? 1 : 16;
+	sym->st_other = 0;
+	sym->st_shndx = 2;
+	strtable_write(strlen(name), name);
+	elf_info.symbols.sym_idx++;
+}
+
+void make_reloc(unsigned int off, char* sym, int type)
+{
+	assert(elf_info.r_idx != elf_info.r_allocated);
+	struct Elf64_Reloc* r = &elf_info.relocs[elf_info.r_idx];
+	uint64_t loc = 0;
+
+	for (unsigned int i = 2; i < elf_info.symbols.sym_idx; i++) {
+		if (!strcmp(elf_info.symbols.pairs[i].name, sym))
+			loc = i;
+	}
+	r->r_offset = off;
+	r->r_info = ELF64_R_INFO(loc, type);
+	r->r_addend = -4;
+
+	elf_info.r_idx++;
 }
 
 void init_strtab()
@@ -94,7 +158,20 @@ void init_strtab()
 	memset(elf_info.strtable.str, 0, INIT_BYTECODE_SIZE);
 }
 
-void init_elf_syms(OppIO* io)
+void init_reloc()
+{
+	elf_info.relocs = (struct Elf64_Reloc*)
+		malloc(sizeof(struct Elf64_Reloc)*DEFAULT_SYMS);
+
+	if (elf_info.relocs == NULL)
+		INTERNAL_ERROR("Malloc fail");
+
+	elf_info.r_idx = 0;
+	elf_info.r_allocated = DEFAULT_SYMS;
+	memset(elf_info.relocs, 0, sizeof(struct Elf64_Reloc)*DEFAULT_SYMS);
+}
+
+void init_elf_syms()
 {
 	elf_info.symbols.pairs = (struct Elf_Pair*)
 		malloc(sizeof(struct Elf_Pair)*DEFAULT_SYMS);
@@ -117,23 +194,7 @@ void init_elf_syms(OppIO* io)
 	sym->st_info = 4;
 	sym->st_other = 0;
 	sym->st_shndx = 65521;
-	// sym = &elf_info.symbols.pairs[2].syms;
-	// // Text section
-	// sym->st_name = 0;
-	// sym->st_value = 0;
-	// sym->st_size = 0;
-	// sym->st_info = 3;
-	// sym->st_other = 0;
-	// sym->st_shndx = 1;
-	// // Data Section
-	// sym = &elf_info.symbols.pairs[3].syms;
-	// sym->st_name = 0;
-	// sym->st_value = 0;
-	// sym->st_size = 0;
-	// sym->st_info = 3;
-	// sym->st_other = 0;
-	// sym->st_shndx = 2;
-	elf_info.symbols.sym_idx += 2;
+	elf_info.symbols.sym_idx = 2;
 }
 
 void init_elf_header()
@@ -206,8 +267,8 @@ void init_data_sect(struct OppIr* ir)
 	sect->sh_entsize = 0;
 
 	while (ir->data_seg.idx % 8 != 0) {
-		// oppir_check_realloc(ir, 1);
-		printf("ADD DATA\n");
+		oppir_check_data(ir, 1);
+		ir->data_seg.data[ir->data_seg.idx++] = 0;
 		break;
 	}
 }
@@ -220,7 +281,7 @@ void init_shstrtab_sect()
 	sect->sh_flags = 0;
 	sect->sh_addr = 0x0;
 	sect->sh_offset = 0x0;
-	sect->sh_size = 50;
+	sect->sh_size = sizeof(shstrtab);
 	sect->sh_link = 0;
 	sect->sh_info = 0;
 	sect->sh_addralign = 1;
@@ -265,7 +326,7 @@ void init_rela_text_sect()
 	sect->sh_flags = 0;
 	sect->sh_addr = 0x0;
 	sect->sh_offset = 0x0;
-	sect->sh_size = 0; // Reloc size * amount
+	sect->sh_size = sizeof(struct Elf64_Reloc)*elf_info.r_idx;
 	sect->sh_link = 3; 
 	sect->sh_info = 1;
 	sect->sh_addralign = 4;
@@ -284,6 +345,8 @@ void elf_offsets(struct OppIr* ir)
 		(ir->code.idx - elf_info.sect_list[SECT_TEXT].sh_size);
 
 	elf_info.sect_list[SECT_DATA].sh_offset = offset;
+	offset += elf_info.sect_list[SECT_DATA].sh_size +
+		(ir->data_seg.idx - elf_info.sect_list[SECT_DATA].sh_size);
 	// do data
 
 	for (int i = 2; i < elf_info.sect_amount-1; i++) {
@@ -313,6 +376,7 @@ void write_elf64(struct OppIr* ir, OppIO* io)
 		fwrite(&elf_info.symbols.pairs[i].syms, sizeof(struct Elf64_Symbol), 1, io->file);
 
 	// Rela Text
+	fwrite(elf_info.relocs, sizeof(struct Elf64_Reloc), elf_info.r_idx, io->file);
 
 	// Shstrtab
 	fwrite(shstrtab, 1, elf_info.sect_list[SECT_SHSTRTAB].sh_size, io->file);

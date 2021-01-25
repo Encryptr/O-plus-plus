@@ -24,7 +24,6 @@
 #include "../parser/parser.h"
 #include "../memory/memory.h"
 #include "../ast/ast.h"
-#include "nodes.h"
 
 struct Opp_Debug_Func {
 	char* scope;

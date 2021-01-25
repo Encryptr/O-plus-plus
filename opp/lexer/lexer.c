@@ -426,6 +426,26 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 	return INVALID;
 }
 
+static void opp_long_comment(struct Opp_Scan* s)
+{
+	unsigned int d = 1;
+	s->src++;
+	while (d > 0 && *s->src) {
+		if (*s->src == '*' && s->src[1] == '/')
+			d--;
+		else if (*s->src == '\n') {
+			s->line++;
+			s->colum = 0;
+		}
+		else if (*s->src == '/' && s->src[1] == '*')
+			d++;
+		INCR;
+	}
+
+	if (!(*s->src) && d != 0)
+		opp_error(s, "Expected terminating '*/'");
+}
+
 void opp_next(struct Opp_Scan* s)
 {
 	memset(s->t.buffer.buf, 0, s->t.buffer.len);
@@ -442,13 +462,16 @@ void opp_next(struct Opp_Scan* s)
 				while (*s->src != '\n' && *s->src) {
 					s->src++;
 				}
+				s->colum = 0;
+				s->line++;
+			}
+			else if (*s->src == '*') {
+				opp_long_comment(s);
 			}
 			else {
 				s->t.id = TDIV;
 				return;
 			}
-			s->colum = 0;
-			s->line++;
 		}
 		else if (isletter(*s->src)) {
 			opp_lex_identifier(s); 
