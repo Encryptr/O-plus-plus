@@ -25,7 +25,9 @@
 #include "../ast/ast.h"
 
 #define STACK_SIZE 8
+// Small maps change to larger for large files
 #define HASH_SIZE 320
+// #define HASH_SIZE 1600
 
 enum Opp_Bucket_Type {
 	TYPE_GLOBAL, TYPE_LOCAL,

@@ -437,13 +437,14 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 		case OPCODE_MOV_ARG:
 			oppir_eval_mov_arg(ir, &op->arg);
 			break;
-		// case OPCODE_LABEL:
-		// 	oppir_eval_label(ir, &op->constant);
-		// 	break;
 
-		// case OPCODE_JMP:
-		// 	oppir_eval_jmp(ir, &op->jmp);
-		// 	break;
+		case OPCODE_LABEL:
+			oppir_eval_label(ir, &op->constant);
+			break;
+
+		case OPCODE_JMP:
+			oppir_eval_jmp(ir, &op->jmp);
+			break;
 
 		// case OPCODE_CMP:
 		// 	oppir_eval_cmp(ir, &op->cmp);
@@ -472,24 +473,22 @@ void oppir_eval_opcode(struct OppIr* ir, struct OppIr_Opcode* op)
 	}
 }
 
-static void oppir_eval_sym(struct OppIr* ir, struct OppIr_Const* imm)
+static void oppir_eval_sym(struct OppIr* ir, enum Regs reg, struct OppIr_Const* imm)
 {
-
-	// add types put in separet func
-	// oppir_check_realloc(ir, 7);
-	// IR_EMIT(0x48); IR_EMIT(0x8b);
-	// IR_EMIT(0x05 + (reg_type*8));
-	// IR_EMIT(0x00); IR_EMIT(0x00);
-	// IR_EMIT(0x00); IR_EMIT(0x00);
-
-
-	// after this make deref of reg with size
-	// add reallocation to ir_linxu module
+	assert(imm->loc_type != IMM_F32 && imm->loc_type != IMM_F64);
+	oppir_check_realloc(ir, 3);
+	IR_EMIT(0x48); IR_EMIT(0x8b);
+	IR_EMIT(0x05 + (reg*8));
+	
+	make_reloc(ir->code.idx, imm->val.imm_sym, 9);
+	imm->val.type = IMM_I32;
+	imm->val.imm_i32 = 0;
 }
 
 static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 {
 	enum Regs reg_type;
+	bool sym = false;
 
 	if (!imm->nopush) {
 		enum OppIr_Const_Type t;
@@ -505,7 +504,8 @@ static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 		reg_type = REG_RAX;
 
 	if (imm->val.type == IMM_SYM) {
-		oppir_eval_sym(ir, imm);
+		oppir_eval_sym(ir, reg_type, imm);
+		sym = true;
 	}
 	else if (imm->val.type > IMM_LOC && imm->val.type < IMM_F32) {
 		oppir_check_realloc(ir, 2);
@@ -517,8 +517,9 @@ static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm)
 		assert(false);
 		printf("ADD FLOATs\n");
 	}
-	else if (imm->val.type == IMM_LOC)
+	else if (imm->val.type == IMM_LOC) {
 		oppir_write_reg(ir, reg_type, imm);
+	}
 	else if (imm->val.type == IMM_STR) {
 		oppir_gen_label();
 		make_global_sym((char*)a_label, ir->data_seg.idx, 0);
@@ -661,7 +662,11 @@ static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Se
 
 static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set)
 {
-	assert(set->global != 1);
+	if (set->global) {
+		struct OppIr_Cast c = {.type = set->loc_type};
+		oppir_eval_ptr_assign(ir, &c);
+		return;
+	}
 
 	struct Register reg_type = oppir_pop_reg(ir);
 	bool small = set->val.imm_i32 > -128;
@@ -771,6 +776,9 @@ static void oppir_eval_end(struct OppIr* ir)
 
 	ir->code.idx = temp;
 
+	struct OppIr_Const ret = { .val.imm_i32 = 0 };
+	oppir_eval_label(ir, &ret);
+
 	IR_EMIT(0xc9); 
 	IR_EMIT(0xc3);
 
@@ -779,23 +787,23 @@ static void oppir_eval_end(struct OppIr* ir)
 
 static void oppir_set_offsets(struct OppIr* ir)
 {
-	// struct OppIr_Const val = {
-	// 	.type = IMM_I32,
-	// 	.imm_i32 = 0
-	// };
+	struct OppIr_Value val = {
+		.type = IMM_I32,
+		.imm_i32 = 0
+	};
 
-	// for (unsigned int i = 0; i < ir->offsets.jmp_idx; i++) {
-	// 	size_t temp = ir->code.idx;
+	for (unsigned int i = 0; i < ir->offsets.jmp_idx; i++) {
+		size_t temp = ir->code.idx;
 
-	// 	int32_t jmp_loc = ir->offsets.offset_table[ir->offsets.jmp_table[i].table_pos] 
-	// 		- (ir->offsets.jmp_table[i].loc + 4);
+		int32_t jmp_loc = ir->offsets.offset_table[ir->offsets.jmp_table[i].table_pos] 
+			- (ir->offsets.jmp_table[i].loc + 4);
 
-	// 	ir->code.idx = ir->offsets.jmp_table[i].loc;
-	// 	val.imm_i32 = jmp_loc;
-	// 	oppir_write_const(ir, &val);
+		ir->code.idx = ir->offsets.jmp_table[i].loc;
+		val.imm_i32 = jmp_loc;
+		oppir_write_const(ir, &val);
 
-	// 	ir->code.idx = temp;
-	// }
+		ir->code.idx = temp;
+	}
 }
 
 static void oppir_cast_to_f32(struct OppIr* ir, enum Regs reg)
@@ -883,8 +891,8 @@ static void oppir_eval_addr(struct OppIr* ir, struct OppIr_Const* addr)
 
 	oppir_check_realloc(ir, 7);
 
-	if (addr->global) {
-		assert(false);
+	if (addr->global || addr->val.type == IMM_SYM) {
+		assert(false); // not needed for globals??
 		return;
 	}
 
@@ -1108,30 +1116,37 @@ static void oppir_eval_ret(struct OppIr* ir)
 {
 	struct Register reg = oppir_pop_reg(ir);
 
-	if (reg.reg == REG_RAX || reg.reg == REG_XMM0)
-		return;
+	if (reg.reg != REG_RAX && reg.reg != REG_XMM0) {
 
-	switch (reg.reg)
-	{
-		case REG_RCX:
-		case REG_RDX:
-			oppir_check_realloc(ir, 3);
-			IR_EMIT(0x48);
-			IR_EMIT(0x89);
-			IR_EMIT(0xc0 + (reg.reg*8));
-			break;
+		switch (reg.reg)
+		{
+			case REG_RCX:
+			case REG_RDX:
+				oppir_check_realloc(ir, 3);
+				IR_EMIT(0x48);
+				IR_EMIT(0x89);
+				IR_EMIT(0xc0 + (reg.reg*8));
+				break;
 
-		default:
-			oppir_check_realloc(ir, 4);
-			if (reg.type == IMM_F32)
-				IR_EMIT(0xf3);
-			else
-				IR_EMIT(0xf2);
+			default:
+				oppir_check_realloc(ir, 4);
+				if (reg.type == IMM_F32)
+					IR_EMIT(0xf3);
+				else
+					IR_EMIT(0xf2);
 
-			IR_EMIT(0x10);
-			IR_EMIT(0xc1 + (reg.reg-4));
-			break;
+				IR_EMIT(0x10);
+				IR_EMIT(0xc1 + (reg.reg-4));
+				break;
+		}
 	}
+
+	struct OppIr_Jmp jmp = {
+		.type = PURE_JMP,
+		.loc = 0
+	};
+
+	oppir_eval_jmp(ir, &jmp);
 }
 
 static void oppir_eval_call(struct OppIr* ir, struct OppIr_Call* call)
@@ -1171,4 +1186,43 @@ static void oppir_eval_mov_arg(struct OppIr* ir, struct OppIr_Arg* arg)
 
 	IR_EMIT(0x48); IR_EMIT(0x89);
 	IR_EMIT(0xc7);
+}
+
+static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc)
+{
+	if ((unsigned int)loc->val.imm_i32 >= ir->offsets.allocated) {
+		printf("LABEL REALLOC NEEDED\n");
+	}
+
+	ir->offsets.offset_table[loc->val.imm_i32] = ir->code.idx;
+}
+
+static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp)
+{
+	if (jmp->loc >= ir->offsets.allocated) {
+		printf("LABEL REALLOC NEEDED\n");
+	}
+
+	if (jmp->type == PURE_JMP)
+		IR_EMIT(0xe9);
+	else
+		IR_EMIT(0x0f);
+
+	switch (jmp->type)
+	{
+		case TEQEQ:  IR_EMIT(0x84); break;
+		case TNOTEQ: IR_EMIT(0x85); break;
+		case TGT:    IR_EMIT(0x8f); break;
+		case TLE:    IR_EMIT(0x8e); break;
+		case TLT:    IR_EMIT(0x8c); break;
+		case TGE:    IR_EMIT(0x8d); break;
+	}
+	ir->offsets.jmp_table[ir->offsets.jmp_idx].loc = ir->code.idx;
+	ir->offsets.jmp_table[ir->offsets.jmp_idx].table_pos = jmp->loc;
+	IR_EMIT(0x00);
+	IR_EMIT(0x00);
+	IR_EMIT(0x00);
+	IR_EMIT(0x00);
+
+	ir->offsets.jmp_idx++;
 }

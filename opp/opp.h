@@ -31,6 +31,6 @@ struct Opp_Context;
 
 void opp_init_file(const char* fname, struct Opp_Scan* s);
 void opp_init_module(const char* fname, struct Opp_Options* opts);
-void opp_add_module(const char* fname, struct Opp_Context* opp);
+struct Opp_Parser* opp_add_module(const char* fname);
 
 #endif /* OPP_H */

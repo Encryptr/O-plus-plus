@@ -43,13 +43,34 @@ void opp_init_file(const char* fname, struct Opp_Scan* s)
 	init_opp_lex(s, content);
 }
 
-static void opp_debug_info(double ptime, double ctime, struct Opp_Context* opp)
+enum {
+	S_PARSER,
+	S_ANALIZE,
+	S_COMPILER,
+	S_IR
+};
+
+typedef struct {
+	clock_t start, end;
+	double list[4];
+} Opp_Stats;
+
+#define START_CLOCK() { stats.start = clock(); }
+#define END_CLOCK() { stats.end = clock(); }
+#define GET_TIME(elem) { \
+	stats.list[elem] = ((double) (stats.end - stats.start)) / CLOCKS_PER_SEC; \
+}
+
+static void opp_debug_info(Opp_Stats* s, struct Opp_Parser* opp)
 {
 	printf("%sOpp Compiler Debug Info\n%s", CL_GREEN, CL_RESET);
-	printf("File: %s\n", opp->parser->lex->io.fname);
-	printf("Size: %ld\n", opp->parser->lex->io.fsize);
-	printf("Parser time: %lf\n", ptime);
-	printf("Compile / CodeGen time: %lf\n", ctime);
+	printf("File: %s\n", opp->lex->io.fname);
+	printf("Size: %ld\n", opp->lex->io.fsize);
+	printf("Benchmarks: (time)\n");
+	printf(" - Parser:   %lf\n", s->list[S_PARSER]);
+	printf(" - Analizer: %lf\n", s->list[S_ANALIZE]);
+	printf(" - Compiler: %lf\n", s->list[S_COMPILER]);
+	printf(" - Ir:       %lf\n", s->list[S_IR]);
 	#ifdef X86_CPU
 	printf("CPU: x86-64\n");
 	#else
@@ -78,57 +99,49 @@ void run_main(struct OppIr* ir)
 
 void opp_init_module(const char* fname, struct Opp_Options* opts)
 {
+	Opp_Stats stats = {0};
 	struct Opp_Scan scan = {0};
 
 	opp_init_file(fname, &scan);
 
-	clock_t pstart, pend, cstart, cend;
-	double ptime, ctime;
-
-	pstart = clock();
+	START_CLOCK();
 	struct Opp_Parser* parser = opp_parser_init(&scan);
 	opp_parser_begin(parser);
-	pend = clock();
-	ptime = ((double) (pend - pstart)) / CLOCKS_PER_SEC;
+	END_CLOCK();
+	GET_TIME(S_PARSER);
 
+	START_CLOCK();
 	struct Opp_Analize* ctx = opp_init_analize(parser, opts);
 	analize_tree(ctx);
+	END_CLOCK();
+	GET_TIME(S_ANALIZE);
 
-	struct Opp_Context* context = opp_init_compile(parser, opts);
-	opp_compile(context);
+	// struct Opp_Context* context = opp_init_compile(parser, opts);
+	// opp_compile(context);
 
-	cstart = clock();
-	context->oppir = init_oppir();
-	oppir_get_opcodes(context->oppir, &context->ir);
-	oppir_eval(context->oppir);
-	OppIO io = {
-		.file = fopen("out.o", "wb")
-	};
-	// dump_bytes(context->oppir, &io);
-	// run_main(context->oppir);
-	oppir_emit_obj(context->oppir, &io);
-	cend = clock();
-	ctime = ((double) (cend - cstart)) / CLOCKS_PER_SEC;
+	// context->oppir = init_oppir();
+	// oppir_get_opcodes(context->oppir, &context->ir);
+	// oppir_eval(context->oppir);
+	// OppIO io = {
+	// 	.file = fopen("out.o", "wb")
+	// };
+	// // dump_bytes(context->oppir, &io);
+	// oppir_emit_obj(context->oppir, &io);
 
-	// if (opts->debug)
-	// 	opp_debug_info(ptime, ctime, context);
+	if (opts->debug)
+		opp_debug_info(&stats, parser);
 }
 
-void opp_add_module(const char* fname, struct Opp_Context* opp)
+struct Opp_Parser* opp_add_module(const char* fname)
 {
 	struct Opp_Scan scan = {0};
-	struct Opp_Parser* old_parser = opp->parser;
 
 	opp_init_file(fname, &scan);
 
 	struct Opp_Parser* parser = opp_parser_init(&scan);
 	opp_parser_begin(parser);
 
-	opp->parser = parser;
-
-	// opp_compile(opp);
-
-	opp->parser = old_parser;
+	return parser;
 }
 
 #define CMP(a) !strcmp(argv[i], a)

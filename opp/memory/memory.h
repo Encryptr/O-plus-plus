@@ -1,4 +1,4 @@
-/** @file memory.h
+/* @file memory.h
  * 
  * @brief Memory pool implementation
  *      

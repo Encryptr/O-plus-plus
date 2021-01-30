@@ -303,8 +303,6 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 		case '}': 
 			return TCLOSEC;
 
-		case '.': 
-			return TDOT;
 
 		case ':': 
 			return TCOLON;
@@ -314,6 +312,16 @@ enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 
 		case '^':
 			return TBITXOR;
+
+		case '.': {
+			INCR;
+			if (*s->src == '.' && s->src[1] == '.') {
+				INCR;
+				return TVA_ARGS;
+			}
+			DECR;
+			return TDOT;
+		}
 
 		case '-': {
 			INCR;

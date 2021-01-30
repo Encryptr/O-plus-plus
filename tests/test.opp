@@ -1,13 +1,16 @@
+// struct t1 {
+// 	char* a;
+// 	int b;
+// 	long* k;
+// 	char d;
+// };
+
 struct t2 {
-	char* b;
-	int c;
-	short k;
+	int a;
+	char b; 
 	long d;
 };
 
-// struct t1 {
-// 	t2 d;
-// };
 
 // struct test {
 // 	t1 a;
@@ -16,21 +19,31 @@ struct t2 {
 
 // extern void puts(char* str);
 // extern void print_this(t2* a);
-extern void print(int c);
+// extern void print(int c);
+
+// extern int a; add this
+
+// import "./stdlib/libc.opp";
+
 
 void main() {
+
 	// t2 a;
+
 	// a.c = 2;
 	// a.b = "hello";
 	// a.d = 1234;
 	// print_this(&a);
+	// a = 2;
+	// add so float a = 2; will not need cast do this in semantics
 
-	int a;
-
-	// char a = 2;
+	// int a = 2;
 	// int b = 3;
-	// int c = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));
+	// int c = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));	
+	// return c;
 	// print(c);
+
+	// return a;
 }
 
 

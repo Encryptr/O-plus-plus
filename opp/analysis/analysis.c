@@ -19,8 +19,7 @@
 
 #include "analysis.h"
 
-static void opp_set_sym_idx(struct Opp_Node* node, unsigned int idx);
-static int get_type_size(struct Opp_Type_Decl* type);
+static unsigned int get_type_size(struct Opp_Type_Decl* type);
 static struct Opp_Node* opp_analize_time_eval(struct Opp_Analize* ctx, struct Opp_Node* expr);
 
 // Globals
@@ -29,6 +28,7 @@ static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn);
 static void opp_analize_args(struct Opp_Analize* ctx, struct Opp_Node* fn, struct Opp_Bucket* bucket);
 static void opp_analize_struct(struct Opp_Analize* ctx, struct Opp_Node* node);
 static void opp_analize_extern(struct Opp_Analize* ctx, struct Opp_Node* node);
+static void opp_analize_import(struct Opp_Analize* ctx, struct Opp_Node* node);
 
 // Stmt
 static void opp_analize_stmt(struct Opp_Analize* ctx, struct Opp_Node* node);
@@ -49,7 +49,6 @@ static Opp_Obj opp_analize_elem(struct Opp_Analize* ctx, struct Opp_Node* node);
 static Opp_Obj opp_analize_addr(struct Opp_Analize* ctx, struct Opp_Node* node);
 static Opp_Obj opp_analize_adjust(struct Opp_Analize* ctx, struct Opp_Node* node);
 static Opp_Obj opp_analize_sizeof(struct Opp_Analize* ctx, struct Opp_Node* node);
-
 
 struct Opp_Analize* opp_init_analize(struct Opp_Parser* parser, struct Opp_Options* opts)
 {
@@ -134,19 +133,14 @@ static void opp_warning(struct Opp_Analize* ctx,
 	va_end(ap);
 }
 
-static void opp_set_sym_idx(struct Opp_Node* node, unsigned int idx)
-{
-	if (node->type != EUNARY)
-		return;
-
-	node->unary_expr.type = TINTEGER;
-	node->unary_expr.val.i64val = (int64_t)idx;
-}
-
-static int get_type_size(struct Opp_Type_Decl* type)
+static unsigned int get_type_size(struct Opp_Type_Decl* type)
 {
 	if (type->depth > 0 && type->size == 0)
 		return 8;
+
+	// TODO: IS THIS NEEDED????
+	// if (type->size > 0)
+	// 	return type->size;
 
 	switch (type->decl->t_type)
 	{
@@ -157,8 +151,7 @@ static int get_type_size(struct Opp_Type_Decl* type)
 		case TYPE_I64:    return 8;
 		case TYPE_FLOAT:  return 4;
 		case TYPE_DOUBLE: return 8;
-		case TYPE_STRUCT: return -1;
-
+		case TYPE_STRUCT: return type->decl->size;
 		default: break;
 	}
 
@@ -191,8 +184,26 @@ static void opp_analize_global(struct Opp_Analize* ctx, struct Opp_Node* node)
 			opp_analize_struct(ctx, node);
 			break;
 
+		case STMT_IMPORT:
+			opp_analize_import(ctx, node);
+			break;
+
 		default: break;
 	}
+}
+
+static void opp_analize_import(struct Opp_Analize* ctx, struct Opp_Node* node)
+{
+	struct Opp_Analize* save = ctx;
+
+	ctx = opp_init_analize(node->import_stmt.import, ctx->opts);
+	ctx->ns = save->ns;
+	ctx->curr_ns = save->ns;
+	ctx->parser->scope = save->ns;
+	analize_tree(ctx);
+
+	free(ctx);
+	ctx = save;
 }
 
 static void opp_analize_extern(struct Opp_Analize* ctx, struct Opp_Node* node)
@@ -220,7 +231,8 @@ static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn)
 	bucket->sym_type = func->type;
 	bucket->args = &fn->fn_stmt;
 
-	assert(func->type.decl->t_type != TYPE_STRUCT);
+	if (func->type.decl->t_type == TYPE_STRUCT)
+		opp_semantics_error(ctx, fn, "Cannot return struct from function '%s'", bucket->key);
 
 	ctx->debug.res_name = func->name->unary_expr.val.strval;
 
@@ -246,7 +258,8 @@ static void opp_analize_func(struct Opp_Analize* ctx, struct Opp_Node* fn)
 		opp_analize_stmt(ctx, func->body->block_stmt.stmts[i]);
 
 	if (ctx->debug.ret == 0 && bucket->sym_type.decl->t_type != TYPE_VOID)
-		opp_warning(ctx, fn, "No return statement found");
+		opp_warning(ctx, fn, "No return statement found, expected '%s', depth '%d'",
+			bucket->sym_type.decl->id, bucket->sym_type.depth);
 
 	ctx->curr_ns = temp;
 	ctx->debug.scope = NULL;
@@ -269,17 +282,94 @@ static void opp_analize_args(struct Opp_Analize* ctx, struct Opp_Node* fn, struc
 	}
 }
 
+static unsigned int opp_get_plain_size(struct Opp_Type_Decl* type)
+{
+	if (type->depth > 0 && type->size == 0)
+		return 8;
+	
+	switch (type->decl->t_type)
+	{
+		case TYPE_VOID:   return 0;
+		case TYPE_I8:     return 1;
+		case TYPE_I16:    return 2;
+		case TYPE_I32:    return 4;
+		case TYPE_I64:    return 8;
+		case TYPE_FLOAT:  return 4;
+		case TYPE_DOUBLE: return 8;
+		case TYPE_STRUCT: return type->decl->l_mem;
+		default: break;
+	}
+
+	return 0;
+}
+
 static void opp_analize_struct(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
+	struct Opp_Type_Entry* t = get_type(&ctx->parser->tree, node->struct_stmt.name);
+	node->struct_stmt.ns = init_namespace(NULL, (void*)alloc);
 	struct Opp_Namespace* temp = ctx->curr_ns;
 	ctx->curr_ns = node->struct_stmt.ns;
+
+	unsigned int allign = 0;
+	unsigned int cur_size = 0;
+	struct Opp_Node** var = node->struct_stmt.elems;
+
+	// Add to namespace
 	for (unsigned int i = 0; i < node->struct_stmt.len; i++) {
 		if (node->struct_stmt.elems[i]->type != STMT_VAR)
 			opp_semantics_error(ctx, node, 
 				"'%s' struct elements can only be var declarations", node->struct_stmt.name);
 
+		if (node->struct_stmt.elems[i]->var_stmt.type.decl->t_type == TYPE_STRUCT &&
+			node->struct_stmt.elems[i]->var_stmt.type.depth == 0 && 
+			t == node->struct_stmt.elems[i]->var_stmt.type.decl)
+			opp_semantics_error(ctx, node, "Cannot make struct obj of '%s' inside '%s'", 
+				t->id, t->id);
 		opp_analize_var(ctx, node->struct_stmt.elems[i]);
 	}
+
+	// Find largest type
+	for (unsigned int i = 0; i < node->struct_stmt.len; i++) {
+		unsigned int s = 0;
+
+		if (var[i]->var_stmt.type.decl->t_type == TYPE_STRUCT 
+			&& var[i]->var_stmt.type.depth == 0)
+			s = var[i]->var_stmt.type.decl->l_mem;
+		else 
+			s = opp_get_plain_size(&var[i]->var_stmt.type);
+
+		if (s > allign)
+			allign = s;
+	}
+
+	// Calculate member offsets
+	for (unsigned int i = 0; i < node->struct_stmt.len; i++) {
+		unsigned int s = opp_get_plain_size(&var[i]->var_stmt.type);
+
+		var[i]->var_stmt.off = 0;
+		if (var[i]->var_stmt.type.decl->t_type != TYPE_I8) {
+			if (cur_size != 0) {
+				while (cur_size % s != 0) {
+					var[i]->var_stmt.off++;
+					cur_size++;
+				}
+			}
+		}
+
+		if (var[i]->var_stmt.type.size > 0)
+			s = var[i]->var_stmt.type.size;
+		else if (var[i]->var_stmt.type.decl->t_type == TYPE_STRUCT &&
+				var[i]->var_stmt.type.depth == 0)
+			s = var[i]->var_stmt.type.decl->size;
+
+		cur_size += s;
+	}
+
+	while (cur_size % allign != 0)
+		cur_size++;
+
+	t->l_mem = allign;
+	t->size = cur_size;
 	ctx->curr_ns = temp;
 }
 
@@ -300,10 +390,9 @@ static void opp_analize_stmt(struct Opp_Analize* ctx, struct Opp_Node* node)
 			break;
 
 		default:
-			// opp_warning(ctx, node, "Unused expression found");
 			// node->type = IGNORE;
-	
-			// TESTING
+			opp_warning(ctx, node, "Unused expression found");
+
 			opp_analize_expr(ctx, node);
 			break;
 	}
@@ -311,13 +400,17 @@ static void opp_analize_stmt(struct Opp_Analize* ctx, struct Opp_Node* node)
 
 static void opp_analize_ret(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	// fix this
+	// Returning value from void
 	if ((ctx->debug.ret_type.decl->t_type == TYPE_VOID && ctx->debug.ret_type.depth == 0) 
 		&& node->ret_stmt.value != NULL)
 		opp_semantics_error(ctx, node, "Attempting to return value from 'void' function");
 
-	if (ctx->debug.ret_type.decl->t_type != TYPE_VOID && node->ret_stmt.value == NULL)
-		opp_semantics_error(ctx, node, "Expected value in return statement");
+	// Return without value but expected
+	if (ctx->debug.ret_type.decl->t_type != TYPE_VOID && node->ret_stmt.value == NULL) {
+		ctx->debug.ret = 1;
+		opp_warning(ctx, node, "No return value in function which expects value");
+		return;
+	}
 
 	if (ctx->debug.ret_type.decl->t_type != TYPE_VOID) {
 		Opp_Obj type = opp_analize_expr(ctx, node->ret_stmt.value);
@@ -335,10 +428,9 @@ static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node)
 	struct Opp_Node* name = NULL;
 	bool assign = false;
 
-	int size = get_type_size(&var->type);
+	unsigned int size = get_type_size(&var->type);
 	if (size == 0)
-		opp_semantics_error(ctx, node, 
-			"Cannot use type 'void' to declare a variable");
+		opp_semantics_error(ctx, node, "Cannot use type 'void' to declare a variable");
 
 	switch (var->var->type)
 	{
@@ -358,7 +450,7 @@ static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node)
 				if (name->elem_expr.loc->unary_expr.type != TINTEGER)
 					opp_semantics_error(ctx, node,
 						"Non constant values not allowed in array declaration");
-				size *= (int)name->elem_expr.loc->unary_expr.val.i64val;				
+				size *= name->elem_expr.loc->unary_expr.val.i64val;				
 				name = name->elem_expr.name;
 			}
 
@@ -366,7 +458,7 @@ static void opp_analize_var(struct Opp_Analize* ctx, struct Opp_Node* node)
 				opp_semantics_error(ctx, node,
 					"Non constant values not allowed in array declaration '%s'", name->unary_expr.val.strval);
 
-			size *= (int)var->var->elem_expr.loc->unary_expr.val.i64val;
+			size *= var->var->elem_expr.loc->unary_expr.val.i64val;
 			var->type.depth = 1;
 			var->type.size = size;
 			var->var = name;
@@ -439,7 +531,9 @@ static Opp_Obj opp_analize_expr(struct Opp_Analize* ctx, struct Opp_Node* node)
 		case ESIZEOF:
 			return opp_analize_sizeof(ctx, node);
 
-		default: break;
+		default:
+			opp_semantics_error(ctx, node, "Use of unsupported expr");
+			break;
 	}
 }
 
@@ -571,6 +665,8 @@ static struct Opp_Node* opp_analize_time_eval(struct Opp_Analize* ctx, struct Op
 			return expr;
 		}
 
+		// TODO: Add sizeof here
+
 		default: break;
 	}
 	return NULL;
@@ -627,42 +723,84 @@ static Opp_Obj opp_analize_bin(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
 	opp_analize_time_eval(ctx, node);
 
-	if (node->type == EUNARY) {
+	if (node->type == EUNARY)
 		return opp_analize_unary(ctx, node);
-	}
 
-	Opp_Obj lhs = opp_analize_expr(ctx, node->bin_expr.left);
-	Opp_Obj rhs = opp_analize_expr(ctx, node->bin_expr.right);
+	/* ### Swap sides optimization for compiler ### */
+	/* Rules
+	1: 2 + a / 2.3 + a
+		Swap immidiates to left
+	2: m + test()
+		Swap function calls to right
 
-	if (lhs.depth != rhs.depth)
-		opp_warning(ctx, node, "Preforming bin operation mixing with ptr '%s' '%s'",
-			lhs.decl->id, rhs.decl->id);
-
-	if (rhs.decl->t_type == TYPE_STRUCT || lhs.decl->t_type == TYPE_STRUCT)
-		opp_semantics_error(ctx, node, "Not allowed to mix struct type in bin operation");
-
-	// add no array adding
-
-	if (lhs.depth > 0 || rhs.depth > 0) { // add this to all other spots, add all rules
-		Opp_Obj* p = lhs.depth > 0 ? &lhs : &rhs;
-		Opp_Obj* t = p == &lhs ? &rhs : &lhs;
-
-		if (t->depth != 0 && t->decl->t_type != p->decl->t_type) 
-			opp_semantics_error(ctx, node, "Not allowed to mix types when preforming pointer arith");
-	}
-
-	// Side swapping
-	struct Opp_Node* temp;
-	if (node->bin_expr.left->type == EUNARY 
-		&& (node->bin_expr.left->unary_expr.type == TINTEGER || node->bin_expr.left->unary_expr.type == TFLOAT)) {
+	3: a + b
+		No swap
+	4: test() + test()
+		No swap
+	*/
+	struct Opp_Node* temp = NULL;
+	if ((node->bin_expr.left->type == EUNARY) &&
+		(node->bin_expr.left->unary_expr.type == TINTEGER 
+		|| node->bin_expr.left->unary_expr.type == TFLOAT)) 
+	{
+		// Swap imm to left side
 		temp = node->bin_expr.left;
 		node->bin_expr.left = node->bin_expr.right;
 		node->bin_expr.right = temp;
 	}
 	else if (node->bin_expr.right->type == ECALL) {
+		// Swap func call to left side
 		temp = node->bin_expr.left;
 		node->bin_expr.left = node->bin_expr.right;
 		node->bin_expr.right = temp;
+	}
+
+	const char *l_name, *r_name;
+	Opp_Obj lhs = opp_analize_expr(ctx, node->bin_expr.left);
+	l_name = ctx->debug.res_name;
+	Opp_Obj rhs = opp_analize_expr(ctx, node->bin_expr.right);
+	r_name = ctx->debug.res_name;
+
+	// Cannot add struct obj of non ptr type
+	if ((rhs.decl->t_type == TYPE_STRUCT && rhs.depth == 0) 
+		|| 
+	   (lhs.decl->t_type == TYPE_STRUCT && lhs.depth == 0))
+		opp_semantics_error(ctx, node, "Not allowed to preform arith on struct type");
+
+	// Warn adding two pointer types
+	if (rhs.depth > 0 && lhs.depth > 0)
+		opp_warning(ctx, node, "Adding two pointers '%s' '%s'", l_name, r_name);
+
+	// Warn array type in arith
+	if (rhs.size > 0 || lhs.size > 0)
+		opp_warning(ctx, node, "Adding two arrays causes undefined behavior");
+
+	// Error adding to pointer a floating point
+	if ((rhs.depth > 0 || lhs.depth > 0) 
+		&& 
+		((rhs.decl->t_type == TYPE_FLOAT || rhs.decl->t_type == TYPE_DOUBLE)
+			|| (lhs.decl->t_type == TYPE_FLOAT || lhs.decl->t_type == TYPE_DOUBLE)))
+		opp_semantics_error(ctx, node, "Adding a floating point type to pointer");
+
+	/* ### Pointer size optimization ### */
+	/* Rules
+
+	double* a;
+	1: a + 2
+		Make 2 actually 2 * sizeof(double)
+	
+	int** b;
+	2: b + 3
+		Make 3 actually 3 * sizeof(int**)
+	*/
+
+	if (lhs.depth > 0 && (node->bin_expr.right->type == EUNARY 
+		&& node->bin_expr.right->unary_expr.type == TINTEGER))
+	{
+		lhs.depth--;
+		unsigned int size = get_type_size(&lhs);
+		node->bin_expr.right->unary_expr.val.i64val *= size;
+		lhs.depth++;
 	}
 
 	return lhs;
@@ -677,11 +815,19 @@ static Opp_Obj opp_analize_logic(struct Opp_Analize* ctx, struct Opp_Node* node)
 	Opp_Obj lhs = opp_analize_expr(ctx, node->logic_expr.left);
 	Opp_Obj rhs = opp_analize_expr(ctx, node->logic_expr.right);
 
+	// Warning different pointer depths compare
 	if (lhs.depth != rhs.depth)
 		opp_warning(ctx, node, "Preforming compare operation mixing with ptr '%s' '%s'",
 			lhs.decl->id, rhs.decl->id);
 
-	if (rhs.decl->t_type == TYPE_STRUCT || lhs.decl->t_type == TYPE_STRUCT)
+	// Warn different type pointer compare
+	if ((lhs.depth > 0 && rhs.depth > 0) && lhs.decl->t_type != rhs.decl->t_type)
+		opp_warning(ctx, node, "Preforming logic on different point types");
+
+	// Mixing struct in compare error
+	if ((rhs.decl->t_type == TYPE_STRUCT && rhs.depth == 0) 
+		|| 
+		(lhs.decl->t_type == TYPE_STRUCT && lhs.depth == 0))
 		opp_semantics_error(ctx, node, "Not allowed to mix struct type in logic operation");
 
 	return lhs;
@@ -699,27 +845,31 @@ static Opp_Obj opp_analize_assign(struct Opp_Analize* ctx, struct Opp_Node* node
 	Opp_Obj lhs = opp_analize_expr(ctx, node->assign_expr.ident);
 
 	const char* name = ctx->debug.res_name;
+
+	// Global assign error
+	if (ctx->curr_ns == ctx->ns)
+		opp_semantics_error(ctx, node, "Global assigments are not permited, assiment of '%s'", name);
+
+	// Cannot assign array error
 	if (lhs.size > 0)
 		opp_semantics_error(ctx, node, "Attempting to assign a value to array '%s'", ctx->debug.res_name);
 
 	Opp_Obj rhs = opp_analize_expr(ctx, node->assign_expr.val);
 
-	if (rhs.decl == void_type && rhs.depth == 0)
-		opp_semantics_error(ctx, node, "Attempting to assign '%s' to a void type", name);
-
+	// Cannot assign non pointer to array type
 	if (rhs.size > 0 && lhs.depth == 0) 
-		opp_semantics_error(ctx, node, "Attempting to assign a array type to var '%s'",
-			name);
+		opp_semantics_error(ctx, node, "Attempting to assign an array type to var '%s'", name);
 
+	// Different depths warning	
 	if (rhs.depth != lhs.depth)
-		opp_warning(ctx, node, "Assigning var '%s' to incompatible pointer depth of type '%s'",
-			name, rhs.decl->id);
+		opp_warning(ctx, node, "Assigning var '%s' to incompatible pointer depth of var '%s'",
+			name, ctx->debug.res_name);
 
-	// fix this should not happen when of depth  > 0
-	if ((rhs.decl->t_type == TYPE_STRUCT || lhs.decl->t_type == TYPE_STRUCT)
-		&& strcmp(rhs.decl->id, lhs.decl->id))
-		opp_semantics_error(ctx, node, "Assigning var '%s' to a incompatible struct type",
-			name);
+	// Cannot assign non pointer to obj and vise versa
+	if ((rhs.decl->t_type == TYPE_STRUCT && rhs.depth == 0)
+		|| 
+		(lhs.decl->t_type == TYPE_STRUCT && lhs.depth == 0))
+		opp_semantics_error(ctx, node, "Assigning var '%s' to a incompatible struct type", name);
 
 	return lhs;
 }
@@ -730,6 +880,7 @@ static Opp_Obj opp_analize_call(struct Opp_Analize* ctx, struct Opp_Node* node)
 
 	ret_type = opp_analize_expr(ctx, node->call_expr.callee);
 
+	// Immidiate func call
 	if (node->call_expr.callee->type == EUNARY) {
 		if (node->call_expr.callee->unary_expr.type != TIDENT)
 			opp_semantics_error(ctx, node, "Expected identifier before '()' for a call expr");
@@ -752,12 +903,16 @@ static Opp_Obj opp_analize_call(struct Opp_Analize* ctx, struct Opp_Node* node)
 		{
 			ret_type = opp_analize_expr(ctx, node->call_expr.args->list[i]);
 
-			if (ret_type.depth != bucket->args->args[i].var_stmt.type.depth)
-				opp_warning(ctx, node, 
-					"Invalid pointer argument provided to function call '%s'", fn_name);
+			if (bucket->type == TYPE_FUNC || bucket->type == TYPE_EXTERN)
+				if (ret_type.depth != bucket->args->args[i].var_stmt.type.depth)
+					opp_warning(ctx, node, 
+						"Invalid pointer argument provided to function call '%s'", fn_name);
 		}
 		return bucket->sym_type;
 	}
+
+	if (node->call_expr.args->length > 0)
+		printf("ADD FN POINTER ARGS\n");
 
 	return ret_type;
 }
@@ -766,17 +921,21 @@ static Opp_Obj opp_analize_dot(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
 	Opp_Obj lhs = opp_analize_expr(ctx, node->dot_expr.left);
 
+	// Error if attempint dot access on non struct
 	if (lhs.decl->t_type != TYPE_STRUCT || lhs.depth > 0)
 		opp_semantics_error(ctx, node, "Attempting to access element on a non object type '%s'",
 			ctx->debug.res_name);
 
 	const char* left = ctx->debug.res_name;
 
+	// Error if no identifier memeber
 	if (node->dot_expr.right->type != EUNARY || node->dot_expr.right->unary_expr.type != TIDENT)
 		opp_semantics_error(ctx, node, "Expected element on right side of '%s' dot expr", left);
 
+	// TODO: Rethink if better strategy
+	// Switch to struct namespace
 	struct Opp_Namespace* temp = ctx->curr_ns;
-	ctx->curr_ns = lhs.decl->s_type;
+	ctx->curr_ns = lhs.decl->s_elems->ns;
 
 	Opp_Obj rhs = opp_analize_expr(ctx, node->dot_expr.right);
 	
@@ -787,12 +946,11 @@ static Opp_Obj opp_analize_dot(struct Opp_Analize* ctx, struct Opp_Node* node)
 
 static Opp_Obj opp_analize_deref(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	if (
-		(node->deref_expr.deref->type != EUNARY || node->deref_expr.deref->unary_expr.type != TIDENT)
+	// Error if lhs of deref is invalid
+	if ((node->deref_expr.deref->type != EUNARY || node->deref_expr.deref->unary_expr.type != TIDENT)
 		&& (node->deref_expr.deref->type != EBIN) && (node->deref_expr.deref->type != EADDR)
-		&& (node->deref_expr.deref->type != EDEREF) && (node->deref_expr.deref->type != EDOT)
-	   )
-		opp_semantics_error(ctx, node, "Attempt to dereference invalid expression");
+		&& (node->deref_expr.deref->type != EDEREF) && (node->deref_expr.deref->type != EDOT))
+			opp_semantics_error(ctx, node, "Attempt to dereference invalid expression");
 
 	Opp_Obj lhs = opp_analize_expr(ctx, node->deref_expr.deref);
 
@@ -809,7 +967,10 @@ static Opp_Obj opp_analize_sub(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
 	opp_analize_time_eval(ctx, node);
 
-	if (node->type == EUNARY) return opp_analize_unary(ctx, node);
+	if (node->type == EUNARY)
+		return opp_analize_unary(ctx, node);
+
+	assert(false);
 }
 
 static Opp_Obj opp_analize_elem(struct Opp_Analize* ctx, struct Opp_Node* node)
@@ -819,11 +980,11 @@ static Opp_Obj opp_analize_elem(struct Opp_Analize* ctx, struct Opp_Node* node)
 	if (node->elem_expr.name->type == EELEMENT)
 		return lhs;
 
-	// if (lhs.depth == 0)
-	// 	opp_semantics_error(ctx, node, "Attemping to get element of non pointer / array type '%s'",
-	// 		ctx->debug.res_name);
-
 	Opp_Obj rhs = opp_analize_expr(ctx, node->elem_expr.loc);
+
+	if (lhs.depth == 0 && rhs.depth == 0)
+		opp_semantics_error(ctx, node, "Attemping to get element of non pointer / array type '%s'",
+			ctx->debug.res_name);
 
 	lhs.size = 0;
 	if (lhs.depth > 0)
@@ -834,9 +995,10 @@ static Opp_Obj opp_analize_elem(struct Opp_Analize* ctx, struct Opp_Node* node)
 
 static Opp_Obj opp_analize_addr(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	if (node->addr_expr.addr->type == EUNARY && node->addr_expr.addr->unary_expr.type == TINTEGER)
-		opp_semantics_error(ctx, node, "Got unexpected rhs value in '&' got '%ld'", 
-			node->addr_expr.addr->unary_expr.val.i64val);
+	if (node->addr_expr.addr->type == EUNARY 
+		&& (node->addr_expr.addr->unary_expr.type == TINTEGER 
+			|| node->addr_expr.addr->unary_expr.type == TFLOAT))
+		opp_semantics_error(ctx, node, "Got unexpected rhs value in '&'");
 
 	Opp_Obj lhs = opp_analize_expr(ctx, node->addr_expr.addr);
 	lhs.depth++;
@@ -851,5 +1013,19 @@ static Opp_Obj opp_analize_adjust(struct Opp_Analize* ctx, struct Opp_Node* node
 
 static Opp_Obj opp_analize_sizeof(struct Opp_Analize* ctx, struct Opp_Node* node)
 {
-	// Opp_Obj type = 
+	Opp_Obj val = opp_analize_expr(ctx, node->sizeof_expr.expr);
+
+	struct Opp_Debug temp = node->debug;
+	memset(node, 0, sizeof(struct Opp_Node));
+	node->type = EUNARY;
+	node->debug = temp;
+	node->unary_expr.type = TINTEGER;
+	node->unary_expr.val.i64val = get_type_size(&val);
+
+	val.decl = int_type;
+	val.depth = 0;
+	val.size = 0;
+	val.unsign = 0;
+
+	return val;
 }

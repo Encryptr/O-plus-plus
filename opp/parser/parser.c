@@ -53,6 +53,7 @@ struct Opp_Parser* opp_parser_init(struct Opp_Scan* s)
 
 err:
 	INTERNAL_ERROR("Malloc Fail");
+	return NULL;
 }
 
 void opp_parser_begin(struct Opp_Parser* parser)
@@ -268,8 +269,6 @@ static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser)
 
 	if (type.decl->t_type == TYPE_STRUCT && type.unsign)
 		opp_error(parser->lex, "Struct '%s' type cannot have unsigned attribute", type.decl->id);
-	// type.decl->id = (char*)malloc(strlen(parser->lex->t.buffer.buf)+1);
-	// strcpy(type.decl->id, parser->lex->t.buffer.buf);
 
 	int lookahead = 1;
 	do {
@@ -327,6 +326,9 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 		if (i == DEFAULT_LIST_SIZE)
 			opp_error(parser->lex, "Max function parameters met");
 		
+		if (parser->lex->t.id == TVA_ARGS)
+			opp_error(parser->lex, "Add ...");
+
 		if (parser->lex->t.id == TUNSIGNED) {
 			func_node->fn_stmt.args[i].var_stmt.type.unsign = 1;
 			opp_next(parser->lex);
@@ -386,10 +388,8 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 
 	if (entry == NULL)
 		opp_error(parser->lex, "Redefinition of type '%s'", struct_node->struct_stmt.name);
-	entry->t_type = TYPE_STRUCT;
-	entry->s_type = init_namespace(NULL, malloc);
+	entry->t_type = TYPE_STRUCT;	
 	entry->s_elems = &struct_node->struct_stmt;
-	struct_node->struct_stmt.ns = entry->s_type;
 
 	opp_next(parser->lex);
 	// add peek to see if non typedef declaration aka struct test a; for example
@@ -401,6 +401,7 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 		malloc(sizeof(struct Opp_Node*)*16);
 
 	memset(struct_node->struct_stmt.elems, 0, sizeof(struct Opp_Node*)*16);
+	unsigned int allocated = 16;
 
 	unsigned int i = 0;
 	do {
@@ -408,8 +409,15 @@ static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser)
 		if (parser->lex->t.id == FEND || parser->lex->t.id == TCLOSEC)
 			break;
 
-		if (i == 16)
-			opp_error(parser->lex, "TODO REALLOC STRUCT");
+		if (i == allocated) {
+			struct_node->struct_stmt.elems = (struct Opp_Node**)
+				realloc(struct_node->struct_stmt.elems, (64+allocated) * sizeof(struct Opp_Node*));
+
+			if (struct_node->struct_stmt.elems == NULL)
+				INTERNAL_ERROR("Malloc Fail");
+
+			allocated += 64;
+		}
 
 		struct_node->struct_stmt.elems[i] = opp_parse_type(parser);
 
@@ -694,7 +702,12 @@ static struct Opp_Node* opp_parse_import(struct Opp_Parser* parser)
 
 	opp_next(parser->lex);
 
-	import->import_stmt.ident = opp_parse_unary(parser);
+	if (parser->lex->t.id != TSTR)
+		opp_error(parser->lex, "Expected file path after import statement");
+
+	struct Opp_Parser* p2 = opp_add_module(parser->lex->t.buffer.buf);
+
+	import->import_stmt.import = p2;
 
 	opp_next(parser->lex);
 
@@ -1028,26 +1041,9 @@ static struct Opp_Node* opp_parse_before(struct Opp_Parser* parser)
 	}
 	else if (parser->lex->t.id == TSIZEOF)
 	{
-		assert(0);
-		// value = opp_new_node(parser, ESIZEOF);
-		// value->sizeof_expr.size.depth = 0;
-		// value->sizeof_expr.size.size = 0;
-		// value->sizeof_expr.size.unsign = 0;
-		// opp_next(parser->lex);
-
-		// if (parser->lex->t.id == TUNSIGNED) {
-		// 	value->sizeof_expr.size.unsign = 1;
-		// 	opp_next(parser->lex);
-		// }
-
-		// struct Opp_Type_Entry* t = get_type(&parser->tree, parser->lex->buffer.buf);
-
-		// if (t == NULL)
-		// 	opp_error(parser->lex, "Expected valid type after sizeof instead got '%s'",
-		// 		parser->lex->buffer.buf);
-
-		// value->sizeof_expr.size.decl = t;
-		// value->sizeof_expr.size = opp_parse_order2(parser);
+		value = opp_new_node(parser, ESIZEOF);
+		opp_next(parser->lex);
+		value->sizeof_expr.expr = opp_parse_order2(parser);
 
 		return value;
 	}

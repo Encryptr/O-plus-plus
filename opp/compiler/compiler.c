@@ -18,7 +18,47 @@
  * limitations under the License.
  */
 
+/*
 #include "compiler.h"
+
+static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt);
+static Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);
+static void opp_set_offsets(struct Opp_Context* opp);
+static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type);
+static void opp_comp_type(Opp_Type* t);
+static unsigned int opp_type_to_size(struct Opp_Type_Decl* type);
+static void opp_try_cast(struct Opp_Context* opp, Opp_Type lhs, Opp_Type rhs);
+
+// Expr
+static Opp_Type opp_compile_unary(struct Opp_Context* opp, struct Opp_Node* unary);
+static Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin);
+static Opp_Type opp_compile_dot(struct Opp_Context* opp, struct Opp_Node* dot);
+static Opp_Type opp_compile_sub(struct Opp_Context* opp, struct Opp_Node* sub);
+static Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* assign);
+static Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call);
+static Opp_Type opp_compile_logic(struct Opp_Context* opp, struct Opp_Node* logic);
+static Opp_Type opp_compile_logic_assign(struct Opp_Context* opp, struct Opp_Node* logic);
+static void opp_compile_logic_end(struct Opp_Context* opp, struct Opp_Node* logic);
+static Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_Node* unary);
+static Opp_Type opp_compile_addr(struct Opp_Context* opp, struct Opp_Node* expr);
+static Opp_Type opp_compile_deref(struct Opp_Context* opp, struct Opp_Node* expr);
+static Opp_Type opp_compile_ptr_assign(struct Opp_Context* opp, struct Opp_Node* expr);
+
+// Stmts
+static void opp_import_module(struct Opp_Context* opp, struct Opp_Node* module);
+static void opp_compile_func(struct Opp_Context* opp, struct Opp_Node* func);
+static void opp_compile_struct(struct Opp_Context* opp, struct Opp_Node* node);
+static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret);
+static void opp_compile_block(struct Opp_Context* opp, struct Opp_Node* block);
+static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var);
+static void opp_compile_bitfield(struct Opp_Context* opp, struct Opp_Node* bit);
+static void opp_compile_label(struct Opp_Context* opp, struct Opp_Node* lab);
+static void opp_compile_goto(struct Opp_Context* opp, struct Opp_Node* lab);
+static void opp_compile_if(struct Opp_Context* opp, struct Opp_Node* ifstmt);
+static void opp_compile_extern(struct Opp_Context* opp, struct Opp_Node* extrn);
+static void opp_compile_while(struct Opp_Context* opp, struct Opp_Node* loop);
+static void opp_compile_for(struct Opp_Context* opp, struct Opp_Node* loop);
+static void opp_compile_switch(struct Opp_Context* opp, struct Opp_Node* cond);
 
 struct Opp_Context* opp_init_compile(struct Opp_Parser* parser, 
 									struct Opp_Options* opts)
@@ -84,7 +124,6 @@ static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type)
 	Opp_Type ret_type = {0};
 	bool sign = type->unsign;
 
-
 	switch (type->decl->t_type)
 	{
 		case TYPE_I8:  ret_type.type = sign ? IMM_U8: IMM_I8; break;
@@ -96,7 +135,7 @@ static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type)
 		
 		default:
 			ret_type.type = IMM_SYM;
-			ret_type.depth = type->decl->size;
+			ret_type.size = type->decl->size;
 			break;
 	}
 	
@@ -105,7 +144,7 @@ static Opp_Type opp_type_to_ir(struct Opp_Type_Decl* type)
 		ret_type.comp_type = ret_type.type;
 		ret_type.type = IMM_U64;
 	}
-
+	
 	return ret_type;
 }
 
@@ -171,9 +210,9 @@ void opp_compile(struct Opp_Context* opp)
 				opp_compile_extern(opp, opp->parser->statments[stmt]);
 				break;
 
-			// case STMT_IMPORT:
-			// 	opp_import_module(opp, opp->parser->statments[stmt]);
-			// 	break;
+			case STMT_IMPORT:
+				opp_import_module(opp, opp->parser->statments[stmt]);
+				break;
 
 			case STMT_VAR:
 				opp_compile_var(opp, opp->parser->statments[stmt]);
@@ -182,6 +221,16 @@ void opp_compile(struct Opp_Context* opp)
 			default: break;
 		}
 	}
+}
+
+static void opp_import_module(struct Opp_Context* opp, struct Opp_Node* module)
+{
+	struct Opp_Parser* save = opp->parser;
+	opp->parser = module->import_stmt.import;
+
+	opp_compile(opp);
+
+	opp->parser = save;
 }
 
 static void opp_compile_struct(struct Opp_Context* opp, struct Opp_Node* node)
@@ -286,33 +335,16 @@ static void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* stmt)
 		case STMT_RET:
 			opp_compile_ret(opp, stmt);
 			break;
-		// case STMT_LABEL:
-		// 	opp_compile_label(opp, stmt);
-		// 	break;
-
-		// case STMT_GOTO:
-		// 	opp_compile_goto(opp, stmt);
-		// 	break;
-
-		// case STMT_IF:
-		// 	opp_compile_if(opp, stmt);
-		// 	break;
-
-		// case STMT_WHILE:
-		// 	opp_compile_while(opp, stmt);
-		// 	break;
-
-		// case STMT_FOR:
-		// case STMT_SWITCH:
-		// 	break;
+			
+		// add STMT_CALL
 
 		case STMT_VAR:
 			opp_compile_var(opp, stmt);
 			break;
 
-		// case STMT_BLOCK:
-		// 	opp_compile_block(opp, stmt);
-		// 	break;
+		case STMT_BLOCK:
+			opp_compile_block(opp, stmt);
+			break;
 
 		case EASSIGN:
 			opp_compile_assign(opp, stmt);
@@ -334,9 +366,6 @@ static void opp_compile_ret(struct Opp_Context* opp, struct Opp_Node* ret)
 	opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_RET;
 	opp->ir.instr_idx++;
-	
-
-	// no jump for now
 }
 
 static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
@@ -364,6 +393,11 @@ static void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* var)
 
 	if (assign)
 		opp_compile_expr(opp, var->var_stmt.var);
+}
+
+static void opp_compile_block(struct Opp_Context* opp, struct Opp_Node* block)
+{
+	assert(false);
 }
 
 static void opp_compile_label(struct Opp_Context* opp, struct Opp_Node* lab)
@@ -403,6 +437,9 @@ static Opp_Type opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr)
 		case EUNARY:
 			return opp_compile_unary(opp, expr);
 
+		case EASSIGN:
+			return opp_compile_assign(opp, expr);
+
 		case EDOT:
 			return opp_compile_dot(opp, expr);
 
@@ -431,19 +468,27 @@ static Opp_Type opp_compile_literal(struct Opp_Context* opp, struct Opp_Node* un
 	}
 
 	if (b->type == TYPE_GLOBAL || b->type == TYPE_FUNC)  {
-		assert(false);
+		opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_SYM;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_sym = b->key;
 	}
 	else {
 		opp->ir.opcodes[opp->ir.instr_idx].constant.val.type = IMM_LOC;
+		opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_i32 = b->offset;
 	}
 
-	opp->ir.opcodes[opp->ir.instr_idx].constant.val.imm_i32 = b->offset;
 	ret_type = opp_type_to_ir(&b->sym_type);
 	opp->ir.opcodes[opp->ir.instr_idx].constant.loc_type = ret_type.type;
 
-	if (opp->info.in_addr) {
+	if (opp->info.in_addr && b->type != TYPE_GLOBAL) {
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ADDR;
 		ret_type.depth++;
+	}
+
+	if ((b->type == TYPE_GLOBAL || b->type == TYPE_EXTERN) && !opp->info.in_assign) {
+		opp->ir.instr_idx++;
+		opp_realloc_instrs(opp);
+		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_DEREF;
+		opp->ir.opcodes[opp->ir.instr_idx].cast.type = ret_type.type;
 	}
 	
 	return ret_type;
@@ -540,7 +585,8 @@ static Opp_Type opp_compile_dot(struct Opp_Context* opp, struct Opp_Node* dot)
 
 static int opp_get_comp_type_size(struct Opp_Type* t)
 {
-	if (t->depth > 1) return 8;
+	if (t->depth > 1) 
+		return 8;
 	switch (t->comp_type)
 	{
 		case IMM_U8: case IMM_I8:
@@ -552,7 +598,7 @@ static int opp_get_comp_type_size(struct Opp_Type* t)
 		case IMM_U64: case IMM_I64:  case IMM_F64:
 			return 8;
 		case IMM_SYM:
-			return t->depth;
+			return t->size;
 
 		default: break;
 	}
@@ -566,13 +612,14 @@ static Opp_Type opp_compile_bin(struct Opp_Context* opp, struct Opp_Node* bin)
 
 	opp_try_cast(opp, lhs, rhs);
 
-	if (lhs.depth > 0) {
+	if (lhs.depth > 0 && lhs.comp_type != IMM_SYM) {
 		opp_realloc_instrs(opp);
 		opp->ir.opcodes[opp->ir.instr_idx].type = OPCODE_ARITH;
 		opp->ir.opcodes[opp->ir.instr_idx].arith.type = TMUL;
 		opp->ir.opcodes[opp->ir.instr_idx].arith.imm = 1;
 		opp->ir.opcodes[opp->ir.instr_idx].arith.val.type = IMM_I8;
 		opp->ir.opcodes[opp->ir.instr_idx].arith.val.imm_i8 = opp_get_comp_type_size(&lhs);
+		
 		opp->ir.instr_idx++;
 	}
 
@@ -622,6 +669,12 @@ static Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* ass
 
 	struct Opp_Bucket* bucket = env_get_item(opp->env.curr_ns, 
 		assign->assign_expr.ident->unary_expr.val.strval);
+	
+	// TODO Consider putting this in ir
+	opp->info.in_assign = 1;
+	if (bucket->type == TYPE_GLOBAL || bucket->type == TYPE_EXTERN)
+		opp_compile_expr(opp, assign->assign_expr.ident);
+	opp->info.in_assign = 0;
 
 	Opp_Type rhs = opp_compile_expr(opp, assign->assign_expr.val);
 	Opp_Type lhs = opp_type_to_ir(&bucket->sym_type);
@@ -643,6 +696,8 @@ static Opp_Type opp_compile_assign(struct Opp_Context* opp, struct Opp_Node* ass
 			opp->ir.opcodes[opp->ir.instr_idx].set.val.imm_i32 = bucket->offset;
 		}
 	opp->ir.instr_idx++;
+
+	return lhs;
 }
 
 static Opp_Type opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call)
@@ -710,3 +765,4 @@ static Opp_Type opp_compile_deref(struct Opp_Context* opp, struct Opp_Node* expr
 {
 
 }
+*/

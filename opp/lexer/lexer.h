@@ -44,8 +44,8 @@ enum Opp_Token {
 	// + - / * % -- ++
 	TADD, TMIN, TDIV, TMUL, TMOD, TDECR, TINCR,
 
-	// &
-	TADDR, TCOLON,
+	// & : ...
+	TADDR, TCOLON, TVA_ARGS,
 
 	// += -= /= *= %= 
 	TADDEQ, TMINEQ, TDIVEQ, TMULEQ, TMODEQ,

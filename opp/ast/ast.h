@@ -60,7 +60,7 @@ struct Opp_Type_Decl {
 	bool unsign;
 };
 
-struct Opp_List { // make this object not ptr
+struct Opp_List {
 	unsigned int length;
 	struct Opp_Node** list;
 };
@@ -116,7 +116,7 @@ struct Opp_Expr_Addr {
 };
 
 struct Opp_Expr_Sizeof {
-	struct Opp_Type_Decl size;
+	struct Opp_Node* expr;
 };
 
 struct Opp_Stmt_Label {
@@ -160,18 +160,19 @@ struct Opp_Stmt_Extrn {
 };
 
 struct Opp_Stmt_Block {
+	struct Opp_Namespace* ns;
 	unsigned int len;
 	struct Opp_Node** stmts;
 };
 
 struct Opp_Stmt_Var {
 	struct Opp_Type_Decl type;
-	// struct Opp_List* vars;
 	struct Opp_Node* var;
+	unsigned int off;
 };
 
 struct Opp_Stmt_Import {
-	struct Opp_Node* ident;
+	struct Opp_Parser* import;
 };
 
 struct Opp_Stmt_While {
@@ -190,7 +191,7 @@ struct Opp_Stmt_Func {
 	struct Opp_Node* body;
 	unsigned int len;
 	struct Opp_Node* args;
-	struct Opp_Namespace* scope;
+	struct Opp_Namespace* scope; // remove and move to block
 };
 
 struct Opp_Stmt_Ret {
