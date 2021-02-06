@@ -1,16 +1,14 @@
 global __oppio_println
 global __oppio_printnumb
 global __oppio_panic
-global _start
+global __oppio_printc
 
-extern main
+extern putc
+; global _start
+global main
 
 section .text
 
-; @Name: __oppio_strlen
-; @Desc: Return len of str
-; @Param: char* (str)
-; @Ret: int (length)
 __oppio_strlen:
     xor rax, rax
 start_len:
@@ -22,10 +20,6 @@ start_len:
 end_len:
     ret
 
-; @Name: __oppio_println
-; @Desc: Print zero terminated string
-; @Param: char* (str)
-; @Ret: None
 __oppio_println:
 	mov r10, rdi
     call __oppio_strlen
@@ -39,20 +33,43 @@ __oppio_println:
     ret
 
 __oppio_printnumb:
-	ret
+    cmp rdi, 0
+    jns posative
+    neg rdi
+    push rdi
+    mov dil, '-'
+    call putc
+    pop rdi
+posative:
+    mov    rax, rdi
+    mov    rcx, 0xa              
+    push   rcx                   
+    mov    rsi, rsp
+    sub    rsp, 16
+digit:
+    xor    rdx, rdx
+    div    rcx
+    add    rdx, '0'
+    dec    rsi
+    mov    [rsi], dl
+    test   rax,rax
+    jnz  digit
+    mov    rax, 0x2000004
+    mov    rdi, 1
+    lea    rdx, [rsp+16 + 1]
+    sub    rdx, rsi
+    syscall
+    add  rsp, 24
+    ret
 
-; @Name: __oppio_panic
-; @Desc: Panic
-; @Param: int
-; @Ret: None
 __oppio_panic:
 	mov rax, 60
 	syscall
 
-_start:
-    call main
-    mov rdi, rax
-    jmp __oppio_panic
+main:
+    mov rdi, 'A'
+    call __oppio_printc
+    ret
 
 section .data
 

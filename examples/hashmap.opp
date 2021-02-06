@@ -1,0 +1,33 @@
+import "libc.opp";
+
+extern void printnumb(long a);
+
+struct Bucket {
+	char* key;
+};
+
+struct Map {
+	Bucket** items;
+	unsigned long size;	
+};
+
+void main()
+{
+	Map map;
+
+	map.items = malloc(8*16);
+
+	if (map.items == 0) {
+		printf("Error\n");
+		exit(1);
+	}
+
+	map.size = 16;
+	map.items[0] = malloc(8);
+
+	// Bucket* b = map.items[0];
+
+	(*map.items[0]).key = "hello";
+
+	puts((*map.items[0]).key);
+}

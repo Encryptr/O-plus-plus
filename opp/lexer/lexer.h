@@ -87,7 +87,7 @@ struct Opp_Tok {
 };
 
 struct Opp_Scan {
-	char* src;
+	char* src, *content;
 	OppIO io;
 	uint32_t line;
 	uint32_t colum;
@@ -109,8 +109,8 @@ void dump_tokens(struct Opp_Scan* s);
 // OppLex
 void init_opp_file(struct Opp_Scan* s, const char* fname);
 void init_opp_lex(struct Opp_Scan* s, char* content);
+void opp_free_lex(struct Opp_Scan* s, bool alloc);
 void opp_next(struct Opp_Scan* s);
-void opp_deinit(struct Opp_Scan* s);
 void opp_peek_tok(struct Opp_Scan* s, int times);
 void opp_lex_identifier(struct Opp_Scan* s);
 void opp_lex_numeral(struct Opp_Scan* s);

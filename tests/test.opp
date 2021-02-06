@@ -1,49 +1,65 @@
-// struct t1 {
-// 	char* a;
-// 	int b;
-// 	long* k;
-// 	char d;
-// };
+// 0
+struct t1 {
+	char* a;
+	int b;
+	long* k;
+	char d[2];
+};
 
 struct t2 {
 	int a;
 	char b; 
 	long d;
+	t1* dl;
 };
 
-
-// struct test {
-// 	t1 a;
-// 	long b;
-// };
-
-// extern void puts(char* str);
-// extern void print_this(t2* a);
-// extern void print(int c);
-
-// extern int a; add this
-
-// import "./stdlib/libc.opp";
-
+// fix ir div
 
 void main() {
 
-	// t2 a;
+	/* Struct test 1 */
+	// t1 a; 
+	// a.d;
+	// a.a;
 
-	// a.c = 2;
-	// a.b = "hello";
-	// a.d = 1234;
-	// print_this(&a);
-	// a = 2;
-	// add so float a = 2; will not need cast do this in semantics
+	/* Struct test 2 */
+	// t1* a; (*a).d; (*a).a;
 
-	// int a = 2;
-	// int b = 3;
-	// int c = (a*b) + ( (a*b) + ((a*b) + ( (a*b) + ((a*b)+(a*b)) ) ));	
-	// return c;
-	// print(c);
+	/* Struct test 3 */
+	// t1* a;
+	// &(*a).b;
 
-	// return a;
+	/* Struct test 4 */
+	// t1 a;
+	// &a.b;
+
+	/* Struct test 5 */
+	// t1 a;
+	// a.a = 2;
+	// a.d = 3;
+
+	/* Struct test 6 */
+	// t1* a;
+	// (*a).a = 2;
+	// (*a).d = 3;
+
+	/* Struct test 7 */
+	// t1** a;
+	// (**a).b = 2;
+
+	/* Struct test 8 */
+	// t2* a;
+	// (*(*a).dl).b = 2;
+
+	/* Struct test 9 */
+	// t1 a; 
+	// a.d[2];
+	// t1* a;
+	// a[1].d[2];
+
+	/* another test */
+	// t1 a[5];
+	// a[1].b = 5;
+
+	// return 0;
 }
-
-

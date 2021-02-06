@@ -139,6 +139,7 @@ void init_opp_lex(struct Opp_Scan* s, char* content)
 	s->line = 1;
 	s->colum = 0;
 	s->src = content;
+	s->content = content;
 	s->t.buffer.buf = (char*)malloc(SCAN_BUF);
 	if (s->t.buffer.buf == NULL)
 		INTERNAL_ERROR("malloc fail");
@@ -146,9 +147,13 @@ void init_opp_lex(struct Opp_Scan* s, char* content)
 	s->t.buffer.len = SCAN_BUF;
 }
 
-void opp_deinit(struct Opp_Scan* s)
+void opp_free_lex(struct Opp_Scan* s, bool alloc)
 {
+	free(s->content);
 	free(s->t.buffer.buf);
+
+	if (alloc)
+		free(s);
 }
 
 void opp_lex_identifier(struct Opp_Scan* s)

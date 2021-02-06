@@ -25,9 +25,9 @@
 #include "../ast/ast.h"
 
 #define STACK_SIZE 8
-// Small maps change to larger for large files
 #define HASH_SIZE 320
-// #define HASH_SIZE 1600
+// #define HASH_SIZE 4600 
+// 1600 - 3600 - 4600 - 10600
 
 enum Opp_Bucket_Type {
 	TYPE_GLOBAL, TYPE_LOCAL,
@@ -39,6 +39,7 @@ struct Opp_Bucket {
 	char* key;
 	enum Opp_Bucket_Type type;
 	struct Opp_Type_Decl sym_type;
+	bool predef;
 	union {
 		struct Opp_Stmt_Func* args;
 		int32_t offset;

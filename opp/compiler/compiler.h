@@ -37,7 +37,9 @@ struct Opp_Options {
 		nostd,
 		warning,
 		debug,
-		wall;
+		wall,
+		test,
+		live;
 };
 
 enum Opp_Cond_Type {
@@ -55,33 +57,35 @@ struct Opp_Cond {
 	unsigned int jloc, hs;
 };
 
-typedef struct Opp_Type {
-	char type;
-	char comp_type;
-	unsigned int depth, size;
-} Opp_Type;
-
-
 struct Opp_Info {
-	Opp_Type ret_type;
+	Opp_Obj ret_type;
 	int32_t stack_offset;
 	unsigned int label_loc;
 
 	// Dot expr info
 	struct {
 		bool indot;
-		struct Opp_Stmt_Struct* s_ns;
+		struct Opp_Bucket* sym;
+		int32_t offset;
+		bool inptr;
 	} dot;
 
-	bool in_assign, in_addr;
-};
-
-struct Opp_Env {
-	struct Opp_Namespace* global_ns;
-	struct Opp_Namespace* curr_ns;
+	bool need_addr;
+	bool in_deref;
 };
 
 #define DEFAULT_OPCODE_SIZE 64
+#define OPCODE_TYPE(op_type) \
+	opp->ir.opcodes[opp->ir.instr_idx].type = op_type
+#define OPCODE_START() \
+	opp_realloc_instrs(opp)
+#define OPCODE_END() \
+	opp->ir.instr_idx++
+
+#define NEED_ADDR() \
+	opp->info.need_addr = true
+#define REVERT() \
+	opp->info.need_addr = false
 
 struct Opp_Context {
 	struct Opp_Parser* parser;
@@ -90,12 +94,20 @@ struct Opp_Context {
 	struct OppIr_Instr ir;
 	struct OppIr* oppir;
 	struct Opp_Cond cond_state;
-	struct Opp_Env env;
 };
 
 struct Opp_Context* opp_init_compile(struct Opp_Parser* parser, 
 									struct Opp_Options* opts);
 void opp_free_compiler(struct Opp_Context* opp);
 void opp_compile(struct Opp_Context* opp);
+void opp_realloc_instrs(struct Opp_Context* opp);
+void opp_compile_stmt(struct Opp_Context* opp, struct Opp_Node* node);
+Opp_Obj opp_compile_expr(struct Opp_Context* opp, struct Opp_Node* expr);
+unsigned int opp_type_to_size(Opp_Obj* type);
+enum OppIr_Const_Type opp_type_to_ir(Opp_Obj* type);
+void opp_compile_var(struct Opp_Context* opp, struct Opp_Node* node);
+void opp_type_cast(struct Opp_Context* opp, Opp_Obj* lhs, Opp_Obj* rhs);
+Opp_Obj opp_compile_call(struct Opp_Context* opp, struct Opp_Node* call, bool stmt);
+void opp_create_label(struct Opp_Context* opp, int32_t jump_loc);
 
 #endif /* OPP_COMPILER */

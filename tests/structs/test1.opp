@@ -1,0 +1,20 @@
+// 24
+
+struct t1 {
+	char* a;
+	int b;
+	long* k;
+	char d[2];
+};
+
+struct t2 {
+	int a;
+	char b; 
+	long d;
+	t1* dl;
+};
+
+int main() {
+	t2 a;
+	return sizeof(a);
+}

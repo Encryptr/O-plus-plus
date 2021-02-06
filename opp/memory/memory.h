@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+// #define BLOCK_SIZE 120000
 #define BLOCK_SIZE 64000
 
 struct Block_Header {

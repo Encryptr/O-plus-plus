@@ -21,7 +21,7 @@
 
 static struct Allocator *root;
 
-#define DEBUG_MEMORY
+// #define DEBUG_MEMORY
 
 static struct Block_Header* block_init()
 {

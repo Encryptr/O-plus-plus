@@ -19,9 +19,66 @@
 
 #include "parser.h"
 
-#define DEBUG_PARSE
+static void opp_debug_parser(struct Opp_Node* node);
+static void opp_expect_error(struct Opp_Parser* parser, char sym);
 
-static void opp_add_std_types(struct Opp_Parser* parser);
+static struct Opp_Node* opp_new_node(struct Opp_Parser* parser, enum Opp_Node_Type type);
+static struct Opp_Node* opp_parse_global_def(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser);
+static struct Opp_List* opp_parse_args(struct Opp_Parser* parser);
+static bool opp_parse_peak(struct Opp_Parser* parser, char ch);
+static bool opp_parse_atype(struct Opp_Parser* parser, struct Opp_Type_Decl* decl);
+
+// Statements
+static struct Opp_Node* opp_parse_statement(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_block(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser, struct Opp_Type_Decl type);
+static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Type_Decl type);
+static struct Opp_Node* opp_parse_struct(struct Opp_Parser* parser);
+
+static struct Opp_Node* opp_parse_return(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_while(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_label(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_goto(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_if(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_extern(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_import(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_for(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_switch(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_case(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_break(struct Opp_Parser* parser);
+
+// Expressions
+static struct Opp_Node* opp_parse_shifts(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_and(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_or(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_bit_xor(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_bit_bit_not(struct Opp_Parser* parser);
+
+static struct Opp_Node* opp_parse_expr(struct Opp_Parser* parser);
+static struct Opp_List* opp_parse_comma(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_allign(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_or(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_and(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_relation(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_comparison(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_order1(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_order2(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_before(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_prefix(struct Opp_Parser* parser);
+static struct Opp_Node* opp_parse_unary(struct Opp_Parser* parser);
+
+// Unary
+static void opp_parse_identifier(struct Opp_Parser* parser, struct Opp_Node* node);
+static void opp_parse_integer(struct Opp_Parser* parser, struct Opp_Node* node);
+static void opp_parse_float(struct Opp_Parser* parser, struct Opp_Node* node);
+static void opp_parse_str(struct Opp_Parser* parser, struct Opp_Node* node);
+static struct Opp_Node* opp_parse_paran(struct Opp_Parser* parser);
+
+struct Opp_Type_Entry* int_type;
+struct Opp_Type_Entry* char_type;
+struct Opp_Type_Entry* float_type; 
+struct Opp_Type_Entry* void_type; 
 
 struct Opp_Parser* opp_parser_init(struct Opp_Scan* s)
 {
@@ -54,6 +111,170 @@ struct Opp_Parser* opp_parser_init(struct Opp_Scan* s)
 err:
 	INTERNAL_ERROR("Malloc Fail");
 	return NULL;
+}
+
+static void opp_free_node(struct Opp_Node* node)
+{
+	unsigned int i = 0;
+	switch (node->type)
+	{
+		case STMT_VAR:
+			opp_free_node(node->var_stmt.var);
+			break;
+
+		case STMT_STRUCT:
+			for (; i < node->struct_stmt.len; i++)
+				opp_free_node(node->struct_stmt.elems[i]);
+			free(node->struct_stmt.elems);
+			break;
+
+		case STMT_FUNC:
+			opp_free_node(node->fn_stmt.name);
+			if (node->fn_stmt.body)
+				opp_free_node(node->fn_stmt.body);
+			for (; i < node->fn_stmt.len; i++)
+				opp_free_node(node->fn_stmt.args[i].var_stmt.var);
+			free(node->fn_stmt.args);
+			break;
+
+		case STMT_EXTERN:
+			opp_free_node(node->extrn_stmt.stmt);
+			break;
+
+		case STMT_RET:
+			opp_free_node(node->ret_stmt.value);
+			break;
+
+		case STMT_WHILE:
+			opp_free_node(node->while_stmt.cond);
+			opp_free_node(node->while_stmt.then);
+			break;
+
+		case STMT_BLOCK:
+			for (; i < node->block_stmt.len; i++)
+				opp_free_node(node->block_stmt.stmts[i]);
+			free(node->block_stmt.stmts);
+			break;
+
+		case STMT_IF:
+			opp_free_node(node->if_stmt.cond);
+			opp_free_node(node->if_stmt.then);
+			if (node->if_stmt.other)
+				opp_free_node(node->if_stmt.other);
+			break;
+
+		case STMT_FOR:
+			opp_free_node(node->for_stmt.decl);
+			opp_free_node(node->for_stmt.cond);
+			opp_free_node(node->for_stmt.expr);
+			opp_free_node(node->for_stmt.body);
+			break;
+
+		case STMT_CASE:
+			opp_free_node(node->case_stmt.cond);
+			opp_free_node(node->case_stmt.stmt);
+			break;
+
+		case STMT_SWITCH:
+			opp_free_node(node->switch_stmt.cond);
+			opp_free_node(node->switch_stmt.block);
+			break;
+
+		case ESIZEOF:
+			opp_free_node(node->sizeof_expr.expr);
+			break;
+
+		case EADDR:
+			opp_free_node(node->addr_expr.addr);
+			break;
+
+		case EDEREF:
+			opp_free_node(node->deref_expr.deref);
+			break;
+
+		case EADJUST:
+			opp_free_node(node->adjust_expr.left);
+			break;
+
+		case EELEMENT:
+			opp_free_node(node->elem_expr.name);
+			opp_free_node(node->elem_expr.loc);
+			break;
+
+		case ESUB:
+			opp_free_node(node->sub_expr.unary);
+			break;
+
+		case ELOGIC:
+			opp_free_node(node->logic_expr.left);
+			opp_free_node(node->logic_expr.right);
+			break;
+
+		case ECALL:
+			opp_free_node(node->call_expr.callee);
+			for (; i < node->call_expr.args->length; i++)
+				opp_free_node(node->call_expr.args->list[i]);
+			free(node->call_expr.args->list);
+			free(node->call_expr.args);
+			break;
+
+		case EASSIGN:
+			opp_free_node(node->assign_expr.val);
+			opp_free_node(node->assign_expr.ident);
+			break;
+
+		case EUNARY:
+			if (node->unary_expr.type == TIDENT 
+				|| node->unary_expr.type == TSTR)
+				free(node->unary_expr.val.strval);
+			break;
+
+		case EBIN:
+			opp_free_node(node->bin_expr.left);
+			opp_free_node(node->bin_expr.right);
+			break;
+
+		case EDOT:
+			opp_free_node(node->dot_expr.left);
+			opp_free_node(node->dot_expr.right);
+			break;
+
+		case STMT_IMPORT:
+		case STMT_BREAK:
+			break;
+
+		default:
+			INTERNAL_ERROR("Unhandeled free node");
+			break;
+	}
+	free(node);
+}
+
+void opp_free_parser(struct Opp_Parser* parser)
+{
+	for (unsigned int i = 0; i < DEFAULT_TYPE_TREE_SIZE; i++) {
+		if (parser->tree.types[i] != NULL) {
+
+			struct Opp_Type_Entry* t = parser->tree.types[i]->next;
+			while (t != NULL) {
+				struct Opp_Type_Entry* c = t;
+				t = t->next;
+				free(c->id);
+				free(c);
+			}
+
+			if (parser->tree.types[i]->t_type == TYPE_STRUCT)
+				free(parser->tree.types[i]->id);
+			free(parser->tree.types[i]);
+		}
+	}
+	free(parser->tree.types);
+
+	for (unsigned int i = 0; i < parser->nstmts; i++)
+		opp_free_node(parser->statments[i]);
+
+	free(parser->statments);
+	free(parser);
 }
 
 void opp_parser_begin(struct Opp_Parser* parser)
@@ -161,7 +382,7 @@ struct Opp_Type_Entry* get_type(struct Opp_Type_Tree* tree, char* name)
 	return NULL;
 }
 
-static void opp_add_std_types(struct Opp_Parser* parser)
+void opp_add_std_types(struct Opp_Parser* parser)
 {
 	struct Opp_Type_Entry* type1;
 
@@ -189,30 +410,6 @@ static void opp_add_std_types(struct Opp_Parser* parser)
 	type1 = add_type(&parser->tree, "double");
 	type1->t_type = TYPE_DOUBLE;
 	float_type = type1;
-}
-
-static bool opp_parse_atype(struct Opp_Parser* parser, struct Opp_Type_Decl* decl)
-{
-	opp_next(parser->lex);
-
-	if (parser->lex->t.id == TUNSIGNED) {
-		decl->unsign = 1;
-		opp_next(parser->lex);
-	}
-
-	struct Opp_Type_Entry* t = get_type(&parser->tree, parser->lex->t.buffer.buf);
-
-	if (t == NULL)
-		return false;
-
-	decl->decl = t;
-	opp_next(parser->lex);
-	while (parser->lex->t.id == TMUL) {
-		decl->depth++;
-		opp_next(parser->lex);
-	}
-
-	return true;
 }
 
 static void opp_expect_error(struct Opp_Parser* parser, char sym)
@@ -267,14 +464,15 @@ static struct Opp_Node* opp_parse_type(struct Opp_Parser* parser)
 	if (type.decl == NULL)
 		opp_error(parser->lex, "Use of undeclared type '%s'", parser->lex->t.buffer.buf);
 
-	if (type.decl->t_type == TYPE_STRUCT && type.unsign)
-		opp_error(parser->lex, "Struct '%s' type cannot have unsigned attribute", type.decl->id);
+	else if ((type.decl->t_type == TYPE_FLOAT || type.decl->t_type == TYPE_DOUBLE 
+		|| type.decl->t_type == TYPE_STRUCT) && type.unsign)
+		opp_error(parser->lex, "Type '%s' cannot be unsigned", type.decl->id);
 
 	int lookahead = 1;
 	do {
 		opp_peek_tok(parser->lex, lookahead);
 		if (parser->lex->t.id != TMUL && parser->lex->t.id != TIDENT)
-			opp_error(parser->lex, "Unexpected token in type definition");
+			opp_error(parser->lex, "Expected a identifier or '*' got unexpected");
 		lookahead++;
 	} while (parser->lex->t.id != TIDENT);
 
@@ -296,6 +494,7 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 
 	opp_next(parser->lex);
 
+	func_node->fn_stmt.type.depth = 0;
 	while (parser->lex->t.id != TIDENT) {
 		func_node->fn_stmt.type.depth++;
 		opp_next(parser->lex);
@@ -309,6 +508,7 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 		opp_error(parser->lex, "Expected '(' after function identifier '%s'",
 			name->unary_expr.val.strval);
 
+	func_node->fn_stmt.args_end = false;
 	func_node->fn_stmt.args = (struct Opp_Node*)
 		malloc(sizeof(struct Opp_Node)*DEFAULT_LIST_SIZE);
 
@@ -326,8 +526,12 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 		if (i == DEFAULT_LIST_SIZE)
 			opp_error(parser->lex, "Max function parameters met");
 		
-		if (parser->lex->t.id == TVA_ARGS)
-			opp_error(parser->lex, "Add ...");
+		if (parser->lex->t.id == TVA_ARGS) {
+			assert(false);
+			func_node->fn_stmt.args_end = true;
+			opp_next(parser->lex);
+			break;
+		}
 
 		if (parser->lex->t.id == TUNSIGNED) {
 			func_node->fn_stmt.args[i].var_stmt.type.unsign = 1;
@@ -344,6 +548,7 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 
 		func_node->fn_stmt.args[i].var_stmt.type.decl = type;
 
+		func_node->fn_stmt.args[i].var_stmt.type.depth = 0;
 		opp_next(parser->lex);
 		while (parser->lex->t.id != TIDENT) {
 			func_node->fn_stmt.args[i].var_stmt.type.depth++;
@@ -355,7 +560,6 @@ static struct Opp_Node* opp_parse_func(struct Opp_Parser* parser, struct Opp_Typ
 		i++;
 
 	} while (parser->lex->t.id == TCOMMA);
-
 
 	func_node->fn_stmt.len = i;
 
@@ -617,6 +821,7 @@ static struct Opp_Node* opp_parse_var_decl(struct Opp_Parser* parser, struct Opp
 
 	var->var_stmt.type = type;
 
+	var->var_stmt.type.depth = 0;
 	opp_next(parser->lex);
 	while (parser->lex->t.id != TIDENT) {
 		var->var_stmt.type.depth++;
@@ -705,9 +910,7 @@ static struct Opp_Node* opp_parse_import(struct Opp_Parser* parser)
 	if (parser->lex->t.id != TSTR)
 		opp_error(parser->lex, "Expected file path after import statement");
 
-	struct Opp_Parser* p2 = opp_add_module(parser->lex->t.buffer.buf);
-
-	import->import_stmt.import = p2;
+	opp_add_module(parser, parser->lex->t.buffer.buf);
 
 	opp_next(parser->lex);
 

@@ -58,6 +58,14 @@ static unsigned char shstrtab[] = {
 	0x0, 0x2E, 0x72, 0x65, 0x6C, 0x61, 0x2E, 0x74, 0x65, 0x78, 0x74, 0x0
 };
 
+void free_elf_data()
+{
+	free(elf_info.strtable.str);
+	free(elf_info.relocs);
+	free(elf_info.symbols.pairs);
+	// free(elf_info.sect_list);
+}
+
 void dump_data(struct OppIr* ir)
 {
 	printf("Data Dump\n");
@@ -145,16 +153,18 @@ void make_reloc(unsigned int off, char* sym, int type)
 	elf_info.r_idx++;
 }
 
+#define STRTAB_SIZE INIT_BYTECODE_SIZE+64
+
 void init_strtab()
 {
-	elf_info.strtable.str = (unsigned char*)malloc(INIT_BYTECODE_SIZE);
+	elf_info.strtable.str = (unsigned char*)malloc(STRTAB_SIZE);
 
 	if (elf_info.strtable.str == NULL)
 		INTERNAL_ERROR("Malloc fail");
 
-	elf_info.strtable.allocated = INIT_BYTECODE_SIZE;
+	elf_info.strtable.allocated = STRTAB_SIZE;
 	elf_info.strtable.str_idx = 0;
-	memset(elf_info.strtable.str, 0, INIT_BYTECODE_SIZE);
+	memset(elf_info.strtable.str, 0, STRTAB_SIZE);
 }
 
 void init_reloc()

@@ -130,7 +130,7 @@ struct OppIr_Value {
 struct OppIr_Const {
 	struct OppIr_Value val;
 	enum OppIr_Const_Type loc_type;
-	bool global, nopush;
+	bool  nopush;
 };
 
 struct OppIr_Var {
@@ -147,6 +147,7 @@ struct OppIr_Func {
 struct OppIr_Arg {
 	enum OppIr_Const_Type type;
 	unsigned int idx;
+	bool stop;
 };
 
 enum {
@@ -171,12 +172,8 @@ struct OppIr_Set {
 
 struct OppIr_Arith {
 	int type;
-	bool imm;
+	bool imm, floating, unsign;
 	struct OppIr_Value val;
-};
-
-enum {
-	BIT_AND, BIT_OR
 };
 
 struct OppIr_Bit {
@@ -192,6 +189,7 @@ struct OppIr_Cast {
 struct OppIr_Call {
 	enum OppIr_Const_Type ret_type;
 	bool imm, ret;
+	int extra_args;
 	char* name;
 };
 
@@ -268,36 +266,5 @@ void oppir_check_data(struct OppIr* ir, unsigned int bytes);
 
 // Util
 void oppir_check_realloc(struct OppIr* ir, unsigned int bytes);
-static enum Regs oppir_push_reg(struct OppIr* ir, enum OppIr_Const_Type type);
-static void oppir_push(struct OppIr* ir, struct Register reg);
-static struct Register oppir_pop_reg(struct OppIr* ir);
-static enum Regs oppir_reg_alloc(struct OppIr* ir);
-static void oppir_write_const(struct OppIr* ir, struct OppIr_Value* imm);
-static int32_t oppir_get_spill(struct OppIr* ir);
-static void oppir_set_offsets(struct OppIr* ir);
-static void oppir_save_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Set* set);
-static void oppir_write_reg(struct OppIr* ir, enum Regs reg_type, struct OppIr_Const* imm);
-static void oppir_write_data(struct OppIr* ir, const unsigned int len, unsigned char* d);
-
-// Opcodes
-static void oppir_eval_const(struct OppIr* ir, struct OppIr_Const* imm);
-static void oppir_local_param(struct OppIr* ir, unsigned int args);
-static void oppir_eval_func(struct OppIr* ir, struct OppIr_Func* fn);
-static void oppir_eval_arg(struct OppIr* ir, struct OppIr_Arg* arg);
-static void oppir_eval_mov_arg(struct OppIr* ir, struct OppIr_Arg* arg);
-static void oppir_eval_label(struct OppIr* ir, struct OppIr_Const* loc);
-static void oppir_eval_jmp(struct OppIr* ir, struct OppIr_Jmp* jmp);
-static void oppir_eval_var(struct OppIr* ir, struct OppIr_Var* var);
-static void oppir_eval_cmp(struct OppIr* ir, struct OppIr_Cmp* cmp);
-static void oppir_eval_arith(struct OppIr* ir, struct OppIr_Arith* arith);
-static void oppir_eval_set(struct OppIr* ir, struct OppIr_Set* set);
-static void oppir_eval_cast(struct OppIr* ir, struct OppIr_Cast* cast);
-static void oppir_eval_ptr_assign(struct OppIr* ir, struct OppIr_Cast* cast);
-static void oppir_eval_bitwise(struct OppIr* ir, struct OppIr_Bit* bit);
-static void oppir_eval_addr(struct OppIr* ir, struct OppIr_Const* addr);
-static void oppir_eval_end(struct OppIr* ir);
-static void oppir_eval_ret(struct OppIr* ir);
-static void oppir_eval_call(struct OppIr* ir, struct OppIr_Call* call);
-static void oppir_eval_deref(struct OppIr* ir, struct OppIr_Cast* cast);
 
 #endif /* OPP_IR */

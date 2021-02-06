@@ -1,8 +1,12 @@
-import "oppio";
+// Opp io lib
+// import "oppio.opp";
+
+// C lib
+import "libc.opp";
 
 int main(int argc, char** argv) {
 
-	println("Hello World!");
+	// println("Hello World!");
 	
 	// Or
 	

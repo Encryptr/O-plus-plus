@@ -1,0 +1,12 @@
+// 23
+
+int main() {
+	char a = 93;
+	char* b = &a;
+	char** c = &b;
+	char*** d = &c;
+	
+	***d = 23;
+
+	return a;
+}

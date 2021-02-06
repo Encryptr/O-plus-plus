@@ -1,0 +1,18 @@
+// 3
+
+struct t1 {
+	long a;
+	int b;
+	long c;
+};
+
+int main() {
+	t1 a;
+	a.a = 2;
+	a.b = 3;
+	a.c = 4;
+
+	t1* b = &a;
+
+	return (*b).b;
+}

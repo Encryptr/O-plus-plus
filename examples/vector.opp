@@ -1,0 +1,36 @@
+import "libc.opp";
+
+extern void printnumb(long num);
+
+struct Vec2 {
+	long x;
+	long y;	
+};
+
+void mul(Vec2* vec, long fac) {
+	(*vec).x = (*vec).x * fac;
+	(*vec).y = (*vec).y * fac;
+}
+
+void main() {
+	Vec2 a;
+	a.x = 1;
+	a.y = 2;
+
+	printf("Vector before\n");
+	printnumb(a.x);
+	printnumb(a.y);
+
+	// mul(&a, 2);
+
+	// printf("Vector after\n");
+	// printnumb(a.x);
+	// printnumb(a.y);
+
+	int i = 0;
+	while (i < 1000) {
+		printnumb(i);
+		i = i + 1;
+	}
+
+}

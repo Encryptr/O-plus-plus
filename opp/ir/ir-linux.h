@@ -49,6 +49,7 @@ void make_fn_sym(char* fname, size_t start);
 void make_global_sym(char* name, size_t loc, bool local);
 void make_reloc(unsigned int off, char* sym, int type);
 void make_extern(char* sym_name);
+void free_elf_data();
 
 // Elf setup
 void init_elf_syms();

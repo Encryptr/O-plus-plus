@@ -75,7 +75,7 @@ struct Opp_Bucket* env_add_item(struct Opp_Namespace* ns, char* name)
 				pos->next->next = NULL;
 				return pos->next;
 			}
-			else 
+			else
 				pos = pos->next;
 		}
 	}

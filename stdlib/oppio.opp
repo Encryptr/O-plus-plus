@@ -6,12 +6,21 @@
 
 // @Name: println
 // @Desc: OppIO print string function
-// @Param: char* (str)
-// @Ret: 0
+// @Param: Input string (char*)
+// @Ret: None
 extern void __oppio_println(char* __str);
 
 void println(char* __str) {
-	__oppio_println(str);
+	__oppio_println(__str);
 }
 
+// @Name: panic
+// @Desc: Panic / exit
+// @Param: Error code (int)
+// @Ret: None
+extern void __oppio_panic(int __id);
+
+void panic(int __id) {
+	__oppio_panic(__id);
+}
 

@@ -20,9 +20,7 @@
 #ifndef OPP_HEADER
 #define OPP_HEADER
 
-#include <stdint.h>
-
-#if defined(MINGW)
+#ifdef MINGW
 #	define WIN64
 #	define PLATFORM_NAME "windows"
 #	include "win_header.h"

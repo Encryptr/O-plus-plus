@@ -32,8 +32,6 @@ struct Opp_Debug_Func {
 	const char* res_name;
 };
 
-typedef struct Opp_Type_Decl Opp_Obj;
-
 struct Opp_Analize {
 	struct Opp_Options* opts;
 	struct Opp_Parser* parser;
@@ -44,6 +42,6 @@ struct Opp_Analize {
 
 struct Opp_Analize* opp_init_analize(struct Opp_Parser* parser, struct Opp_Options* opts);
 void analize_tree(struct Opp_Analize* ctx);
-
+void opp_free_analize(struct Opp_Analize* analize);
 
 #endif /* OPP_ANALYSIS */

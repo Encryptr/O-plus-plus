@@ -60,6 +60,8 @@ struct Opp_Type_Decl {
 	bool unsign;
 };
 
+typedef struct Opp_Type_Decl Opp_Obj;
+
 struct Opp_List {
 	unsigned int length;
 	struct Opp_Node** list;
@@ -74,6 +76,7 @@ struct Opp_Expr_Bin {
 struct Opp_Expr_Unary {
 	enum Opp_Token type;
 	union Opp_Value val;
+	struct Opp_Bucket* bidx;
 };
 
 struct Opp_Expr_Assign {
@@ -168,7 +171,7 @@ struct Opp_Stmt_Block {
 struct Opp_Stmt_Var {
 	struct Opp_Type_Decl type;
 	struct Opp_Node* var;
-	unsigned int off;
+	struct Opp_Bucket* bidx;
 };
 
 struct Opp_Stmt_Import {
@@ -180,18 +183,14 @@ struct Opp_Stmt_While {
 	struct Opp_Node* then;
 };
 
-struct Opp_Func_Args {
-	struct Opp_Type_Decl type;
-	struct Opp_Node* name;
-};
-
 struct Opp_Stmt_Func {
 	struct Opp_Type_Decl type;
 	struct Opp_Node* name;
 	struct Opp_Node* body;
 	unsigned int len;
+	bool args_end;
 	struct Opp_Node* args;
-	struct Opp_Namespace* scope; // remove and move to block
+	struct Opp_Bucket* bidx;
 };
 
 struct Opp_Stmt_Ret {
