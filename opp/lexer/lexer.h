@@ -1,6 +1,6 @@
 /** @file lexer.h
  * 
- * @brief Lexical analysis
+ * @brief Opp Lexer
  *      
  * Copyright (c) 2020 Maks S
  *
@@ -15,109 +15,123 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
-
-#ifndef OPP_LEXER
-#define OPP_LEXER
+**/
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 #include <stdarg.h>
-#include <assert.h>
-#include "../header/os.h"
-#include "io.h"
+#include "../os/os.h"
+
+#ifndef OPP_LEXER
+#define OPP_LEXER
+
+#define ignore(i) (i == ' ' || i == '\t' || i=='\r')
+#define isletter(i) ((i >= 'a' && i <= 'z') || \
+		(i >= 'A' && i <= 'Z') || (i == '_'))
+#define isnum(i) ((i >= '0' && i <= '9'))
+
+struct Opp_IO {
+	const char* fname;
+	FILE* file;
+	long fsize;
+};
 
 enum Opp_Token {
 	INVALID,
 
-	TIDENT, TINTEGER, TFLOAT, THEX, TSTR, TCH,
+	TIDENT, TINTEGER, TFLOATING, TSTR,
 
-	// || && > < >= <= 
+	// || && > <= < >= 
 	TOR, TAND, TGT, TLE, TLT, TGE,
-
-	// == = ! != ' "
-	TEQEQ, TNOTEQ, TEQ, TNOT, TTIK, TQUOTE,	
-	
+	// == != ! ?
+	TEQEQ, TNOTEQ, TNOT, TQUESTION, 
 	// + - / * % -- ++
 	TADD, TMIN, TDIV, TMUL, TMOD, TDECR, TINCR,
-
-	// & : ...
+	// & : ... 
 	TADDR, TCOLON, TVA_ARGS,
-
-	// += -= /= *= %= 
-	TADDEQ, TMINEQ, TDIVEQ, TMULEQ, TMODEQ,
-
-	// ( ) , [ ] . ; 
+	// = += -= /= *= %= 
+	TEQ, TADDEQ, TMINEQ, TDIVEQ, TMULEQ, TMODEQ,
+	// ( ) , [ ] { } . ; ->
 	TOPENP, TCLOSEP, TCOMMA, TOPENB, TCLOSEB, 
-	TOPENC, TCLOSEC, TDOT, TSEMICOLON,
-
+	TOPENC, TCLOSEC, TDOT, TSEMICOLON, TARROW,
 	// << >> ^ | ~
 	TSHL, TSHR, TBITXOR, TBITOR, TBITNOT,
+    // <<= >>= &= |= ~= ^= 
+	TSHLEQ, TSHREQ, TANDEQ, TOREQ, TBNOTEQ, TXOREQ, 
+	// Keywords
+    TAUTO,
+    TBREAK,
+    TCASE,
+    TCONST,
+    TCONTINUE,
+    TDEFAULT,
+    TDO,
+    TWHILE,
+    TIF,
+    TELSE,
+    TEXTERN,
+    TFOR,
+    TGOTO,
+    TREGITSTER,
+    TRETURN,
+    TSIZEOF,
+    TSTATIC,
+    TSWITCH,
+    TTYPEDEF,
+    TVOLATILE,
+    TUNSIGNED,
+    TSIGNED,
 
-	// O++ Keywords
-	TASM, TAUTO, TSIZEOF, TWHILE, TIF, 
-	TELSE, TRET, TSWITCH, TSTRUCT, TGOTO,
-	TEXTERN, TIMPORT, TFOR, TCASE, TBREAK,
-	TUNSIGNED,
+    // Types
+    TSTRUCT,
+    TENUM,
+	TUNION,
+    TCHAR,
+    TSHORT,
+    TINT,
+    TLONG,
+    TFLOAT,
+    TDOUBLE,
+	TVOID,
+	TINLINE,
+	TRESTRICT,
 	
 	FEND
 };
 
-#define SCAN_BUF 32
-#define INCR s->src++; s->colum++
-#define DECR s->src--; s->colum--
+#define SCAN_BUFFER_INITAL 32
 
 struct Opp_Buf {
 	char* buf;
 	size_t len;
 };
 
-typedef struct Opp_Buf OppBuf;
-
 struct Opp_Tok {
 	enum Opp_Token id;
-	OppBuf buffer;
+	struct Opp_Buf buffer;
 	union {
 		int64_t num;
 		double	real;
-	};
+	} value;
 };
 
 struct Opp_Scan {
 	char* src, *content;
-	OppIO io;
-	uint32_t line;
-	uint32_t colum;
+	struct Opp_IO io;
+	uint32_t line, colum;
 	struct Opp_Tok t;
 };
 
-#define INTERNAL_ERROR(str) \
-	internal_error(str, __FUNCTION__);
-
-struct Opp_Scan;
-
-void opp_error(struct Opp_Scan* s, const char* str, ...);
-void internal_error(const char* str, const char* func);
-
-uint64_t hex2i64(char *str);
-bool is_keyword(struct Opp_Scan* s);
+// Lexer
+void opp_init_scan(struct Opp_Scan* s, const char* fname);
 void dump_tokens(struct Opp_Scan* s);
-
-// OppLex
-void init_opp_file(struct Opp_Scan* s, const char* fname);
-void init_opp_lex(struct Opp_Scan* s, char* content);
-void opp_free_lex(struct Opp_Scan* s, bool alloc);
+void opp_init_lex(struct Opp_Scan* s, const char* fname);
 void opp_next(struct Opp_Scan* s);
 void opp_peek_tok(struct Opp_Scan* s, int times);
-void opp_lex_identifier(struct Opp_Scan* s);
-void opp_lex_numeral(struct Opp_Scan* s);
-void opp_lex_hex(struct Opp_Scan* s);
-void opp_lex_str(struct Opp_Scan* s);
-enum Opp_Token opp_lex_char(struct Opp_Scan* s);
-void realloc_buf(struct Opp_Scan* s);
-
+const char* tok_to_str(struct Opp_Scan* s);
+const char* tok_debug(enum Opp_Token tok);
 
 #endif /* OPP_LEXER */

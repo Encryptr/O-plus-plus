@@ -1,6 +1,8 @@
 import "libc.opp";
 
 extern void printnumb(int a);
+extern int rand_to(int limit);
+extern void rand_setup();
 
 void swap(int *xp, int *yp) 
 { 
@@ -25,19 +27,27 @@ void bubbleSort(int* arr, int n)
 	}
 } 
 
-void main() 
-{ 
-    int arr[5];
-    arr[0] = 64;
-    arr[1] = 23;
-    arr[2] = 54;
-    arr[3] = 12;
-    arr[4] = 99;
+int* create_array(long size)
+{
+	int* arr = malloc(4*size);
+	int i = 0;
+	while (i < size) {
+		arr[i] = rand_to(100000);
+		i = i + 1;
+	}
+
+	return arr;
+}
+
+void main()
+{
+	rand_setup();
+	int* arr = create_array(100000);
  
-    bubbleSort(arr, 5); 
+    bubbleSort(arr, 100000); 
 	
 	int i = 0;
-	while (i < 5) {
+	while (i < 100000) {
 		printnumb(arr[i]);
 
 		i = i + 1;

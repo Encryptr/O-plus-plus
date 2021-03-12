@@ -1,6 +1,6 @@
-/** @file io.h
+/** @file util.h
  * 
- * @brief File IO header
+ * @brief Opp Utilities
  *      
  * Copyright (c) 2020 Maks S
  *
@@ -15,19 +15,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+**/
 
-#ifndef OPP_IO
-#define OPP_IO
+#ifndef OPP_UTIL
+#define OPP_UTIL
 
 #include <stdio.h>
+#include <stdlib.h>
+#include "../lexer/lexer.h"
 
-struct Opp_IO {
-	const char* fname;
-	FILE* file;
-	long fsize;
-};
+#define INTERNAL_ERROR(str) \
+	internal_error(str)
+#define MALLOC_FAIL() \
+	INTERNAL_ERROR("Malloc fail")
 
-typedef struct Opp_IO OppIO;
+// Error Util
+void opp_error(struct Opp_Scan* s, const char* str, ...);
+void internal_error(const char* str);
 
-#endif /* OPP_IO */
+#endif /* OPP_UTIL */

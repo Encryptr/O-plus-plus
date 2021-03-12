@@ -1,8 +1,8 @@
 /** @file types.h
  * 
- * @brief Type tree module
+ * @brief Opp C Type Module
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2021 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,30 +20,28 @@
 #ifndef OPP_TYPES
 #define OPP_TYPES
 
-enum Opp_Std_Type {
-	TYPE_VOID,
-	TYPE_I8,
-	TYPE_I16,
-	TYPE_I32,
-	TYPE_I64,
-	TYPE_FLOAT,
-	TYPE_DOUBLE,
-	TYPE_BITFIELD,
-	TYPE_STRUCT,
+#include <stdio.h>
+
+struct Opp_Type {
+	enum Opp_Token type,
+				   storage_class;
+	unsigned char sign;
+	unsigned char const_attr : 1;
+	unsigned char volatile_attr : 1;
+	unsigned char inline_attr : 1;
+	unsigned char restrict_attr : 1;
+	// char ptr_attr;
+	// char ptr_volatile_attr;
+	// char ptr_restrict_attr;
+	struct Opp_Type_Entry* entry;
 };
 
 struct Opp_Type_Entry {
-	char* id;
-	enum Opp_Std_Type t_type;
-	struct {
-		unsigned int size, l_mem;
-		struct Opp_Stmt_Struct* s_elems;
-	};
-	struct Opp_Type_Entry* next;
+	int a;
 };
 
 struct Opp_Type_Tree {
-	struct Opp_Type_Entry** types;
+	struct Opp_Type_Entry** tree;
 	size_t size;
 };
 

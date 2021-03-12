@@ -17,8 +17,8 @@
  * limitations under the License.
  */ 
 
-#ifndef OPP_HEADER
-#define OPP_HEADER
+#ifndef OPP_OS
+#define OPP_OS
 
 #ifdef MINGW
 #	define WIN64
@@ -37,7 +37,7 @@
 #	define LINUX64
 #	define UNX
 #	define PLATFORM_NAME "linux"
-#	include "linux-header.h"
+// #	include "linux-header.h"
 #endif
 
 #ifdef __x86_64__
@@ -56,4 +56,4 @@
 	#define CL_YELLOW "\x1b[33m"
 #endif
 
-#endif /* OPP_HEADER */
+#endif /* OPP_OS */

@@ -13,8 +13,6 @@ struct t2 {
 	t1* dl;
 };
 
-// fix ir div
-
 void main() {
 
 	/* Struct test 1 */

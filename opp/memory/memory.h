@@ -23,24 +23,27 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
-// #define BLOCK_SIZE 120000
 #define BLOCK_SIZE 64000
+#define ALLIGMENT 8
 
 struct Block_Header {
     struct Block_Header *next;
-    char *block, *free, *end;
+    unsigned char *block, *free, *end;
 };
 
 struct Allocator {
-	size_t used_mem;
     struct Block_Header* first;
     struct Block_Header* current;
+    void* (*allocator)(size_t);
+    void (*xfree)(void*);
 };
 
-bool allocator_init();
-char* alloc(size_t size);
+bool allocator_init(void* (*xmalloc)(size_t), void (*xfree)(void*));
+void* opp_alloc(size_t size);
+void* opp_realloc(void* mem, size_t new_size, size_t old_size);
 void allocator_free();
-void allocator_reset();
+void allocator_reset();	
 
 #endif /* OPP_ALLOCATOR */

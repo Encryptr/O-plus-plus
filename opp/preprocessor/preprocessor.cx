@@ -1,0 +1,168 @@
+// #include "preprocessor.h"
+// #include <time.h>
+
+// static void opp_init_file(struct Opp_Scanner* s, const char* fname);
+
+// struct Opp_Scanner* opp_init_scanner(const char* fname)
+// {
+//     struct Opp_Scanner* scn = (struct Opp_Scanner*)
+//         malloc(sizeof(struct Opp_Scanner));
+
+//     if (!scn)
+//         goto err;
+
+//     memset(scn, 0, sizeof(struct Opp_Scanner));
+
+//     opp_init_file(scn, fname);
+
+//     // Runtime
+//     scn->src.line = 1;
+//     scn->src.colum = 0;
+//     scn->src.newbuf = (char*)calloc(scn->io.fsize + 1, 1);
+//     if (!scn->src.newbuf)
+//         goto err;
+//     scn->src.allocated = scn->io.fsize;
+//     scn->src.tok.buffer.buf = (char*)malloc(SCAN_BUFFER_INITAL);
+//     scn->src.tok.buffer.len = SCAN_BUFFER_INITAL;
+
+//     // State
+//     time_t date = time(NULL);
+//     scn->state.date = ctime(&date);
+
+//     struct tm* t = localtime(&date);
+//     sprintf(scn->state.time, "%02d:%02d:%02d", 
+//         t->tm_hour, t->tm_min, t->tm_sec);
+
+//     // Init hash map
+
+//     return scn;
+// err:
+//     MALLOC_FAIL();
+// }
+
+// static void opp_init_file(struct Opp_Scanner* s, const char* fname)
+// {
+//     long size = 0;
+// 	s->io.fname = fname;
+// 	s->io.file = fopen(fname, "r");
+
+// 	if (!s->io.file) {
+// 		printf("Opp error opening file '%s'\n", fname);
+// 		exit(1);
+// 	}
+
+// 	fseek(s->io.file, 0, SEEK_END);
+// 	size = ftell(s->io.file);
+// 	s->io.fsize = size;
+// 	rewind(s->io.file);
+// 	s->src.content = calloc(1, size + 1);
+
+// 	if (!s->src.content)
+// 		MALLOC_FAIL();
+
+// 	int _ = fread(s->src.content, size, 1, s->io.file);
+// 	fclose(s->io.file);
+//     s->src.ptr = s->src.content;
+// }
+
+// static void preprocessor_error(struct Opp_Scanner* s, const char* str, ...)
+// {
+// 	// va_list ap;
+// 	// va_start(ap, str);
+	
+// 	// // printf("%s:%u:%u ", s->io.fname, s->line, s->colum);
+// 	// #ifdef UNX 
+// 	// printf(CL_RED);
+// 	// #endif
+
+// 	// printf("error: \n\t");
+// 	// printf(CL_RESET); 
+// 	// vfprintf(stdout, str, ap);
+// 	// fprintf(stdout, "\n");
+// 	// va_end(ap);
+// 	// exit(1);
+// }
+
+// enum Keywords {
+//     KEY_LINE,
+//     KEY_FILE,
+//     KEY_DATE,
+//     KEY_TIME,
+// };
+
+// struct Preprocessor_Keywords {
+//     const char* key;
+//     enum Keywords id;
+// };
+
+// static struct Preprocessor_Keywords keys[] = {
+//     {"__LINE__", KEY_LINE},
+//     {"__FILE__", KEY_FILE},
+//     {"__DATE__", KEY_DATE},
+//     {"__TIME__", KEY_TIME},
+// };
+
+// // static void opp_long_comment(struct Opp_Scan* s)
+// // {
+// // 	bool found = false;
+// // 	s->src++; 
+// // 	while (!found && *s->src) {
+// // 		if (*s->src == '*' && s->src[1] == '/')
+// // 			found = true;
+// // 		s->src++; 
+// // 	}
+// //     s->src++;
+
+// // 	if (!found)
+// // 		opp_error(s, "Expected terminating '*/'");
+// // }
+
+// // static void opp_macro(struct Opp_Scan* s)
+// // {
+
+// // }
+
+// void opp_start_preprocessor(struct Opp_Scanner* s)
+// {
+
+// }
+// // void opp_start_preprocessor(struct Opp_Scan* s)
+// // {
+// //     s->map.newbuf = (char*)malloc(s->io.fsize + 1);
+// //     if (!s->map.newbuf)
+// //         MALLOC_FAIL();
+// //     memset(s->map.newbuf, 0, s->io.fsize + 1);
+
+// //     while (*s->src) {
+// //         if (*s->src == '/') {
+// //             s->src++;
+// //             if (*s->src == '/') {
+// //                 while (*s->src && *s->src != '\n')
+// //                     s->src++;
+// //             }
+// //             else if (*s->src == '*') {
+// //                 opp_long_comment(s);
+// //             }
+// //         }
+// //         else if (*s->src == '\\') {
+// //             s->src++;
+// //             if (*s->src == '\n')
+// //                 s->src++;
+// //             else 
+// //                 s->src--;
+// //         }
+// //         else if (*s->src == '#')
+// //             opp_macro(s);
+
+// //         if (s->map.idx == s->io.fsize)
+// //             printf("REALLOC\n");
+// //         s->map.newbuf[s->map.idx++] = *s->src;
+// //         s->src++;
+// //     }
+// // }
+// int main() {
+//     struct Opp_Scanner* scn = opp_init_scanner("test.c");
+//     opp_start_preprocessor(scn);
+
+
+// }

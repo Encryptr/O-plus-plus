@@ -20,14 +20,10 @@
 #ifndef OPP_ENV
 #define OPP_ENV
 
-#include <stdint.h>
-#include "../lexer/lexer.h"
-#include "../ast/ast.h"
+#include <stdio.h>
 
 #define STACK_SIZE 8
 #define HASH_SIZE 320
-// #define HASH_SIZE 4600 
-// 1600 - 3600 - 4600 - 10600
 
 enum Opp_Bucket_Type {
 	TYPE_GLOBAL, TYPE_LOCAL,
@@ -37,14 +33,14 @@ enum Opp_Bucket_Type {
 
 struct Opp_Bucket {
 	char* key;
-	enum Opp_Bucket_Type type;
-	struct Opp_Type_Decl sym_type;
-	bool predef;
-	union {
-		struct Opp_Stmt_Func* args;
-		int32_t offset;
-	};
-	struct Opp_Bucket* next;
+	// enum Opp_Bucket_Type type;
+	// struct Opp_Type_Decl sym_type;
+	// bool predef;
+	// union {
+	// 	struct Opp_Stmt_Func* args;
+	// 	int32_t offset;
+	// };
+	// struct Opp_Bucket* next;
 };
 
 struct Opp_Namespace {
