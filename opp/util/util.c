@@ -1,6 +1,6 @@
 #include "util.h"
-#include "../os/os.h"
 #include "../opp.h"
+#include "../memory/memory.h"
 #include <setjmp.h>
 
 void opp_error(struct Opp_Scan* s, const char* str, ...)
@@ -33,4 +33,102 @@ void internal_error(const char* str)
 	#endif 
 
 	longjmp(global_state.error_buf, OPP_ERROR);
+}
+
+unsigned int hash_str(char *string, unsigned int size)
+{
+	unsigned int h = 0;
+	while (*string) {
+		h = ((h<<5)-h)^(unsigned char)*(string++);
+	}
+	h = h % size;
+	
+	return h;
+}
+
+struct Opp_Hashmap* opp_create_map(size_t size, struct Opp_Hashmap* parent)
+{
+	struct Opp_Hashmap* map = (struct Opp_Hashmap*)
+		opp_alloc(sizeof(struct Opp_Hashmap));
+
+	if (!map)
+		MALLOC_FAIL();
+
+	map->items = (struct Opp_Bucket**)
+		opp_alloc(sizeof(struct Opp_Bucket*)*size);
+
+	map->size = size;
+	map->parent = parent;
+	
+	memset(map->items, 0, sizeof(struct Opp_Bucket*)*size);
+
+	return map;
+}
+
+struct Opp_Bucket* opp_get_bucket(struct Opp_Hashmap* map, char* string)
+{
+	unsigned int loc = hash_str(string, map->size);
+
+	struct Opp_Hashmap* scope = map;
+
+	while (scope != NULL)
+	{
+		if (scope->items[loc] != NULL) 
+		{
+			struct Opp_Bucket* node = scope->items[loc];
+
+			while (node) {
+				if (!strcmp(node->id, string)) 
+					return node;
+				else if (node->next != NULL)
+					node = node->next;
+				else 
+					break;
+			}
+		}
+		scope = scope->parent;
+	}
+
+	return NULL;
+}
+
+struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string)
+{
+	unsigned int loc = hash_str(string, map->size);
+
+	if (map->items[loc] != NULL) {
+		struct Opp_Bucket* pos = map->items[loc];
+		while (pos) {
+			if (!strcmp(pos->id, string)) 
+				return NULL;
+			else if (pos->next == NULL) {
+				pos->next = (struct Opp_Bucket*)
+					opp_alloc(sizeof(struct Opp_Bucket));
+
+				if (!pos->next)
+					MALLOC_FAIL();
+
+				pos->next->id = string;
+				pos->next->next = NULL;
+				return pos->next;
+			}
+			else
+				pos = pos->next;
+		}
+	}
+	else {
+		struct Opp_Bucket* node = (struct Opp_Bucket*)
+			opp_alloc(sizeof(struct Opp_Bucket));
+
+		if (node == NULL)
+			MALLOC_FAIL();
+
+		node->id = string;
+		node->next = NULL;
+		map->items[loc] = node;
+
+		return node;
+	}
+
+	return NULL;
 }

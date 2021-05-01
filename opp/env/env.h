@@ -50,7 +50,6 @@ struct Opp_Namespace {
 	void* (*xmalloc)(size_t);
 };
 
-unsigned int hash_str(char *string, unsigned int size);
 struct Opp_Namespace* init_namespace(struct Opp_Namespace* parent, void* (*xmalloc)(size_t));
 struct Opp_Bucket* env_add_item(struct Opp_Namespace* ns, char* name);
 struct Opp_Bucket* env_get_item(struct Opp_Namespace* ns, char* name);

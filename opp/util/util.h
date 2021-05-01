@@ -24,6 +24,36 @@
 #include <stdlib.h>
 #include "../lexer/lexer.h"
 
+#ifdef MINGW
+#	define WIN64
+#endif
+
+#ifdef __APPLE__
+#	define MAC64
+#	define UNX
+#endif
+
+#ifdef __linux__
+#	define LINUX64
+#	define UNX
+#endif
+
+#ifdef __x86_64__
+#	define X86_CPU
+#endif
+
+#if !defined(WIN) && !defined(UNX)
+	#define OS_ERROR
+#endif
+
+#ifdef UNX
+	#define CL_RED    "\x1b[31m"
+	#define CL_BLUE   "\x1b[34m"
+	#define CL_GREEN  "\x1b[32m"
+	#define CL_RESET  "\x1b[0m"
+	#define CL_YELLOW "\x1b[33m"
+#endif
+
 #define INTERNAL_ERROR(str) \
 	internal_error(str)
 #define MALLOC_FAIL() \
@@ -32,5 +62,23 @@
 // Error Util
 void opp_error(struct Opp_Scan* s, const char* str, ...);
 void internal_error(const char* str);
+
+// Hashmap
+struct Opp_Bucket {
+	const char* id;
+	void* data;
+	struct Opp_Bucket* next;
+};
+
+struct Opp_Hashmap {
+	size_t size;
+	struct Opp_Bucket** items;
+	struct Opp_Hashmap* parent;
+};
+
+unsigned int hash_str(char* string, unsigned int size);
+struct Opp_Hashmap* opp_create_map(size_t size, struct Opp_Hashmap* parent);
+struct Opp_Bucket* opp_get_bucket(struct Opp_Hashmap* map, char* string);
+struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string);
 
 #endif /* OPP_UTIL */

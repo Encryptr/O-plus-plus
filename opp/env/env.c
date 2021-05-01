@@ -19,17 +19,6 @@
 
 #include "env.h"
 
-unsigned int hash_str(char *string, unsigned int size)
-{
-	unsigned int h = 0;
-	while (*string) {
-		h = ((h<<5)-h)^(unsigned char)*(string++);
-	}
-	h = h % size;
-	
-	return h;
-}
-
 // struct Opp_Namespace* init_namespace(struct Opp_Namespace* parent, void* (*xmalloc)(size_t))
 // {
 // 	struct Opp_Namespace* ns = (struct Opp_Namespace*)

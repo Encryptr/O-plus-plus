@@ -23,7 +23,6 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdarg.h>
-#include "../os/os.h"
 
 #ifndef OPP_LEXER
 #define OPP_LEXER
@@ -126,9 +125,8 @@ struct Opp_Scan {
 };
 
 // Lexer
-void opp_init_scan(struct Opp_Scan* s, const char* fname);
 void dump_tokens(struct Opp_Scan* s);
-void opp_init_lex(struct Opp_Scan* s, const char* fname);
+struct Opp_Scan* opp_init_lex(const char* fname);
 void opp_next(struct Opp_Scan* s);
 void opp_peek_tok(struct Opp_Scan* s, int times);
 const char* tok_to_str(struct Opp_Scan* s);

@@ -24,12 +24,40 @@
 #include "types.h"
 #include "../lexer/lexer.h"
 
+// Util
 static struct Opp_Stmt* opp_new_stmt(struct Opp_Parser* parser, enum Opp_Stmt_Type type);
 static struct Opp_Expr* opp_new_expr(struct Opp_Parser* parser, enum Opp_Expr_Type type);
-static struct Opp_Type opp_parse_type(struct Opp_Parser* parser);
 
+static struct Opp_Type* opp_parse_declaration_specifier(struct Opp_Parser* parser);
 static struct Opp_Stmt* opp_parse_global_def(struct Opp_Parser* parser);
-static struct Opp_Stmt* opp_parse_declaration(struct Opp_Parser* parser);
+static struct Opp_Stmt* opp_parse_decl(struct Opp_Parser* parser);
+static struct Opp_Type* opp_parse_declarator(struct Opp_Parser* parser, 
+											 struct Opp_Type* base);
+static struct Opp_Type* opp_parse_post_decl(struct Opp_Parser* parser, struct Opp_Type* base);
+
+// Statements
+static struct Opp_Stmt* opp_parse_stmt(struct Opp_Parser* parser);
+static struct Opp_Stmt* opp_parse_definition(struct Opp_Parser* parser, struct Opp_Type* type);
+static struct Opp_Stmt* opp_decl(struct Opp_Parser* parser, struct Opp_Type* type, bool init);
+static struct Opp_Stmt* opp_func_decl(struct Opp_Parser* parser, struct Opp_Type* type);
+
+// Expressions
+static struct Opp_Expr* opp_parse_expr(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_assign(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_ternary(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_or(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_and(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_bit_or(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_bit_xor(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_bit_and(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_relation(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_relation2(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_shift(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_op(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_op2(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_prefix(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_postfix(struct Opp_Parser* parser);
+static struct Opp_Expr* opp_parse_unary(struct Opp_Parser* parser);
 
 struct Opp_Parser* opp_init_parser(struct Opp_Scan* s)
 {
@@ -99,8 +127,6 @@ void opp_parser_begin(struct Opp_Parser* parser)
 
 		struct Opp_Stmt* stmt = opp_parse_global_def(parser);
 
-		// handel null rule
-
 		if (parser->nstmts == parser->allocated) {
 			parser->statements = (struct Opp_Stmt**)
 				opp_realloc(parser->statements, 
@@ -118,19 +144,39 @@ void opp_parser_begin(struct Opp_Parser* parser)
 	}
 }
 
+static bool is_valid_def(struct Opp_Parser* parser)
+{
+	switch (parser->lex->t.id) {
+		case TIDENT:     case TEXTERN:  case TSTATIC: 
+		case TINLINE:    case TUNION:   case TENUM:     
+		case TSTRUCT:    case TCHAR:    case TSHORT:
+		case TINT:       case TLONG:    case TUNSIGNED:
+		case TSIGNED:    case TCONST:   case TVOLATILE:
+		case TFLOAT:     case TDOUBLE:  case TVOID:
+		case TREGITSTER: case TAUTO:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
 static struct Opp_Stmt* opp_parse_global_def(struct Opp_Parser* parser)
 {
 	parser->state.scope = SCOPE_GLOBAL;
 	switch (parser->lex->t.id)
 	{
-		case TIDENT:    case TEXTERN:  case TSTATIC: 
-		case TINLINE:   case TTYPEDEF: case TUNION:  
-		case TENUM:     case TSTRUCT:  case TCHAR:   
-		case TSHORT:    case TINT:     case TLONG:    
-		case TUNSIGNED: case TSIGNED:  case TCONST:   
-		case TVOLATILE: case TFLOAT:   case TDOUBLE:
-		case TVOID:     case TREGITSTER: case TAUTO:
-			return opp_parse_declaration(parser);
+		case TIDENT:     case TEXTERN:  case TSTATIC: 
+		case TINLINE:    case TUNION:   case TENUM:     
+		case TSTRUCT:    case TCHAR:    case TSHORT:
+		case TINT:       case TLONG:    case TUNSIGNED:
+		case TSIGNED:    case TCONST:   case TVOLATILE:
+		case TFLOAT:     case TDOUBLE:  case TVOID:
+		case TREGITSTER: case TAUTO:
+			return opp_parse_decl(parser);
+
+		case TTYPEDEF:
+		break;
 	
 		default:
 			opp_error(parser->lex, "Error unexpected global declaration '%s'", 
@@ -139,120 +185,458 @@ static struct Opp_Stmt* opp_parse_global_def(struct Opp_Parser* parser)
 	return NULL;
 }
 
-static struct Opp_Type opp_parse_type(struct Opp_Parser* parser)
+#define ANOTHER() \
+	opp_error(parser->lex, "Another attribute found in declaration '%s'", parser->lex->t.buffer.buf)
+
+static struct Opp_Type* opp_parse_declaration_specifier(struct Opp_Parser* parser)
 {
-	struct Opp_Type type = {0};
+	struct Opp_Type* type = opp_create_type(TYPE_NONE, NULL);
+	bool got_base = false;
+	bool got_mod  = false;
+	bool got_sign = false;
+	enum Opp_Type_T mod;
 
-	while (parser->lex->t.id != FEND) {
+	for (;;) {
 		switch (parser->lex->t.id) {
-			case TEXTERN:
-			case TSTATIC: 
-			case TAUTO:   
-			case TREGITSTER: 
-			case TTYPEDEF: {
-				if (type.storage_class != 0)
-					opp_error(parser->lex, 
-						"Another storage class detected in declaration '%s'", 
-						parser->lex->t.buffer.buf);
+			case FEND:
+				opp_error(parser->lex, "Unexpected end of file in declaration");
 
+			case TEXTERN: case TSTATIC: 
+			case TAUTO:   case TREGITSTER: {
+				if (type->storage_class != 0)
+					ANOTHER();
 				if (parser->state.scope == SCOPE_GLOBAL && 
 					(parser->lex->t.id == TREGITSTER || parser->lex->t.id == TAUTO))
-					opp_error(parser->lex, "Unexpected '%s' in global scope", 
-						parser->lex->t.buffer.buf);
-				type.storage_class = parser->lex->t.id;
+						opp_error(parser->lex, "Unexpected '%s' in global scope", 
+							parser->lex->t.buffer.buf);
+				type->storage_class = parser->lex->t.id;
 				break;
 			}
 
-			case TSTRUCT: 
-		    case TENUM:
+			case TSTRUCT:
 			case TUNION:
 			break;
 
-		    case TCHAR: 
-		    case TSHORT: 
-		    case TINT: 
-		    case TLONG: 
-		    case TFLOAT: 
-		    case TDOUBLE: 
+		    case TCHAR: {
+		    	if (got_base)
+		    		ANOTHER();
+		    	type->type = TYPE_CHAR;
+		    	got_base = true;
+		    	break;
+		    }
+
+		    case TINT: {
+		    	if (got_base)
+		    		ANOTHER();
+		    	type->type = TYPE_INT;
+		    	got_base = true;
+		    	break;
+		    }
+		    
+		    case TFLOAT: {
+		    	if (got_base)
+		    		ANOTHER();
+		    	type->type = TYPE_FLOAT;
+		    	got_base = true;
+		    	break;
+		    }
+
+		    case TDOUBLE: {
+		    	if (got_base)
+		    		ANOTHER();
+		    	type->type = TYPE_DOUBLE;
+		    	got_base = true;
+		    	break;
+		    }
+
 			case TVOID: {
-				switch (type.type) {
-					case TINT: {
-						if (parser->lex->t.id != TSHORT && 
-							parser->lex->t.id != TLONG)
-							opp_error(parser->lex, "Another type found in declaration '%s'", 
-								parser->lex->t.buffer.buf);
-						type.type = parser->lex->t.id;
-						break;
-					}
+				if (got_base)
+		    		ANOTHER();
+		    	type->type = TYPE_VOID;
+		    	got_base = true;
+		    	break;
+		    }
 
-					case TSHORT: case TLONG: {
-						if (parser->lex->t.id != TINT)
-							opp_error(parser->lex, "Another type found in declaration '%s'", 
-								parser->lex->t.buffer.buf);
-						break;
-					}
+		    case TLONG: case TSHORT: {
+		    	if (got_mod)
+		    		ANOTHER();
+		    	
+		    	mod = parser->lex->t.id == TLONG 
+		    		? TYPE_LONG : TYPE_SHORT;
 
-					default: {
-						if (type.type != 0)
-							opp_error(parser->lex, "Another type found in declaration '%s'", 
-								parser->lex->t.buffer.buf);
-						type.type = parser->lex->t.id;
-						break;
-					}
-				}
+		    	got_mod = true;
 				break;
 			}
 
-			case TINLINE:
-			case TRESTRICT:
-			case TVOLATILE:
+			case TRESTRICT: {
+				type->restrict_attr = true; 
+				break;
+			}
+
+			case TINLINE: {
+				type->inline_attr = true; 
+				break;
+			}
+
+			case TVOLATILE: {
+				type->volatile_attr = true; 
+				break;
+			}
+
 			case TCONST: {
-				// if (type.attribute != 0 && type.attribute == type.a)
-				// 	opp_error(parser->lex, "Another type qualifier found '%s'", 
-				// 		parser->lex->t.buffer.buf);
-				// type.attribute = parser->lex->t.id;
+				type->const_attr = true; 
 				break;
 			}
 
-			case TUNSIGNED:
-			case TSIGNED: {
-				if (type.sign != 0)
-					opp_error(parser->lex, "Unexpected '%s' type attribute",
-						parser->lex->t.buffer.buf);
-				type.sign = parser->lex->t.id == TSIGNED ? 1 : 2;
-				break; 
+			case TUNSIGNED: case TSIGNED: {
+				if (got_sign)
+					ANOTHER();
+				got_sign = true;
+				type->unsign = parser->lex->t.id == TUNSIGNED;
+				break;
 			}
 
 			case TIDENT: {
-				printf("CHECK TYPEDEF\n");
+				goto end;
 				break;
 			}
 
-			default:
-				break;
+			default: {
+				goto end;
+			}
 		}
 		opp_next(parser->lex);
 	}
 
-	if (type.storage_class == 0)
-		type.storage_class = TEXTERN;
-	if (type.type == 0)
-		type.type = TINT;
-	if (type.sign == 0)
-		type.sign = 1;
-	
+end:
+	if (got_mod) {
+		if (!got_base) {
+			type->type = mod;
+		}
+		else {
+			switch (type->type) {
+				case TYPE_INT:
+					type->type = mod;
+					break;
+				case TYPE_DOUBLE:
+					if (mod == TYPE_LONG)
+						type->type = TYPE_LDOUBLE;
+					else
+						ANOTHER();
+					break;
+
+				default:
+					opp_error(parser->lex, "Unexpected extra modifier in declaration");
+					break;
+			}
+		}
+	}
+
 	return type;
 }
 
-static struct Opp_Stmt* opp_parse_declaration(struct Opp_Parser* parser)
+static struct Opp_Type* opp_parse_param(struct Opp_Parser* parser, struct Opp_Type* base)
+{
+	char* cpy = parser->state.decl_name;
+	base = opp_create_type(TYPE_FUNC, base);
+	base->val.fn.param = (struct Opp_Func_Mem*)opp_alloc(sizeof(struct Opp_Func_Mem)*6);
+	if (!base->val.fn.param)
+		MALLOC_FAIL();
+	unsigned int len = 0;
+
+	opp_next(parser->lex);
+	while (parser->lex->t.id != TCLOSEP) {
+		if (len == 6)
+			opp_error(parser->lex, "Max func param length met (6)");
+		if (parser->lex->t.id == TVA_ARGS) {
+			base->val.fn.is_vaarg = true;
+			opp_next(parser->lex);
+			break;
+		}
+
+		if (!is_valid_def(parser))
+			opp_error(parser->lex, "Invalid definition in func paramter #%d", len);
+
+		struct Opp_Type* type = opp_parse_declaration_specifier(parser);
+
+		if (type->storage_class == TEXTERN || type->storage_class == TSTATIC)
+			opp_error(parser->lex, "Unexpected storage class in function paramater");
+
+		if (type->type == TYPE_NONE)
+			type->type = TYPE_INT;
+
+		type = opp_parse_declarator(parser, type);
+
+		base->val.fn.param[len].name = parser->state.decl_name;
+		base->val.fn.param[len].type = type;
+
+		if (parser->lex->t.id == TCOMMA)
+			opp_next(parser->lex);
+		len++;
+	}
+
+	if (parser->lex->t.id != TCLOSEP)
+		opp_error(parser->lex, "Expected ')' in function declaration");
+
+	base->val.fn.len = len;
+	parser->state.decl_name = cpy;
+
+	return base;
+}
+
+static struct Opp_Type* opp_parse_post_decl(struct Opp_Parser* parser, struct Opp_Type* base)
+{
+	struct Opp_Type* nest = NULL;
+	if (parser->lex->t.id == TOPENP) { // check if not func
+		opp_next(parser->lex);
+		nest = opp_parse_declarator(parser, nest);
+
+		if (parser->lex->t.id != TCLOSEP)
+			opp_error(parser->lex, "Expected closing ')'");
+		opp_next(parser->lex);
+	}
+	else if (parser->lex->t.id == TIDENT) {
+		parser->state.decl_name = opp_alloc(strlen(parser->lex->t.buffer.buf) + 1);
+		if (!parser->state.decl_name)
+			MALLOC_FAIL();
+		strcpy(parser->state.decl_name, parser->lex->t.buffer.buf);
+		opp_next(parser->lex);
+	}
+
+	while (parser->lex->t.id == TOPENP || parser->lex->t.id == TOPENB) {
+		if (parser->lex->t.id == TOPENP) {
+			base = opp_parse_param(parser, base);
+			opp_next(parser->lex);
+		}
+		else {
+			opp_next(parser->lex);
+			opp_next(parser->lex);
+		}
+	}
+
+	if (nest != NULL) {
+		base = opp_type_fix(nest, base);
+	}
+
+	return base;
+}
+
+static struct Opp_Type* opp_parse_pointer(struct Opp_Parser* parser, struct Opp_Type* base)
+{
+	while (parser->lex->t.id == TMUL) {
+		base = opp_create_type(TYPE_PTR, base);
+		opp_next(parser->lex);
+
+		while (parser->lex->t.id == TCONST || 
+			   parser->lex->t.id == TRESTRICT ||
+			   parser->lex->t.id == TVOLATILE) 
+		{
+			if (parser->lex->t.id == TCONST)
+				base->const_ptr = 1;
+			else if (parser->lex->t.id == TRESTRICT)
+				base->restrict_ptr = 1;
+			else if (parser->lex->t.id == TVOLATILE)
+				base->volatile_ptr = 1;
+
+			opp_next(parser->lex);
+		}
+	}
+
+	base = opp_parse_post_decl(parser, base);
+
+	return base;
+}
+
+static struct Opp_Type* opp_parse_declarator(struct Opp_Parser* parser, struct Opp_Type* base)
+{
+	return opp_parse_pointer(parser, base);
+}
+
+static struct Opp_Stmt* opp_parse_definition(struct Opp_Parser* parser, struct Opp_Type* type)
 {
 	struct Opp_Stmt* stmt = NULL;
-
-	struct Opp_Type t = opp_parse_type(parser);
-
-	printf("===>%s\n", tok_debug(t.type));
-	printf("===>%s\n", tok_debug(t.storage_class));
-	printf("===>%s\n", t.sign == 1 ? "signed" : "unsigned");
+	if (parser->lex->t.id == TOPENC) 
+		stmt = opp_func_decl(parser, type);
+	else 
+		stmt = opp_decl(parser, type, parser->lex->t.id == TEQ);
 
 	return stmt;
+}
+
+static struct Opp_Stmt* opp_decl(struct Opp_Parser* parser, struct Opp_Type* type, bool init)
+{
+	struct Opp_Stmt* decl = opp_new_stmt(parser, STMT_DECL);
+
+	assert(!init);
+
+	decl->stmt.decl.name = parser->state.decl_name;
+	decl->stmt.decl.type = type;
+
+	return decl;
+}
+
+static struct Opp_Stmt* opp_func_decl(struct Opp_Parser* parser, struct Opp_Type* type)
+{
+	struct Opp_Stmt* func = opp_new_stmt(parser, STMT_FUNC);
+
+	func->stmt.func.name = parser->state.decl_name;
+	func->stmt.func.type = type;
+	// func->stmt.func.body //parse
+
+	return func;
+}
+
+static struct Opp_Stmt* opp_parse_decl(struct Opp_Parser* parser)
+{
+	parser->state.decl_name = NULL;
+	struct Opp_Type* base = opp_parse_declaration_specifier(parser);
+	struct Opp_Type* t = opp_parse_declarator(parser, base);
+
+	struct Opp_Stmt* stmt = opp_parse_definition(parser, t);
+
+	if (stmt->type == STMT_FUNC)
+		return stmt;
+
+	struct Opp_Stmt* list = stmt;
+	while (parser->lex->t.id == TCOMMA) {
+		opp_next(parser->lex);
+		t = opp_parse_declarator(parser, base);
+		list->stmt.decl.next = opp_parse_definition(parser, t);
+		list = list->stmt.decl.next;
+	}
+
+	if (parser->lex->t.id != TSEMICOLON)
+		opp_error(parser->lex, "Expected ';' after declaration");
+
+	opp_debug_type(t);
+
+	return stmt;
+}
+
+static struct Opp_Stmt* opp_parse_stmt(struct Opp_Parser* parser)
+{
+	switch (parser->lex->t.id)
+	{
+		case TIF:
+		case TWHILE:
+		case TDO:
+		case TFOR:
+		case TSWITCH:
+		case TCASE:
+		case TDEFAULT:
+		case TRETURN:
+		case TCONTINUE:
+		case TSEMICOLON:
+		case TOPENB:
+		break;
+		default:
+			break;
+	}
+	return NULL;
+}
+
+static struct Opp_Expr* opp_parse_expr(struct Opp_Parser* parser)
+{
+	struct Opp_Expr* expr = opp_parse_assign(parser);
+
+	if (parser->lex->t.id != TSEMICOLON)
+		opp_error(parser->lex, "Expected ';' after expression");
+
+	return expr;
+}
+
+static struct Opp_Expr* opp_parse_assign(struct Opp_Parser* parser)
+{
+	struct Opp_Expr* left = opp_parse_ternary(parser);
+	struct Opp_Expr* right = NULL;
+	struct Opp_Expr* node = NULL;
+
+	while (parser->lex->t.id == TEQ || parser->lex->t.id == TADDEQ ||
+		parser->lex->t.id == TMINEQ || parser->lex->t.id == TDIVEQ ||
+		parser->lex->t.id == TMULEQ || parser->lex->t.id == TMODEQ ||
+		parser->lex->t.id == TSHLEQ || parser->lex->t.id == TSHREQ ||
+		parser->lex->t.id == TANDEQ || parser->lex->t.id == TOREQ)
+	{
+		opp_next(parser->lex);
+
+		right = opp_parse_ternary(parser);
+
+		node = opp_new_expr(parser, EXPR_ASSIGN);
+		node->expr.bin.tok = parser->lex->t.id;
+		node->expr.bin.left = left;
+		node->expr.bin.right = right;
+
+		left = node;
+	}
+}
+
+static struct Opp_Expr* opp_parse_ternary(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_or(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_and(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_bit_or(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_bit_xor(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_bit_and(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_relation(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_relation2(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_shift(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_op(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_op2(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_prefix(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_postfix(struct Opp_Parser* parser)
+{
+
+}
+
+static struct Opp_Expr* opp_parse_unary(struct Opp_Parser* parser)
+{
+	(void)parser;
+	return NULL;
 }

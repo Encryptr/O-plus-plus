@@ -137,8 +137,14 @@ void opp_init_file(struct Opp_Scan* s, const char* fname)
 	s->src = s->content;
 }
 
-void opp_init_lex(struct Opp_Scan* s, const char* fname)
+struct Opp_Scan* opp_init_lex(const char* fname)
 {
+	struct Opp_Scan* s = (struct Opp_Scan*)
+		opp_alloc(sizeof(struct Opp_Scan));
+
+	if (!s)
+		MALLOC_FAIL();
+
 	opp_init_file(s, fname);
 	s->line = 1;
 	s->colum = 0;
@@ -146,6 +152,8 @@ void opp_init_lex(struct Opp_Scan* s, const char* fname)
 	if (!s->t.buffer.buf)
 		MALLOC_FAIL();
 	s->t.buffer.len = SCAN_BUFFER_INITAL;
+
+	return s;
 }
 
 const char* tok_to_str(struct Opp_Scan* s)
@@ -336,8 +344,7 @@ static void opp_lex_escape(struct Opp_Scan* s, unsigned int idx)
 static void opp_lex_str(struct Opp_Scan* s)
 {
 	if (*s->src == 'L') {
-		printf("ADD LONG STRING \n");
-		exit(1);
+		INCR;
 	}
 
 	INCR;
@@ -364,8 +371,9 @@ static void opp_lex_str(struct Opp_Scan* s)
 
 static void opp_lex_tik(struct Opp_Scan* s)
 {
-	if (*s->src == 'L')
-		printf("ADD L\n"), exit(1);
+	if (*s->src == 'L') {
+		INCR;
+	}
 
 	INCR;
 	union {
@@ -557,6 +565,16 @@ void opp_next(struct Opp_Scan* s)
 			s->colum = 0;
 		}
 		else if (ignore(*s->src)) {}
+			/////////
+		else if (*s->src == '/' && s->src[1] == '/') {
+			//delete this
+			while (*s->src && *s->src != '\n') {
+				INCR;
+			}
+			s->line++;
+			s->colum = 0;
+		}
+		////////
 		else if (*s->src == '\"' || (*s->src == 'L' 
 				&& s->src[1] == '\"')) {
 			opp_lex_str(s);
@@ -595,7 +613,7 @@ void dump_tokens(struct Opp_Scan* s)
 		if (s->t.id == TFLOAT)
 			printf("FLOAT\t %lf\n", s->t.value.real);
 		else if (s->t.id == TINTEGER)
-			printf("INT\t %ld\n", s->t.value.num);
+			printf("INT\t %lld\n", s->t.value.num);
 		else if (s->t.id == TIDENT)
 			printf("IDENT\t %s\n", s->t.buffer.buf);
 		else if (s->t.id == TSTR)

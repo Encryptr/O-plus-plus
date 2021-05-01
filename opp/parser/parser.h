@@ -33,6 +33,7 @@ enum Scope_State {
 
 struct Opp_Parser_State {
 	enum Scope_State scope;
+	char* decl_name;
 };
 
 struct Opp_Parser {
@@ -40,6 +41,7 @@ struct Opp_Parser {
     struct Opp_Stmt** statements;
 	size_t allocated, nstmts;
 	struct Opp_Parser_State state;
+	struct Opp_Hashmap* type_map;
 };
 
 struct Opp_Parser* opp_init_parser(struct Opp_Scan* s);

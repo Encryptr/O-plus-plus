@@ -31,19 +31,15 @@ union Opp_Value {
 };
 
 enum Opp_Expr_Type {
-	IGNORE,
-	EBIN, ELOGIC, ECALL,
-	EASSIGN, EUNARY, ESUB,
-	EELEMENT, EDEREF, EADJUST,
-	EADDR, ESIZEOF, EBITFIELD,
-	EDOT, EBIT,
+	EXPR_BIN, EXPR_LOGIC, EXPR_CALL,
+	EXPR_ASSIGN, EXPR_UNARY, EXPR_SUB,
+	EXPR_ELEMENT, EXPR_DEREF, EXPR_ADJUST,
 };
 
 enum Opp_Stmt_Type {
-    STMT_EXPR,
-    STMT_LABEL, STMT_GOTO, STMT_IF,
-	STMT_BLOCK, STMT_VAR, STMT_IMPORT, 
-    STMT_WHILE, STMT_FUNC, STMT_RET, 
+    STMT_EXPR, STMT_LABEL, STMT_GOTO, 
+    STMT_IF, STMT_BLOCK, STMT_DECL, 
+	STMT_WHILE, STMT_FUNC, STMT_RET, 
 	STMT_EXTERN, STMT_FOR, STMT_SWITCH, 
     STMT_ENUM, STMT_CASE, STMT_BREAK,
 	STMT_STRUCT,
@@ -80,21 +76,9 @@ struct Opp_Expr_Unary {
 	union Opp_Value val;
 };
 
-struct Opp_Expr_Assign {
-	enum Opp_Token op;
-	struct Opp_Expr* val;
-	struct Opp_Expr* ident;
-};
-
 struct Opp_Expr_Call {
 	struct Opp_Expr* callee;
 	struct Opp_List* args;
-};
-
-struct Opp_Expr_Logic {
-	enum Opp_Token tok;
-	struct Opp_Expr* right;
-	struct Opp_Expr* left;
 };
 
 struct Opp_Expr_Operator {
@@ -113,7 +97,7 @@ struct Opp_Expr_Adjust {
 };	
 
 struct Opp_Expr_Deref {
-	struct Opp_Expr* deref;
+	struct Opp_Expr* expr;
 };
 
 struct Opp_Expr_Addr {
@@ -131,15 +115,33 @@ struct Opp_Expr {
     union {
         struct Opp_Expr_Comma comma;
         struct Opp_Expr_Bin bin;
+        struct Opp_Expr_Unary unary;
+        struct Opp_Expr_Deref deref;
+        struct Opp_Expr_Call call;
     } expr;
 };
 
 // Stmts
+struct Opp_Stmt_Decl {
+	char* name;
+	struct Opp_Type* type;
+	// initializer
+	struct Opp_Stmt* next;
+};
+
+struct Opp_Stmt_Func {
+	char* name;
+	struct Opp_Type* type;
+	struct Opp_Stmt* body;
+};
+
 struct Opp_Stmt {
     enum Opp_Stmt_Type type;
     struct Opp_Debug debug;
     union {
         struct Opp_Expr expr_stmt;
+        struct Opp_Stmt_Decl decl;
+        struct Opp_Stmt_Func func;
     } stmt;
 };
 

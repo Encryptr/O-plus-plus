@@ -21,28 +21,70 @@
 #define OPP_TYPES
 
 #include <stdio.h>
+#include <stdbool.h>
+
+#include "../lexer/lexer.h"
+
+enum Opp_Type_T {
+	TYPE_NONE,
+	TYPE_VOID,
+	TYPE_CHAR,
+	TYPE_SHORT,
+	TYPE_INT,
+	TYPE_LONG,
+	TYPE_FLOAT,
+	TYPE_DOUBLE,
+	TYPE_LDOUBLE,
+	TYPE_PTR,
+	TYPE_FUNC,
+	TYPE_ARRAY,
+	TYPE_STRUCT,
+	TYPE_UNION
+};
+
+struct Opp_Func_Mem {
+	const char* name;
+	struct Opp_Type* type;
+};
+
+struct Opp_Type_Func {
+	bool is_vaarg;
+	struct Opp_Func_Mem* param;
+	unsigned int len;
+};
 
 struct Opp_Type {
-	enum Opp_Token type,
-				   storage_class;
-	unsigned char sign;
-	unsigned char const_attr : 1;
-	unsigned char volatile_attr : 1;
-	unsigned char inline_attr : 1;
-	unsigned char restrict_attr : 1;
-	// char ptr_attr;
-	// char ptr_volatile_attr;
-	// char ptr_restrict_attr;
-	struct Opp_Type_Entry* entry;
+	enum Opp_Type_T type;
+	enum Opp_Token storage_class;
+	bool unsign : 1,
+		 const_attr : 1,
+		 volatile_attr : 1,
+		 inline_attr : 1,
+		 restrict_attr : 1,
+		 const_ptr : 1,
+		 restrict_ptr : 1,
+		 volatile_ptr : 1;
+
+	union {
+		struct Opp_Type_Func fn;
+	} val;
+
+	struct Opp_Type* next;
 };
 
 struct Opp_Type_Entry {
-	int a;
+	char* id;
+	struct Opp_Type* value;
+	struct Opp_Type_Entry* next;
 };
 
 struct Opp_Type_Tree {
-	struct Opp_Type_Entry** tree;
+	struct Opp_Type_Entry** types;
 	size_t size;
 };
+
+void opp_debug_type(struct Opp_Type* type);
+struct Opp_Type* opp_create_type(enum Opp_Type_T type, struct Opp_Type* prev);
+struct Opp_Type* opp_type_fix(struct Opp_Type* a, struct Opp_Type* b);
 
 #endif /* OPP_TYPES */
