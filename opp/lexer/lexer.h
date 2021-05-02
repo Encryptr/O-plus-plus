@@ -122,13 +122,14 @@ struct Opp_Scan {
 	struct Opp_IO io;
 	uint32_t line, colum;
 	struct Opp_Tok t;
+	char* peek;
 };
 
 // Lexer
 void dump_tokens(struct Opp_Scan* s);
 struct Opp_Scan* opp_init_lex(const char* fname);
 void opp_next(struct Opp_Scan* s);
-void opp_peek_tok(struct Opp_Scan* s, int times);
+enum Opp_Token opp_peek_tok(struct Opp_Scan* s, int times);
 const char* tok_to_str(struct Opp_Scan* s);
 const char* tok_debug(enum Opp_Token tok);
 

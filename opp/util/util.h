@@ -80,5 +80,6 @@ unsigned int hash_str(char* string, unsigned int size);
 struct Opp_Hashmap* opp_create_map(size_t size, struct Opp_Hashmap* parent);
 struct Opp_Bucket* opp_get_bucket(struct Opp_Hashmap* map, char* string);
 struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string);
+char* cpy_string(char* original);
 
 #endif /* OPP_UTIL */

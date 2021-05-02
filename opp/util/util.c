@@ -35,7 +35,19 @@ void internal_error(const char* str)
 	longjmp(global_state.error_buf, OPP_ERROR);
 }
 
-unsigned int hash_str(char *string, unsigned int size)
+char* cpy_string(char* original) 
+{
+	char* cpy = (char*)opp_alloc(strlen(original) + 1);
+
+	if (!cpy)
+		MALLOC_FAIL();
+
+	strcpy(cpy, original);
+
+	return cpy;
+}
+
+unsigned int hash_str(char* string, unsigned int size)
 {
 	unsigned int h = 0;
 	while (*string) {
@@ -108,7 +120,7 @@ struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string)
 				if (!pos->next)
 					MALLOC_FAIL();
 
-				pos->next->id = string;
+				pos->next->id = cpy_string(string);
 				pos->next->next = NULL;
 				return pos->next;
 			}
@@ -120,10 +132,10 @@ struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string)
 		struct Opp_Bucket* node = (struct Opp_Bucket*)
 			opp_alloc(sizeof(struct Opp_Bucket));
 
-		if (node == NULL)
+		if (!node)
 			MALLOC_FAIL();
 
-		node->id = string;
+		node->id = cpy_string(string);
 		node->next = NULL;
 		map->items[loc] = node;
 

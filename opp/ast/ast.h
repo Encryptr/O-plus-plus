@@ -32,8 +32,8 @@ union Opp_Value {
 
 enum Opp_Expr_Type {
 	EXPR_BIN, EXPR_LOGIC, EXPR_CALL,
-	EXPR_ASSIGN, EXPR_UNARY, EXPR_SUB,
-	EXPR_ELEMENT, EXPR_DEREF, EXPR_ADJUST,
+	EXPR_ASSIGN, EXPR_UNARY, EXPR_PREFIX,
+	EXPR_TERNARY, EXPR_BIT, EXPR_CAST,
 };
 
 enum Opp_Stmt_Type {
@@ -42,7 +42,7 @@ enum Opp_Stmt_Type {
 	STMT_WHILE, STMT_FUNC, STMT_RET, 
 	STMT_EXTERN, STMT_FOR, STMT_SWITCH, 
     STMT_ENUM, STMT_CASE, STMT_BREAK,
-	STMT_STRUCT,
+	STMT_STRUCT, STMT_TYPEDEF, STMT_NOP,
 };
 
 struct Opp_Debug {
@@ -61,14 +61,20 @@ struct Opp_Stmt;
 
 // Exprs
 struct Opp_Expr_Comma {
-    struct Opp_Expr* expr;
-    struct Opp_Expr* next;
+	struct Opp_Expr* expr;
+	struct Opp_Expr* next;
 };
 
 struct Opp_Expr_Bin {
 	enum Opp_Token tok;
 	struct Opp_Expr* right;
 	struct Opp_Expr* left;
+};
+
+struct Opp_Expr_Ternary {
+	struct Opp_Expr* cond;
+	struct Opp_Expr* then;
+	struct Opp_Expr* other;
 };
 
 struct Opp_Expr_Unary {
@@ -91,20 +97,13 @@ struct Opp_Expr_Element {
 	struct Opp_Expr* loc;
 };
 
-struct Opp_Expr_Adjust {
-	enum Opp_Token type;
-	struct Opp_Expr* left;
-};	
-
-struct Opp_Expr_Deref {
+struct Opp_Expr_Prefix {
+	enum Opp_Token tok;
 	struct Opp_Expr* expr;
 };
 
-struct Opp_Expr_Addr {
-	struct Opp_Expr* addr;
-};
-
-struct Opp_Expr_Sizeof {
+struct Opp_Expr_Cast {
+	struct Opp_Type* type;
 	struct Opp_Expr* expr;
 };
 
@@ -113,12 +112,13 @@ struct Opp_Expr {
     struct Opp_Debug debug;
     bool lvalue;
     union {
-        struct Opp_Expr_Comma comma;
         struct Opp_Expr_Bin bin;
         struct Opp_Expr_Unary unary;
-        struct Opp_Expr_Deref deref;
         struct Opp_Expr_Call call;
+		struct Opp_Expr_Prefix prefix;
+		struct Opp_Expr_Cast cast;
     } expr;
+	struct Opp_Expr* next;
 };
 
 // Stmts
@@ -135,13 +135,19 @@ struct Opp_Stmt_Func {
 	struct Opp_Stmt* body;
 };
 
+struct Opp_Stmt_Block {
+	struct Opp_Stmt** stmt;
+	unsigned int len;
+};
+
 struct Opp_Stmt {
     enum Opp_Stmt_Type type;
     struct Opp_Debug debug;
     union {
-        struct Opp_Expr expr_stmt;
+        struct Opp_Expr* expr_stmt;
         struct Opp_Stmt_Decl decl;
         struct Opp_Stmt_Func func;
+        struct Opp_Stmt_Block block;
     } stmt;
 };
 

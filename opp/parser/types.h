@@ -39,7 +39,8 @@ enum Opp_Type_T {
 	TYPE_FUNC,
 	TYPE_ARRAY,
 	TYPE_STRUCT,
-	TYPE_UNION
+	TYPE_UNION,
+	TYPE_ENUM,
 };
 
 struct Opp_Func_Mem {
@@ -50,6 +51,12 @@ struct Opp_Func_Mem {
 struct Opp_Type_Func {
 	bool is_vaarg;
 	struct Opp_Func_Mem* param;
+	unsigned int len;
+};
+
+struct Opp_Type_Obj {
+	bool is_complete;
+	struct Opp_Func_Mem* mems;
 	unsigned int len;
 };
 
@@ -67,20 +74,10 @@ struct Opp_Type {
 
 	union {
 		struct Opp_Type_Func fn;
+		struct Opp_Type_Obj obj;
 	} val;
 
 	struct Opp_Type* next;
-};
-
-struct Opp_Type_Entry {
-	char* id;
-	struct Opp_Type* value;
-	struct Opp_Type_Entry* next;
-};
-
-struct Opp_Type_Tree {
-	struct Opp_Type_Entry** types;
-	size_t size;
 };
 
 void opp_debug_type(struct Opp_Type* type);

@@ -36,7 +36,7 @@ static void opp_lex_escape(struct Opp_Scan* s, unsigned int idx);
 	if (idx == s->t.buffer.len) \
 		realloc_buf(s);
 
-static uint64_t hex2i64(char *str)
+static uint64_t hex2i64(char* str)
 {
 	uint64_t res = 0;
 	char c;
@@ -105,10 +105,13 @@ static void realloc_buf(struct Opp_Scan* s)
 {
 	char* temp = opp_realloc(s->t.buffer.buf, 
 		s->t.buffer.len+32, s->t.buffer.len);
-	if (!temp)
+	char* temp2 = opp_realloc(s->peek, 
+		s->t.buffer.len+32, s->t.buffer.len);
+	if (!temp || !temp2)
 		MALLOC_FAIL();
 	s->t.buffer.len += 32;
 	s->t.buffer.buf = temp;
+	s->peek = temp2;
 }
 
 void opp_init_file(struct Opp_Scan* s, const char* fname)
@@ -149,8 +152,11 @@ struct Opp_Scan* opp_init_lex(const char* fname)
 	s->line = 1;
 	s->colum = 0;
 	s->t.buffer.buf = (char*)opp_alloc(SCAN_BUFFER_INITAL);
-	if (!s->t.buffer.buf)
+	s->peek = (char*)opp_alloc(SCAN_BUFFER_INITAL);
+
+	if (!s->t.buffer.buf || !s->peek)
 		MALLOC_FAIL();
+
 	s->t.buffer.len = SCAN_BUFFER_INITAL;
 
 	return s;
@@ -541,18 +547,25 @@ static enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 	return INVALID;
 }
 
-void opp_peek_tok(struct Opp_Scan* s, int times)
+enum Opp_Token opp_peek_tok(struct Opp_Scan* s, int times)
 {
-	char* temp = s->src;
-	uint32_t tline = s->line;
-	uint32_t tcolum = s->colum;
+	struct Opp_Scan cpy = *s;
+	strcpy(s->peek, s->t.buffer.buf);
 
 	for (int i = 0; i < times; i++)
 		opp_next(s);
 
-	s->src = temp;
-	s->line = tline;
-	s->colum = tcolum;
+	enum Opp_Token t = s->t.id;
+
+	// Swap
+	for (unsigned int i = 0; i < s->t.buffer.len; i++) {
+		char t = s->peek[i];
+		s->peek[i] = s->t.buffer.buf[i];
+		s->t.buffer.buf[i] = t;
+	}
+	*s = cpy;
+
+	return t;
 }
 
 void opp_next(struct Opp_Scan* s)
