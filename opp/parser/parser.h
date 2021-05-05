@@ -2,7 +2,7 @@
  * 
  * @brief Opp Parser header file
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2021 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ struct Opp_Parser {
 	size_t allocated, nstmts;
 	struct Opp_Parser_State state;
 };
+
+#define TYPE_MAP_SIZE 64
 
 struct Opp_Parser* opp_init_parser(struct Opp_Scan* s);
 void opp_parser_begin(struct Opp_Parser* parser);

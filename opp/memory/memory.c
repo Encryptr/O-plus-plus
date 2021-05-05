@@ -2,7 +2,7 @@
  * 
  * @brief Memory pool implementation
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2021 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

@@ -1,8 +1,8 @@
-/** @file opp.h
+/** @file analizer.h
  * 
- * @brief Main Opp header
+ * @brief Opp Analalysis Stage
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2021 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,30 +15,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+**/
 
-#ifndef OPP_HEADER
-#define OPP_HEADER
+#ifndef OPP_ANALIZER
+#define OPP_ANALIZER
 
-#include <setjmp.h>
-
-struct Opp_Options {
-	bool dump_toks,
-		 warning,
-		 debug,
-		 wall;
-};
-
-enum Opp_Global_State {
-	OPP_OK,
-	OPP_ERROR
-};
-
-struct Opp_State {
-	struct Opp_Options opts;
-	jmp_buf error_buf;
-};
-
-extern struct Opp_State global_state;
-
-#endif /* OPP_HEADER */
+#endif

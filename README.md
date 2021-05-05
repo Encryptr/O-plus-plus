@@ -1,5 +1,5 @@
-# Opp Programming Language
-> Opp is a programming language / compiler inspired by the C programming language
+# Opp Interpreter
+> Opp interpreter, an interpreter aiming to be fully compliant with C89
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
@@ -7,7 +7,7 @@
 [![Issues][issues-shield]][issues-url]
 [![License][license-shield]][license-url]
 
-Opp was created to be a simple but powerfull general purpose compiled langauage. Opp was created alongside the idea that it is to be a standalone compiler that can run on windows / mac / linux. Opp also takes inspiration from the old B programming language as well as C, implementing the "minimum needed". In the end Opp is being made to educate and experimant with creating standalone compilers.
+The Opp Interpreter was created out of the need for a fast, small, and simple interpreter for the C programming language. Its goal is to be able to take any C89 (plus some additions) C file and be able to run it as an interpreter. This may be useful when needing to prototype and not wanting to go through the whole compilation process or when wanting to safely play around with some C features. In the end, there are many great uses for a C interpreter and Opp aims to be able to cover as many of them as possible.
 
 <img src="logo.png" width="350" height="350"/>
 
@@ -29,19 +29,17 @@ mingw32-make.exe
 
 ## Usage example
 
-Example of the opp language can be found under the examples folder. Opp can be also learned in the [wiki][wiki]!
+Example C program.
 
 ```c
 int main(int argc, char** argv) {
-	println("Hello World!");
+	printf("Hello World!\n");
 	return 0;
 }
 ```
 
 ## Development
 > Opp is being developed by **Encryptr**, a open-source organization. Becoming a dev/contributor is as easy as joining Encryptr's discord server. [Link](https://discord.gg/8tcf6sJ5Gq)
-
-Currently Opp is a compiler aimed for linux/mac x86-64 however opp will be able to compile to win in the future. Opp requires **ld** to link the generated obj file with opp's standard library alongside c's stdandart library. 
 
 ## Release History
 * 0.0.1

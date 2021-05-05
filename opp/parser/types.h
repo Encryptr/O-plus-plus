@@ -55,6 +55,7 @@ struct Opp_Type_Func {
 };
 
 struct Opp_Type_Obj {
+	// char* obj_name; needed
 	bool is_complete;
 	struct Opp_Func_Mem* mems;
 	unsigned int len;

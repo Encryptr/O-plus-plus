@@ -2,7 +2,7 @@
  * 
  * @brief Opp AST
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2021 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,9 +40,10 @@ enum Opp_Stmt_Type {
     STMT_EXPR, STMT_LABEL, STMT_GOTO, 
     STMT_IF, STMT_BLOCK, STMT_DECL, 
 	STMT_WHILE, STMT_FUNC, STMT_RET, 
-	STMT_EXTERN, STMT_FOR, STMT_SWITCH, 
-    STMT_ENUM, STMT_CASE, STMT_BREAK,
-	STMT_STRUCT, STMT_TYPEDEF, STMT_NOP,
+	STMT_EXTERN, STMT_FOR, STMT_DOWHILE,
+	STMT_SWITCH, STMT_ENUM, STMT_CASE, 
+	STMT_BREAK, STMT_STRUCT, STMT_TYPEDEF, 
+	STMT_NOP,
 };
 
 struct Opp_Debug {
@@ -60,11 +61,6 @@ struct Opp_Expr;
 struct Opp_Stmt;
 
 // Exprs
-struct Opp_Expr_Comma {
-	struct Opp_Expr* expr;
-	struct Opp_Expr* next;
-};
-
 struct Opp_Expr_Bin {
 	enum Opp_Token tok;
 	struct Opp_Expr* right;
@@ -140,6 +136,27 @@ struct Opp_Stmt_Block {
 	unsigned int len;
 };
 
+struct Opp_Stmt_If {
+	struct Opp_Expr* cond;
+	struct Opp_Stmt* then;
+	struct Opp_Stmt* other;
+};
+
+struct Opp_Stmt_While {
+	struct Opp_Expr* cond;
+	struct Opp_Stmt* then;
+};
+
+struct Opp_Stmt_For {
+	struct Opp_Expr* init;
+	struct Opp_Expr* cond;
+	struct Opp_Expr* expr;
+};
+
+struct Opp_Stmt_Atom {
+	enum Opp_Token tok;
+};
+
 struct Opp_Stmt {
     enum Opp_Stmt_Type type;
     struct Opp_Debug debug;
@@ -148,6 +165,10 @@ struct Opp_Stmt {
         struct Opp_Stmt_Decl decl;
         struct Opp_Stmt_Func func;
         struct Opp_Stmt_Block block;
+        struct Opp_Stmt_If if_stmt;
+        struct Opp_Stmt_While while_stmt;
+        struct Opp_Stmt_For for_stmt;
+        struct Opp_Stmt_Atom atom;
     } stmt;
 };
 
