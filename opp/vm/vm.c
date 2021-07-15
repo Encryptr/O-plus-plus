@@ -1,6 +1,6 @@
-/** @file parser.h
+/** @file vm.c
  * 
- * @brief Opp Parser header file
+ * @brief Opp VM
  *      
  * Copyright (c) 2021 Maks S
  *
@@ -15,29 +15,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+**/
 
-#ifndef OPP_PARSER
-#define OPP_PARSER
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include "code.h"
+#include "vm.h"
 
-struct Opp_Parser_State {
-	struct Opp_Hashmap* global;
-	struct Opp_Hashmap* scope;
-	unsigned int anon_type;
-};
-
-struct Opp_Parser {
-	struct Opp_Scan* lex;
-    struct Opp_Stmt** statements;
-	size_t allocated, nstmts;
-	struct Opp_Parser_State state;
-};
-
-struct Opp_Parser* opp_init_parser(struct Opp_Scan* s);
-void opp_parser_begin(struct Opp_Parser* parser);
-
-#endif /* OPP_PARSER */
+struct Opp_VM* opp_new_vm()
+{
+	return 0;
+}

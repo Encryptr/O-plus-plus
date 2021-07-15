@@ -25,9 +25,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define BLOCK_SIZE 64000
-#define ALLIGMENT 8
-
 struct Block_Header {
     struct Block_Header *next;
     unsigned char *block, *free, *end;
@@ -36,7 +33,16 @@ struct Block_Header {
 struct Allocator {
     struct Block_Header* first;
     struct Block_Header* current;
+
+    /* Allocation function. Should allocate and 
+       return pointer to memory. If unable to do so
+       NULL is expected.
+    */
     void* (*allocator)(size_t);
+
+    /* Free function for memory allocated from 
+       the allocation function declared above.
+    */
     void (*xfree)(void*);
 };
 

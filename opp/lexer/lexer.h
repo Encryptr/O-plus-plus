@@ -101,8 +101,6 @@ enum Opp_Token {
 	FEND
 };
 
-#define SCAN_BUFFER_INITAL 32
-
 struct Opp_Buf {
 	char* buf;
 	size_t len;

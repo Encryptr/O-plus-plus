@@ -1,6 +1,6 @@
-/** @file parser.h
+/** @file compiler.c
  * 
- * @brief Opp Parser header file
+ * @brief Opp Compiler
  *      
  * Copyright (c) 2021 Maks S
  *
@@ -15,29 +15,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+**/
 
-#ifndef OPP_PARSER
-#define OPP_PARSER
+#include "compiler.h"
+#include "../memory/memory.h"
+#include "../util/util.h"
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdbool.h>
+struct Opp_Compiler* opp_new_compiler(struct Opp_Parser* parser)
+{
+	struct Opp_Compiler* opp = (struct Opp_Compiler*)
+		opp_alloc(sizeof(struct Opp_Compiler));
 
-struct Opp_Parser_State {
-	struct Opp_Hashmap* global;
-	struct Opp_Hashmap* scope;
-	unsigned int anon_type;
-};
+	if (!opp)
+		MALLOC_FAIL();
 
-struct Opp_Parser {
-	struct Opp_Scan* lex;
-    struct Opp_Stmt** statements;
-	size_t allocated, nstmts;
-	struct Opp_Parser_State state;
-};
+	opp->parser = parser;
 
-struct Opp_Parser* opp_init_parser(struct Opp_Scan* s);
-void opp_parser_begin(struct Opp_Parser* parser);
+	return opp;
+}
 
-#endif /* OPP_PARSER */
+void opp_start_compiler(struct Opp_Compiler* opp)
+{
+	// begin by analyzing top level decl and func 
+	// decl is converted to no byte code since its assigment expr is const
+	// func entry is created and bytecode is began created from it.
+}

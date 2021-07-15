@@ -20,6 +20,7 @@
 #include "lexer.h"
 #include "../util/util.h"
 #include "../memory/memory.h"
+#include "../platform.h"
 
 static void opp_lex_identifier(struct Opp_Scan* s);
 static void opp_lex_hex(struct Opp_Scan* s);
@@ -578,16 +579,27 @@ void opp_next(struct Opp_Scan* s)
 			s->colum = 0;
 		}
 		else if (ignore(*s->src)) {}
-			/////////
 		else if (*s->src == '/' && s->src[1] == '/') {
-			//delete this
-			while (*s->src && *s->src != '\n') {
+			while (*s->src && *s->src != '\n')
 				INCR;
-			}
+
 			s->line++;
 			s->colum = 0;
 		}
-		////////
+		else if (*s->src == '/' && s->src[1] == '*') {
+			INCR;
+			INCR;
+			while (*s->src) {
+				if (*s->src == '*' && s->src[1] == '/')
+					break;
+				else if (*s->src == '\n') {
+					s->line++;
+					s->colum = 0;
+				}
+				INCR;
+			}
+			INCR;
+		}
 		else if (*s->src == '\"' || (*s->src == 'L' 
 				&& s->src[1] == '\"')) {
 			opp_lex_str(s);

@@ -106,6 +106,8 @@ void opp_debug_type(struct Opp_Type* type)
 				if ((i+1) < type->val.fn.len)
 					printf(", ");
 			}
+			if (type->val.fn.is_vaarg)
+				printf(", ...");
 			printf(")");
 			break;
 		}

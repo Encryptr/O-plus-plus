@@ -1,0 +1,21 @@
+## General ##
+	- Add handeling multiple files. How will sharing work?? Module like??
+	- Think of some useful __builtin functions
+	- make this work "opp test.c out.c" (file out.c should share global declarations from test.c)
+
+## Opp Parser ##
+	- Add type defaults like auto, int since TYPE_NONE is default
+	- FIX enum / struct / union declarations (make sure work with typedef)
+	- When using typedef in decl make sure attributes are not overwritten
+	- Make sure Teranary works correctly
+	- Add sizeof 
+	- Add postfix expr
+
+## Opp Semantics ##
+	- Begin writing analizer, possibly conbine symantic analysis with code gen
+	first check if this is possible
+
+## Opp VM ##
+	- Brainstorm opcodes / structure of VM
+	- How to deal with all C types especially struct/union and bit-fields
+	- Handeling threads??

@@ -1,5 +1,5 @@
 # Opp Interpreter
-> Opp interpreter, an interpreter aiming to be fully compliant with C89
+> An interpreter aiming to be fully compliant with C89
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]

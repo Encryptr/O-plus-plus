@@ -139,7 +139,7 @@ struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string)
 				if (!pos->next)
 					MALLOC_FAIL();
 
-				pos->next->id = cpy_string(string);
+				pos->next->id = string;
 				pos->next->next = NULL;
 				return pos->next;
 			}
@@ -154,7 +154,7 @@ struct Opp_Bucket* opp_create_bucket(struct Opp_Hashmap* map, char* string)
 		if (!node)
 			MALLOC_FAIL();
 
-		node->id = cpy_string(string);
+		node->id = string;
 		node->next = NULL;
 		map->items[loc] = node;
 

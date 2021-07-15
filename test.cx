@@ -1,0 +1,9 @@
+//int (*(*lol)(int i, ...))(long (*)(), unsigned char);
+//const int long volatile * const * a();
+//const struct A {} * volatile b() {}
+//int (*(*lol)())();
+
+int t()
+{
+	
+}

@@ -49,13 +49,12 @@ struct Opp_Func_Mem {
 };
 
 struct Opp_Type_Func {
-	bool is_vaarg;
+	bool is_vaarg, incomplete;
 	struct Opp_Func_Mem* param;
 	unsigned int len;
 };
 
 struct Opp_Type_Obj {
-	// char* obj_name; needed
 	bool is_complete;
 	struct Opp_Func_Mem* mems;
 	unsigned int len;
@@ -75,7 +74,7 @@ struct Opp_Type {
 
 	union {
 		struct Opp_Type_Func fn;
-		struct Opp_Type_Obj obj;
+		struct Opp_Bucket* obj;
 	} val;
 
 	struct Opp_Type* next;

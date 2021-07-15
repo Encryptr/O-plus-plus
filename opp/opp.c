@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <time.h>
-#include "./memory/memory.h"
 /** @file opp.c
  * 
  * @brief Opp Main Module
@@ -18,9 +15,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+**/
 
+#include <stdio.h>
+#include <time.h>
+#include "./memory/memory.h"
 #include "./parser/parser.h"
+#include "./preprocessor/preprocessor.h"
+#include "./semantics/analizer.h"
 #include "./lexer/lexer.h"
 #include "./util/util.h"
 #include "opp.h"
@@ -53,7 +55,7 @@ struct Opp_Compiler {
 
 static void opp_debug_info(Opp_Stats* s, struct Opp_Compiler* comp)
 {
-	printf("%s### Opp Compiler Debug Info ###\n%s", CL_GREEN, CL_RESET);
+	printf("%s### Opp Interpreter Debug Info ###\n%s", CL_GREEN, CL_RESET);
 	printf("File: %s\n", comp->scan->io.fname);
 	printf("Size: %ld\n", comp->scan->io.fsize);
 	printf("Benchmarks:\n");
@@ -72,7 +74,7 @@ static void opp_debug_info(Opp_Stats* s, struct Opp_Compiler* comp)
 	#elif defined(LINUX64)
 	printf("OS: Linux64\n");
 	#elif defined(MAC64)
-	printf("OS: Macos64\n");
+	printf("OS: macOS64\n");
 	#endif
 	printf("%s################################%s\n", CL_GREEN, CL_RESET);
 }
@@ -84,26 +86,32 @@ static void opp_init_module(const char* fname, struct Opp_State* state)
 
 	int res = setjmp(state->error_buf);
 
-	if (res == OPP_ERROR) 
-		goto end;
+	if (res != OPP_ERROR) {
+		allocator_init(malloc, free);
 
-	allocator_init(malloc, free);
+		// fname = opp_invoke_preproc(fname);
 
-	comp.scan = opp_init_lex(fname);
+		START_CLOCK();
+		comp.scan = opp_init_lex(fname);
+		comp.parser = opp_init_parser(comp.scan);
+		opp_parser_begin(comp.parser);
+		END_CLOCK();
+		GET_TIME(S_PARSER);
 
-	START_CLOCK();
-	comp.parser = opp_init_parser(comp.scan);
-	opp_parser_begin(comp.parser);
-	END_CLOCK();
-	GET_TIME(S_PARSER);
-	
-	if (state->opts.debug)
-		opp_debug_info(&stats, &comp);
-	if (state->opts.dump_toks)
-		dump_tokens(comp.scan);
-
-end:
+		START_CLOCK();
+		opp_start_analyzer(comp.parser);
+		END_CLOCK();
+		GET_TIME(S_ANALIZE);
+		
+		if (state->opts.debug)
+			opp_debug_info(&stats, &comp);
+		if (state->opts.dump_toks)
+			dump_tokens(comp.scan);
+		if (state->opts.preproc)
+			printf("%s\n", comp.scan->content);
+	}
 	allocator_free();
+	// opp_cleanup(fname);
 }
 
 static void opp_help()
@@ -114,6 +122,7 @@ static void opp_help()
 	printf("\t-c              | Check source code for errors (without running)\n");
 	printf("\t-d              | For dumping file tokens\n");
 	printf("\t-w              | Hide warnings\n");
+	printf("\t-E              | Dump preprocessor file\n");
 	printf("\t-debug          | Debug compiler statistics\n");
 	printf("\t-Wall           | Turn warnings to errors\n");
 	printf("\n");
@@ -124,10 +133,11 @@ static void opp_args(int argc, const char** argv)
 	// Defaults
 	global_state.opts.warning = true;
 	for (int i = 1; i < argc - 1; i++) {
-		if (CMP("-d")) global_state.opts.dump_toks  = true;
+		if (CMP("-d")) global_state.opts.dump_toks       = true;
 		else if (CMP("-w")) global_state.opts.warning    = false;
 		else if (CMP("-debug")) global_state.opts.debug  = true;
 		else if (CMP("-Wall")) global_state.opts.wall    = true;
+		else if (CMP("-E")) global_state.opts.preproc    = true;
 		else printf("%sInvalid argument '%s'%s\n", CL_RED, argv[i], CL_RESET);
 	}
 }

@@ -1,6 +1,6 @@
-/** @file parser.h
+/** @file compiler.h
  * 
- * @brief Opp Parser header file
+ * @brief Opp Compiler
  *      
  * Copyright (c) 2021 Maks S
  *
@@ -15,29 +15,30 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+**/
 
-#ifndef OPP_PARSER
-#define OPP_PARSER
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdbool.h>
+#ifndef OPP_COMPILER
+#define OPP_COMPILER
 
-struct Opp_Parser_State {
-	struct Opp_Hashmap* global;
-	struct Opp_Hashmap* scope;
-	unsigned int anon_type;
+#include "../vm/vm.h"
+#include "../vm/code.h"
+
+struct Opp_Func {
+	const char* name;
+	Opcode* code;
 };
 
-struct Opp_Parser {
-	struct Opp_Scan* lex;
-    struct Opp_Stmt** statements;
-	size_t allocated, nstmts;
-	struct Opp_Parser_State state;
+struct Opp_Data {
+	struct Opp_Value* val_pool;
+	unsigned int len;
 };
 
-struct Opp_Parser* opp_init_parser(struct Opp_Scan* s);
-void opp_parser_begin(struct Opp_Parser* parser);
+struct Opp_Compiler {
+	struct Opp_Parser* parser;
+};
 
-#endif /* OPP_PARSER */
+struct Opp_Compiler* opp_new_compiler(struct Opp_Parser* parser);
+void opp_start_compiler(struct Opp_Compiler* opp);
+
+#endif /* OPP_COMPILER */

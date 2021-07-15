@@ -15,7 +15,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+**/
 
 #include "parser.h"
 #include "../ast/ast.h"
@@ -23,6 +23,7 @@
 #include "../memory/memory.h"
 #include "types.h"
 #include "../lexer/lexer.h"
+#include "../platform.h"
 
 // Util
 static struct Opp_Stmt* opp_new_stmt(struct Opp_Parser* parser, enum Opp_Stmt_Type type);
@@ -48,6 +49,7 @@ static struct Opp_Stmt* opp_parse_if(struct Opp_Parser* parser);
 static struct Opp_Stmt* opp_parse_while(struct Opp_Parser* parser);
 static struct Opp_Stmt* opp_parse_do_while(struct Opp_Parser* parser);
 static struct Opp_Stmt* opp_parse_for(struct Opp_Parser* parser);
+static struct Opp_Stmt* opp_parse_return(struct Opp_Parser* parser);
 
 // Expressions
 static struct Opp_Expr* opp_parse_comma(struct Opp_Parser* parser);
@@ -79,13 +81,13 @@ struct Opp_Parser* opp_init_parser(struct Opp_Scan* s)
 	parser->lex = s;
 	parser->nstmts = 0;
 	parser->statements = (struct Opp_Stmt**)
-        opp_alloc(sizeof(struct Opp_Stmt*)*64);
-	parser->allocated = 64;
+        opp_alloc(sizeof(struct Opp_Stmt*)*STMT_SIZE);
+	parser->allocated = STMT_SIZE;
 
 	if (!parser->statements)
 		goto err;
     
-    memset(parser->statements, 0, sizeof(struct Opp_Stmt*)*64);
+    memset(parser->statements, 0, sizeof(struct Opp_Stmt*)*STMT_SIZE);
 
     parser->state.global = opp_create_map(TYPE_MAP_SIZE, NULL);
     parser->state.scope = parser->state.global;
@@ -130,6 +132,19 @@ static struct Opp_Expr* opp_new_expr(struct Opp_Parser* parser,
 	return node;
 }
 
+static char* new_anon_tag(struct Opp_Parser* parser)
+{
+	static char tag[10] = {0};
+
+	if (parser->state.anon_type > 9999)
+		opp_error(parser->lex, "Too many anonymous types");
+
+	sprintf(tag, "anon%u", parser->state.anon_type);
+	parser->state.anon_type++;
+
+	return (char*)tag;
+}
+
 void opp_parser_begin(struct Opp_Parser* parser)
 {
     for (;;) {
@@ -142,13 +157,13 @@ void opp_parser_begin(struct Opp_Parser* parser)
 		if (parser->nstmts == parser->allocated) {
 			parser->statements = (struct Opp_Stmt**)
 				opp_realloc(parser->statements, 
-					(64+parser->allocated) * sizeof(struct Opp_Stmt*), 
+					(STMT_SIZE+parser->allocated) * sizeof(struct Opp_Stmt*), 
 					sizeof(struct Opp_Stmt*)*parser->allocated);
 
 			if (!parser->statements)
 				MALLOC_FAIL();
 
-			parser->allocated += 64;
+			parser->allocated += STMT_SIZE;
 		}
 
 		parser->statements[parser->nstmts] = stmt;
@@ -159,13 +174,12 @@ void opp_parser_begin(struct Opp_Parser* parser)
 static bool is_valid_def(enum Opp_Token t)
 {
 	switch (t) {
-		case TEXTERN:    case TSTATIC: 
-		case TINLINE:    case TUNION:   case TENUM:     
-		case TSTRUCT:    case TCHAR:    case TSHORT:
-		case TINT:       case TLONG:    case TUNSIGNED:
-		case TSIGNED:    case TCONST:   case TVOLATILE:
-		case TFLOAT:     case TDOUBLE:  case TVOID:
-		case TREGITSTER: case TAUTO:
+		case TEXTERN:    case TSTATIC:    case TUNION:     
+		case TENUM:      case TSTRUCT:    case TCHAR:
+		case TSHORT:     case TINT:       case TLONG:
+		case TUNSIGNED:  case TSIGNED:    case TCONST:
+		case TVOLATILE:  case TFLOAT:     case TDOUBLE:  
+		case TVOID:      case TREGITSTER: case TAUTO:
 			return true;
 
 		default:
@@ -187,7 +201,7 @@ static struct Opp_Stmt* opp_parse_global_def(struct Opp_Parser* parser)
 			return opp_parse_decl(parser);
 
 		default:
-			opp_error(parser->lex, "Error unexpected global declaration '%s'", 
+			opp_error(parser->lex, "Error expected a global declaration but got '%s'", 
 				tok_to_str(parser->lex));
 
 	}
@@ -199,37 +213,53 @@ static struct Opp_Stmt* opp_parse_global_def(struct Opp_Parser* parser)
 
 static void opp_parse_struct_or_union(struct Opp_Parser* parser, struct Opp_Type* type)
 {
+	enum Opp_Token next;
+	char* tag = NULL;
+	struct Opp_Bucket* bucket = NULL;
 
-	/* 
-		add support for 
-		union {
+	type->type = parser->lex->t.id == TSTRUCT ? TYPE_STRUCT : TYPE_UNION;
 
-		} a;
+	next = opp_peek_tok(parser->lex, 1);
 
-		A ident can either reference a type declared inside type map or it can have it own copy so to say
-		^^^ might need flag for union
+	if (next == TSEMICOLON)
+		opp_error(parser->lex, "Incorrect struct/union declaration");
 
-	*/
-	enum Opp_Type_T t = parser->lex->t.id == TSTRUCT ? TYPE_STRUCT : TYPE_UNION;
+	if (next == TIDENT) {
+		opp_next(parser->lex);
 
-	opp_next(parser->lex);
+		bucket = opp_get_bucket(parser->state.scope, parser->lex->t.buffer.buf);
 
-	if (parser->lex->t.id != TIDENT)
-		opp_error(parser->lex, "Expected indentifier when declaring struct/union");
-	
-	type->type = t;
-	type->val.obj.is_complete = false;
+		tag = cpy_string(parser->lex->t.buffer.buf);
+		next = opp_peek_tok(parser->lex, 1);
+	}
 
-	enum Opp_Token next = opp_peek_tok(parser->lex, 1);
+	if (!tag)
+		tag = cpy_string(new_anon_tag(parser));
+
+	if (!bucket) {
+		bucket = opp_create_bucket(parser->state.scope, tag);
+		if (!bucket)
+			INTERNAL_ERROR("Unexpected struct/union failure");
+		bucket->data = (struct Opp_Type_Obj*)opp_alloc(sizeof(struct Opp_Type_Obj));
+		if (!bucket->data)
+			MALLOC_FAIL();
+		((struct Opp_Type_Obj*)bucket->data)->is_complete = false;
+	}
 
 	if (next == TOPENC) {
-		type->val.obj.is_complete = true;
+		// Make sure its not empty
 		while (parser->lex->t.id != TCLOSEC) {
 			opp_next(parser->lex);
 			if (parser->lex->t.id == FEND)
 				opp_error(parser->lex, "Found end of file while inside of struct/union declaration");
 		}
+		((struct Opp_Type_Obj*)bucket->data)->is_complete = true;
 	}
+}
+
+static void opp_parse_enum(struct Opp_Parser* parser, struct Opp_Type* type)
+{
+	// similar to struct/union
 }
 
 static struct Opp_Type* opp_parse_declaration_specifier(struct Opp_Parser* parser)
@@ -254,13 +284,21 @@ static struct Opp_Type* opp_parse_declaration_specifier(struct Opp_Parser* parse
 				break;
 			}
 
-			case TSTRUCT: case TUNION:
+			case TSTRUCT: case TUNION: {
 				if (got_mod || got_sign || got_base)
-					opp_error(parser->lex, "Unexpected '%s' in declaration", tok_to_str(parser->lex));
+					ANOTHER();
 				opp_parse_struct_or_union(parser, type);
+				got_base = true;
 				break;
+			}
 
-			case TENUM: assert(false); break;
+			case TENUM: {
+				if (got_mod || got_sign || got_base)
+					ANOTHER();
+				opp_parse_enum(parser, type);
+				got_base = true;
+				break;
+			}
 
 		    case TCHAR: {
 		    	if (got_base)
@@ -388,6 +426,9 @@ end:
 		}
 	}
 
+	// if (type->type == TYPE_NONE)
+	// 	opp_error(parser->lex, "Expected base type got none");
+
 	return type;
 }
 
@@ -410,11 +451,14 @@ static struct Opp_Type* opp_parse_param(struct Opp_Parser* parser, struct Opp_Ty
 		if (len == 6)
 			opp_error(parser->lex, "Max func param length met (6)");
 		if (parser->lex->t.id == TVA_ARGS) {
+			if (len == 0)
+				opp_error(parser->lex, "Expected a paramater before '...'");
 			base->val.fn.is_vaarg = true;
 			opp_next(parser->lex);
 			break;
 		}
 
+		// Fix old style not working
 		if (!is_valid_def(parser->lex->t.id))
 			opp_error(parser->lex, "Invalid definition in func paramter #%d", len);
 
@@ -447,7 +491,7 @@ static struct Opp_Type* opp_parse_param(struct Opp_Parser* parser, struct Opp_Ty
 static struct Opp_Type* opp_parse_post_decl(struct Opp_Parser* parser, struct Opp_Type* base, char** name)
 {
 	struct Opp_Type* nest = NULL;
-	if (parser->lex->t.id == TOPENP) { // check if not func
+	if (parser->lex->t.id == TOPENP) { // check if not func not working ()
 		opp_next(parser->lex);
 		nest = opp_parse_declarator(parser, nest, name);
 
@@ -573,7 +617,7 @@ static struct Opp_Stmt* opp_parse_decl(struct Opp_Parser* parser)
 
 	struct Opp_Stmt* stmt = opp_parse_definition(parser, t, is_typedef, name);
 		
-	opp_debug_type(t);
+	// opp_debug_type(t);
 
 	if (stmt->type == STMT_FUNC)
 		return stmt;
@@ -609,17 +653,20 @@ static struct Opp_Stmt* opp_parse_stmt(struct Opp_Parser* parser)
 		case TFOR:
 			return opp_parse_for(parser);
 			
+		case TRETURN:
+			return opp_parse_return(parser);
+
 		case TSWITCH:
 		case TCASE:
 		case TDEFAULT:
-		case TRETURN:
 		case TCONTINUE:
+		case TBREAK:
 		break;
 
 		case TSEMICOLON:
 			return opp_new_stmt(parser, STMT_NOP);
 
-		case TOPENB:
+		case TOPENC:
 			return opp_parse_block(parser);
 
 		case TIDENT:
@@ -636,6 +683,21 @@ static struct Opp_Stmt* opp_parse_stmt(struct Opp_Parser* parser)
 		default: break;
 	}
 	return opp_parse_stmt_expr(parser);
+}
+
+static struct Opp_Stmt* opp_parse_return(struct Opp_Parser* parser)
+{
+	struct Opp_Stmt* node = opp_new_stmt(parser, STMT_RETURN);
+
+	opp_next(parser->lex);
+	node->stmt.ret.expr = parser->lex->t.id == TSEMICOLON ? 
+		NULL : 
+		opp_parse_comma(parser);
+
+	if (parser->lex->t.id != TSEMICOLON)
+		opp_error(parser->lex, "Expected ';' after return");
+
+	return node;
 }
 
 static struct Opp_Stmt* opp_parse_block(struct Opp_Parser* parser)
@@ -656,6 +718,8 @@ static struct Opp_Stmt* opp_parse_block(struct Opp_Parser* parser)
 	while (parser->lex->t.id != TCLOSEC) {
 		if (parser->lex->t.id == FEND)
 			break;
+
+		assert(len != 16);
 
 		block->stmt.block.stmt[len] = opp_parse_stmt(parser);
 		len++;

@@ -15,18 +15,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+**/
 
 #ifndef OPP_HEADER
 #define OPP_HEADER
 
 #include <setjmp.h>
+#include <stdbool.h>
 
 struct Opp_Options {
 	bool dump_toks,
-		 warning,
-		 debug,
-		 wall;
+		warning,
+		debug,
+		wall,
+		preproc;
 };
 
 enum Opp_Global_State {

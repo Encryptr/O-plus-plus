@@ -15,8 +15,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-
+**/
 
 #ifndef OPP_AST
 #define OPP_AST
@@ -24,11 +23,7 @@
 #include <inttypes.h>
 #include "../lexer/lexer.h"
 
-union Opp_Value {
-	int64_t i64val;
-	double  f64val;
-	char*   strval;
-};
+typedef unsigned int Loc_Tab;
 
 enum Opp_Expr_Type {
 	EXPR_BIN, EXPR_LOGIC, EXPR_CALL,
@@ -39,7 +34,7 @@ enum Opp_Expr_Type {
 enum Opp_Stmt_Type {
     STMT_EXPR, STMT_LABEL, STMT_GOTO, 
     STMT_IF, STMT_BLOCK, STMT_DECL, 
-	STMT_WHILE, STMT_FUNC, STMT_RET, 
+	STMT_WHILE, STMT_FUNC, STMT_RETURN, 
 	STMT_EXTERN, STMT_FOR, STMT_DOWHILE,
 	STMT_SWITCH, STMT_ENUM, STMT_CASE, 
 	STMT_BREAK, STMT_STRUCT, STMT_TYPEDEF, 
@@ -75,7 +70,12 @@ struct Opp_Expr_Ternary {
 
 struct Opp_Expr_Unary {
 	enum Opp_Token type;
-	union Opp_Value val;
+	Loc_Tab id;
+	union {
+		int64_t i64val;
+		double  f64val;
+		char*   strval;
+	} val;
 };
 
 struct Opp_Expr_Call {
@@ -119,6 +119,7 @@ struct Opp_Expr {
 
 // Stmts
 struct Opp_Stmt_Decl {
+	Loc_Tab id;
 	char* name;
 	struct Opp_Type* type;
 	// initializer
@@ -157,6 +158,10 @@ struct Opp_Stmt_Atom {
 	enum Opp_Token tok;
 };
 
+struct Opp_Stmt_Ret {
+	struct Opp_Expr* expr;
+};
+
 struct Opp_Stmt {
     enum Opp_Stmt_Type type;
     struct Opp_Debug debug;
@@ -169,6 +174,7 @@ struct Opp_Stmt {
         struct Opp_Stmt_While while_stmt;
         struct Opp_Stmt_For for_stmt;
         struct Opp_Stmt_Atom atom;
+        struct Opp_Stmt_Ret ret;
     } stmt;
 };
 

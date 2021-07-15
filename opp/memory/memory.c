@@ -18,6 +18,7 @@
  */ 
 
 #include "memory.h"
+#include "../platform.h"
 
 static struct Allocator root;
 

@@ -2,7 +2,7 @@
  * 
  * @brief Opp compiler enviroment
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2021 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,40 +19,5 @@
 
 #ifndef OPP_ENV
 #define OPP_ENV
-
-#include <stdio.h>
-
-#define STACK_SIZE 8
-#define HASH_SIZE 320
-
-enum Opp_Bucket_Type {
-	TYPE_GLOBAL, TYPE_LOCAL,
-	TYPE_FUNC, TYPE_LABEL,
-	TYPE_EXTERN
-};
-
-struct Opp_Bucket {
-	char* key;
-	// enum Opp_Bucket_Type type;
-	// struct Opp_Type_Decl sym_type;
-	// bool predef;
-	// union {
-	// 	struct Opp_Stmt_Func* args;
-	// 	int32_t offset;
-	// };
-	// struct Opp_Bucket* next;
-};
-
-struct Opp_Namespace {
-	size_t size;
-	struct Opp_Bucket** items;
-	struct Opp_Namespace* parent;
-	void* (*xmalloc)(size_t);
-};
-
-struct Opp_Namespace* init_namespace(struct Opp_Namespace* parent, void* (*xmalloc)(size_t));
-struct Opp_Bucket* env_add_item(struct Opp_Namespace* ns, char* name);
-struct Opp_Bucket* env_get_item(struct Opp_Namespace* ns, char* name);
-void env_free(struct Opp_Namespace* ns);
 
 #endif /* OPP_ENV */

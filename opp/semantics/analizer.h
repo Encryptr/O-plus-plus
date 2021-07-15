@@ -20,4 +20,21 @@
 #ifndef OPP_ANALIZER
 #define OPP_ANALIZER
 
+struct Debug_Info {
+	char* fn_name;
+	enum {
+		SCOPE_GLOBAL,
+		SCOPE_LOCAL,
+		SCOPE_PARAM,
+	} linkage;
+};
+
+struct Opp_Analyzer {
+	struct Opp_Parser* parser;
+	struct Opp_Hashmap* global, *scope;
+	struct Debug_Info debug;
+};
+
+void opp_start_analyzer(struct Opp_Parser* parser);
+
 #endif
