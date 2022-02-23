@@ -1,0 +1,48 @@
+## ----------------------------------------------------------------------
+## Opp Makefile
+## ----------------------------------------------------------------------
+
+CXX = gcc
+EXE = o++.exe
+BUILD_DIR = build
+TYPE = DEBUG
+SRC_DIR = ./opp
+
+SOURCES  =	./opp/opp.c
+SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
+
+DEPS = $(addprefix build\, $(SOURCES:.c=.d))
+CXXFLAGS += -O2 -Wall -std=c11 -pedantic-errors
+
+ifeq ($(TYPE), RELEASE)
+	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
+endif
+
+.PHONY: all clean directory
+
+all: directory compile
+ifneq ($(OS), Windows_NT)
+	$(error Makefile only compatible for Windows system)
+endif
+	@echo Build Complete!
+
+compile: $(EXE)
+
+directory:
+	@if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
+
+clean:
+	del $(addprefix .\build\, $(SOURCES:.c=.o))
+	rmdir /s /q $(INSTALL_DIR)
+
+# TO create shortcut mklink qs_short.lnk qs.exe
+
+# Build App Source
+$(BUILD_DIR)/%.o:$(SRC_DIR)/%.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+# Link Together
+$(EXE): $(SRC_OBJS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LINKER) 
+
+-include $(DEPS)

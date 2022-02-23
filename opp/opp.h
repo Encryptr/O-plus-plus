@@ -17,20 +17,37 @@
  * limitations under the License.
  */ 
 
-#ifndef OPP_H
-#define OPP_H
+#ifndef OPP_HEADER
+#define OPP_HEADER
 
-#include "./compiler/compiler.h"
-#include "./analysis/analysis.h"
-#include "./ir/ir.h"
-#include "./header/os.h"
+#include <setjmp.h>
 
-struct Opp_Scan;
-struct Opp_Options;
-struct Opp_Context;
+enum Opp_Flags {
+    WARNINGS = 1 << 0,
+};
 
-void opp_init_file(const char* fname, struct Opp_Scan* s);
-void opp_init_module(const char* fname, struct Opp_Options* opts);
-void opp_add_module(struct Opp_Parser* old, char* fname);
+enum Status {
+    OPP_OK,
+    OPP_ERROR
+};
 
-#endif /* OPP_H */
+struct Opp_State {
+    unsigned int flags;
+    jmp_buf error_buf;
+};
+
+#define ERROR_RECOVER(state) \
+    (enum Status)setjmp(state)
+
+#define THROW_ERROR(state) \
+    longjmp(state, OPP_ERROR)
+
+// struct Opp_Scan;
+// struct Opp_Options;
+// struct Opp_Context;
+
+// void opp_init_file(const char* fname, struct Opp_Scan* s);
+// void opp_init_module(const char* fname, struct Opp_Options* opts);
+// void opp_add_module(struct Opp_Parser* old, char* fname);
+
+#endif /* OPP_HEADER */

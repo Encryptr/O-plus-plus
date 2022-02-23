@@ -1,8 +1,8 @@
-/* @file memory.h
+/** @file memory.h
  * 
  * @brief Memory pool implementation
  *      
- * Copyright (c) 2020 Maks S
+ * Copyright (c) 2022 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,23 +24,31 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-// #define BLOCK_SIZE 120000
-#define BLOCK_SIZE 64000
-
 struct Block_Header {
     struct Block_Header *next;
     char *block, *free, *end;
 };
 
 struct Allocator {
-	size_t used_mem;
     struct Block_Header* first;
     struct Block_Header* current;
+
+	/* Allocation function. Should allocate and 
+       return pointer to memory. If unable to do so
+       NULL is expected.
+    */
+    void* (*allocator)(size_t);
+
+    /* Free function for memory allocated from 
+       the allocation function declared above.
+    */
+    void (*xfree)(void*);
 };
 
-bool allocator_init();
-char* alloc(size_t size);
+bool allocator_init(void* (*xmalloc)(size_t), void (*xfree)(void*));
+void* opp_alloc(size_t size);
+void* opp_realloc(void* mem, size_t new_size, size_t old_size);
 void allocator_free();
-void allocator_reset();
+void allocator_reset();	
 
 #endif /* OPP_ALLOCATOR */

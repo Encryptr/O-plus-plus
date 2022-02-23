@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "stdarg.h": "c",
+        "memory.h": "c",
+        "util.h": "c",
+        "stdio.h": "c",
+        "lexer.h": "c",
+        "string.h": "c",
+        "setjmp.h": "c"
+    }
+}
