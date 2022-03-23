@@ -21,33 +21,31 @@
 #define OPP_HEADER
 
 #include <setjmp.h>
+#include "./memory/gc.h"
 
 enum Opp_Flags {
-    WARNINGS = 1 << 0,
+    F_NONE     = 0,
+    F_DEBUG    = 1 << 0,
+    F_WARNINGS = 1 << 1,
 };
 
-enum Status {
+enum Error_State {
     OPP_OK,
     OPP_ERROR
 };
 
 struct Opp_State {
     unsigned int flags;
+    char* fname;
     jmp_buf error_buf;
 };
 
 #define ERROR_RECOVER(state) \
-    (enum Status)setjmp(state)
+    (enum Error_State)setjmp(state)
 
 #define THROW_ERROR(state) \
     longjmp(state, OPP_ERROR)
 
-// struct Opp_Scan;
-// struct Opp_Options;
-// struct Opp_Context;
-
-// void opp_init_file(const char* fname, struct Opp_Scan* s);
-// void opp_init_module(const char* fname, struct Opp_Options* opts);
-// void opp_add_module(struct Opp_Parser* old, char* fname);
+void opp_init_module(struct Opp_State* const state);
 
 #endif /* OPP_HEADER */

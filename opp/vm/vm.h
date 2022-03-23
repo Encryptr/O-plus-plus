@@ -1,6 +1,6 @@
-/** @file memory.h
+/** @file vm.h
  * 
- * @brief Memory implementation
+ * @brief Opp VM
  *      
  * Copyright (c) 2022 Maks S
  *
@@ -15,23 +15,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+**/
 
-#ifndef OPP_MEM
-#define OPP_MEM
+#ifndef OPP_VM
+#define OPP_VM
 
-#include <stdio.h>
-#include "gc.h"
+#include "../object./object.h"
+#include "opcode.h"
 
-void* opp_os_alloc(size_t size);
-void  opp_os_free(void* ptr);
-void* opp_os_realloc(void* ptr, size_t new_size);
-void* opp_realloc(struct GC_State* const gc, void* ptr, size_t old_size, size_t new_size);
+struct Func_Call_Frame {
+    struct Opp_Obj_Func* func;
+    Instruction* ip;
+    struct Opp_Value* frame_stack;
+};
 
-#define OPP_ALLOC(gc, size) \
-    opp_realloc(gc, NULL, 0, size)
+struct Opp_VM {
+    struct Opp_Parser* parser;
+    struct Opp_Value* stack, *top;
+    struct Func_Call_Frame* frames;
+    unsigned int frame_size, frame_count;
+};
 
-#define OPP_FREE(gc, ptr) \
-    opp_realloc(gc, ptr, 0, 0);
+struct Opp_VM* opp_init_vm(struct Opp_Parser* const parser);
+void opp_dump_vm(const struct Opp_VM* const vm);
 
-#endif /* OPP_MEM */
+#endif /* OPP_VM */

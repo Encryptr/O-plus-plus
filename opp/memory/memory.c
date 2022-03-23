@@ -22,124 +22,50 @@
 #include "memory.h"
 #include "../util/util.h"
 
-static struct Allocator *root;
+void* opp_os_alloc(size_t size)
+{
+    return OPP_OS_MALLOC(size);
+}
 
-#ifdef DEBUG_ALLOCATOR
-static size_t used_mem = 0;
+void opp_os_free(void* ptr)
+{
+    OPP_OS_FREE(ptr);
+}
+
+void* opp_os_realloc(void* ptr, size_t new_size)
+{
+    return OPP_OS_REALLOC(ptr, new_size);
+}
+
+/* Opp general allocate function
+    @Return - pointer to block if sucessful
+    @Param gc - pointer to GC_State
+    @Param old_size - old size of allocation
+    @Param new_size > 0 - new size of allocation
+*/
+void* opp_realloc(struct GC_State* const gc, void* ptr, size_t old_size, size_t new_size)
+{
+    if (!gc) INTERNAL_ERROR("gc argument NULL");
+
+#ifdef DEBUG_MEMORY
+    colored_printf(CL_GREEN, "realloc (%p, %lu, %lu)\n", ptr, old_size, new_size);
 #endif
 
-static struct Block_Header* block_init()
-{
-    struct Block_Header *alloc = NULL;
-    char *block = NULL;
-
-    block = (char*)malloc(BLOCK_SIZE);
-    alloc = (struct Block_Header*)
-    	malloc(sizeof(struct Block_Header));
-
-    if (alloc == NULL || block == NULL) 
-    	return NULL;
-
-    alloc->block = block;
-    alloc->free = block;
-    alloc->next = NULL;
-    alloc->end = block + BLOCK_SIZE;
-
-    return alloc;
-}
-
-bool allocator_init(void* (*xmalloc)(size_t), void (*xfree)(void*))
-{
-    root = (struct Allocator*)malloc(sizeof(struct Allocator));
-
-    if (root == NULL) 
-    	return false;
-
-    root->first = block_init();
-
-    if (root->first == NULL)
-    	return false;
-
-    root->current = root->first;
-    #ifdef DEBUG_ALLOCATOR
-    used_mem = 0;
-    #endif
-
-    return true;
-}
-
-void* opp_realloc(void* mem, size_t new_size, size_t old_size)
-{
-    void* buffer = opp_alloc(new_size);
-
-    if (!buffer)
+    if (new_size == 0) {
+        opp_os_free(ptr);
         return NULL;
+    }
 
-    memcpy(buffer, mem, old_size);
+    void* buffer = opp_os_realloc(ptr, new_size);
+
+    if (!buffer) {
+        // collect gc 
+        // buffer = 
+        // retry
+        INTERNAL_ERROR("Out of memory");
+    }
+
+    gc->used += new_size - old_size;
 
     return buffer;
-}
-
-void* opp_alloc(size_t size)
-{
-    struct Block_Header* block = root->current;
-    char *ptr = NULL;
-
-    while ((size % ALLIGMENT) != 0)
-    	size++;
-
-    ptr = block->free;
-    block->free += size;
-
-    #ifdef DEBUG_ALLOCATOR
-    used_mem += size;
-    colored_printf(CL_GREEN, "Allocating: %ld Used: %ld\n", size, used_mem);
-    #endif
-
-    if (block->free >= block->end) {
-        if (block->next != NULL) {
-            block->next->free = block->next->block;
-            root->current = block->next;
-        }
-        else {
-            #ifdef DEBUG_ALLOCATOR
-            colored_print(CL_GREEN, "Allocating extra block\n");
-            #endif
-        	block->next = block_init();
-
-            if (block->next == NULL) 
-            	return NULL;
-            root->current = block->next;
-        }
-
-        ptr = root->current->free;
-        root->current->free += size;
-    }
-
-    return ptr;
-}
-
-void allocator_reset()
-{
-    #ifdef DEBUG_ALLOCATOR
-    colored_print(CL_GREEN, "Allocator reset\n");
-    #endif
-    root->current = root->first;
-    root->current->free = root->current->block;
-}
-
-void allocator_free()
-{
-    struct Block_Header* ptr;
-    struct Block_Header* hdr = root->first;
-
-    while (hdr != NULL)
-    {
-        ptr = hdr->next;
-        free(hdr->block);
-        free(hdr);
-        hdr = ptr;
-    }
-    free(root);
-    root = NULL;
 }

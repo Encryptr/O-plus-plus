@@ -1,0 +1,41 @@
+import "std.opp" as std
+
+func matrix_dot(mat1, mat2) 
+    | mat1 != null and mat2 != null
+    | len(mat2) > 0 and len(mat2) > 0
+    | len(mat2) == len(mat1)
+{
+    sum = 0
+
+    for i = 0, i < len(mat1), i++ {
+        sum += mat1[i] * mat2[i]
+    }
+
+    return sum
+}
+
+mat1 = [1, 3, -5]
+mat2 = [4, -2, -1]
+
+try {
+    // If mat1 or mat2 does not pass matrix_dot precondition check
+    // exeption will be called and it will be caught in the catch block
+    print(matrix_dot(mat1, mat2));
+} catch e {
+    print(e)
+}
+
+if k == 3 and k == 3 {
+    print("ok")
+} 
+elif b == 3 and k > 3 {
+
+}
+
+matrix_dot() {
+    sum = 0
+    
+    return test(a,b) {
+        return a + b
+    }()
+}

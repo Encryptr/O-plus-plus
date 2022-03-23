@@ -1,0 +1,109 @@
+// ##### Bopp Scripting Language Reference ##### \\
+
+// Comments
+/* Long Comments */
+
+Types:
+    null Null
+    132 Integer (int64_t)
+    1.3 Float (double)
+    "string" Immutable String (const char *const)
+        - Supported escape character:
+        "\n"
+        "\t"
+    [1,2.3,3] Mutable Array
+    Native func / Native data
+        - These data types can only be obtained
+        by calling some imported C defined functions.
+        This data can be passed around however.
+
+Modules:
+    Imports:
+        Format: import "file" <as> <namespace>
+        import "file.bopp"
+        Import statments will run the provided file and add any of
+        its exported (global) content to the current ** scope **.
+
+    import "file.bopp" as std
+    Import statments with "as" will make the following an alias to
+    the global scope inside the imported file
+
+Variable:
+Format: auto <key list> <expr?>
+    "auto" is the keywords used for variable definitions.
+    auto a;
+    Declares varaible a with null type
+    auto a = 4;
+    Declares a with type of integer
+    auto a,b,c;
+    Declares a, b, and c with null type
+
+Functions:
+    Format: func <name> (<args>) <block>
+    func abc(a,b,c) {}
+    Declares "abc" as a function with three arguments.
+
+    func(...) {}
+    Functions can also have a ... argument which means,
+    there is a variable amount of arguments.
+
+Control flow:
+    Format: if <cond> <stmt> elif <cond> <stmt> else <stmt>
+    Format: while <cond> <stmt>
+    Fromat: for <expr>, <expr>, <expr?> <stmt>
+
+Mathematical:
+    Format: <expr> <op> <expr>
+        + Add
+        - Sub
+        * Mul
+        / Div
+        % Mod
+
+Assigment:
+Format: <var> = <expr>
+    = Assigment
+
+Logic:
+Format: <expr> <op> <expr>
+    == Equal
+    != Not Equal
+    > Greater than
+    < Less than
+    >= Greater than or equal
+    <= Less than or equal
+    and And
+    or Or
+
+Binary:
+Format: <expr> <op> <expr>
+    ** Any binary operation only works on values with integer type **
+    & Binary And
+    | Binary Or
+    ^ Binary Xor
+    >> Binary shift left
+    << Binary shift right
+
+Prefix:
+Format: <op> <expr>
+    ~ Binary negate
+    - Negate
+    not Logic not
+
+Postfix:
+Format: <var> <op>
+    ( <args> ) Func call
+    [ <expr> ] Index operation
+    <namespace> . <var> Element access
+
+Libraries:
+    BigInt
+    WideString
+    Thread
+    Error
+
+JIT:
+- Possibly implement jit in which functions can be
+
+
+Brainstorm:

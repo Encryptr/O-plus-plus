@@ -6,6 +6,11 @@
         "stdio.h": "c",
         "lexer.h": "c",
         "string.h": "c",
-        "setjmp.h": "c"
+        "setjmp.h": "c",
+        "parser.h": "c",
+        "ast.h": "c",
+        "stddef.h": "c",
+        "vm.h": "c",
+        "opcode.h": "c"
     }
 }

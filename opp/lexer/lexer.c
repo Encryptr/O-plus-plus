@@ -2,7 +2,7 @@
  * 
  * @brief Opp Lexer
  *      
- * Copyright (c) 2021 Maks S
+ * Copyright (c) 2022 Maks S
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 #include "../memory/memory.h"
 #include "../util/platform.h"
 
+static void opp_lex_comments(struct Opp_Scan* s);
 static void opp_lex_identifier(struct Opp_Scan* s);
 static void opp_lex_hex(struct Opp_Scan* s);
 static void opp_lex_numeral(struct Opp_Scan* s);
@@ -47,10 +48,8 @@ static inline void write_into_buf(register struct Opp_Scan* s,
 								  register int idx,
 								  register char c) 
 {
-	if (idx >= s->t.size) {
-		printf("Realloc\n");
+	if (idx >= s->t.size) 
 		realloc_buf(s);
-	}
 
 	s->t.buffer[idx] = c;
 }
@@ -59,8 +58,6 @@ static inline void write_into_buf(register struct Opp_Scan* s,
 #define LETTER(i) ((i >= 'a' && i <= 'z') || \
 					(i >= 'A' && i <= 'Z')  || (i == '_'))
 #define NUMBER(i) ((i >= '0' && i <= '9'))
-
-// make tarce back lengths args in Opp_Status
 
 static void trace_back(struct Opp_Scan* s)
 {
@@ -80,8 +77,6 @@ static void trace_back(struct Opp_Scan* s)
 		\n unless it exceeds its max characters limit
 	*/
 
-	#define IN_BOUNDS(ptr) ((ptr > s->content) && (*ptr != 0))
-
 	const int max_characters = 32;
 	unsigned int pos = s->src - s->content;
 	const unsigned int error_pos = pos;
@@ -94,8 +89,6 @@ static void trace_back(struct Opp_Scan* s)
 		pos--;
 
 	unsigned int start_pos = pos;
-
-	// colored_print(CL_YELLOW, "... ");
 
 	for (
 		unsigned int i = 0;
@@ -156,19 +149,29 @@ static const struct Opp_Str_Pair opp_keys[] = {
 	TOKEN(TSTR     , 0),  TOKEN(FEND      , 0),
 	
 	// Characters
-	TOKEN(TGT, ">"),  TOKEN(TLE    , "<="),  TOKEN(TLT, "<"),  
-	TOKEN(TGE, ">="),  TOKEN(TEQEQ , "==" ),  TOKEN(TNOTEQ , "!="),  
-	TOKEN(TNOT, "!"), TOKEN(TADD, "+"), TOKEN(TMIN, "-"), 
-	TOKEN(TDIV, "/"), TOKEN(TMUL, "*"), TOKEN(TMOD, "%%"),
-	TOKEN(TDECR, "--"), TOKEN(TINCR, "++"), TOKEN(TVA_ARGS, "..."),
+	TOKEN(TGT, ">")     , TOKEN(TLE, "<=")    , TOKEN(TLT, "<"),  
+	TOKEN(TGE, ">=")    , TOKEN(TEQEQ, "==")  , TOKEN(TNOTEQ , "!="),  
+	TOKEN(TNOT, "!")    , TOKEN(TADD, "+")    , TOKEN(TMIN, "-"), 
+	TOKEN(TDIV, "/")    , TOKEN(TMUL, "*")    , TOKEN(TMOD, "%%"),
+	TOKEN(TDECR, "--")  , TOKEN(TINCR, "++")  , TOKEN(TVA_ARGS, "..."),
+	TOKEN(TEQ, "=")     , TOKEN(TADDEQ, "+=") , TOKEN(TMINEQ, "-="),
+	TOKEN(TDIVEQ, "/=") , TOKEN(TMULEQ, "*=") , TOKEN(TMODEQ, "%%="),
+	TOKEN(TOPENP, "(")  , TOKEN(TCLOSEP, ")") , TOKEN(TCOMMA, ","),
+	TOKEN(TOPENB, "[")  , TOKEN(TCLOSEB, "]") , TOKEN(TOPENC, "{"),
+	TOKEN(TCLOSEC, "}") , TOKEN(TDOT, ".")    , TOKEN(TSEMICOLON, ";"),
+	TOKEN(TARROW, "->") , TOKEN(TSHL, "<<")   , TOKEN(TSHR, ">>"),
+	TOKEN(TBITXOR, "^") , TOKEN(TBITOR, "|")  , TOKEN(TBITNOT, "~"),
+	TOKEN(TADDR, "&")   ,
 
-
-	// Keywords 
+	// Keywords
+	TOKEN(TOR, "or")     , TOKEN(TAND, "and")     , TOKEN(TAUTO, "auto"),
+	TOKEN(TFUNC, "func") , TOKEN(TIF, "if")       , TOKEN(TELIF, "elif"),
+	TOKEN(TELSE, "else") , TOKEN(TWHILE, "while") , TOKEN(TFOR, "for")
 };
 
 static bool is_keyword(struct Opp_Scan* s)
 {
-	for (int i = TOR; i < FEND; i++) {
+	for (int i = TK_KEYWORDS+1; i < FEND; i++) {
 		if (!strcmp(opp_keys[i].key, s->t.buffer)) {
 			s->t.id = opp_keys[i].id;
 			return true;
@@ -179,16 +182,14 @@ static bool is_keyword(struct Opp_Scan* s)
 
 static void realloc_buf(struct Opp_Scan* s)
 {
-	char* const temp = opp_realloc(
-			s->t.buffer, 
-			s->t.size+SCAN_BUFFER_INITAL, 
-			s->t.size);
+	s->t.buffer = opp_os_realloc(
+		s->t.buffer, 
+		s->t.size + SCAN_BUFFER_INITAL
+	);
 
-	if (!temp)
-		MALLOC_FAIL();
+	MALLOC_FAIL(!s->t.buffer);
 
 	s->t.size += SCAN_BUFFER_INITAL;
-	s->t.buffer = temp;
 }
 
 bool opp_init_file(struct Opp_Scan* s, const char* fname)
@@ -204,10 +205,10 @@ bool opp_init_file(struct Opp_Scan* s, const char* fname)
 	size = ftell(s->io.file); // make sure whole size + 1 stuff works right
 	s->io.fsize = size;
 	rewind(s->io.file);
-	s->content = opp_alloc(size + 1);
 
-	if (!s->content)
-		MALLOC_FAIL();
+	s->content = opp_os_alloc(size + 1);
+	MALLOC_FAIL(!s->content);
+	
 	memset(s->content, 0, size + 1);
 
 	(void)fread(s->content, size, 1, s->io.file);
@@ -227,25 +228,33 @@ void opp_init_from_buffer(struct Opp_Scan* s, char* const buffer)
 
 struct Opp_Scan* opp_init_lex(struct Opp_State* state)
 {
-	struct Opp_Scan* s = (struct Opp_Scan*)
-		opp_alloc(sizeof(struct Opp_Scan));
+	if (!state)
+		INTERNAL_ERROR("'state' is null");
 
-	if (!s)
-		MALLOC_FAIL();
+	struct Opp_Scan* s = (struct Opp_Scan*)
+		opp_os_alloc(sizeof(struct Opp_Scan));
+
+	MALLOC_FAIL(!s);
 
 	s->state = state;
 	s->line = 1;
 	s->colum = 0;
 
-	s->t.buffer = (char*)opp_alloc(SCAN_BUFFER_INITAL);
-
-	if (!s->t.buffer)
-		MALLOC_FAIL();
+	s->t.buffer = (char*)opp_os_alloc(SCAN_BUFFER_INITAL);
+	MALLOC_FAIL(!s->t.buffer);
 
 	memset(s->t.buffer, 0, SCAN_BUFFER_INITAL);
+
 	s->t.size = SCAN_BUFFER_INITAL;
 
 	return s;
+}
+
+void opp_free_lex(struct Opp_Scan* s)
+{
+	opp_os_free(s->content);
+	opp_os_free(s->t.buffer);
+	opp_os_free(s);
 }
 
 const char* tok_to_str(struct Opp_Scan* s)
@@ -279,7 +288,7 @@ static void opp_lex_identifier(struct Opp_Scan* s)
 	while (LETTER(*s->src) || 
 		   NUMBER(*s->src)) 
 	{
-		if (idx == 32)
+		if (idx == MAX_IDENTIFIER_LEN)
 			opp_error(s, "Identifiers can only be 32 characters long");
 		s->t.buffer[idx] = *s->src;
 		idx++;
@@ -287,7 +296,7 @@ static void opp_lex_identifier(struct Opp_Scan* s)
 	}
 	s->t.buffer[idx] = '\0';
 
-	// if (!is_keyword(s))
+	if (!is_keyword(s))
 		s->t.id = TIDENT;
 }
 
@@ -301,6 +310,7 @@ static void opp_lex_hex(struct Opp_Scan* s)
 
 	s->t.id = TINTEGER;
 	incr(s);
+
 
 	while (LETTER(*s->src) || 
 		   NUMBER(*s->src)) 
@@ -385,8 +395,10 @@ static char opp_lex_escape(struct Opp_Scan* s)
 		case '0':  return '\0';
 
 		default:
-			opp_error(s, "Invalid escape character '%c'", *s->src);
+			opp_error(s, "Invalid escape character '\\%c'", *s->src);
 	}
+
+	return 0;
 }
 
 static void opp_lex_str(struct Opp_Scan* s)
@@ -547,60 +559,104 @@ static enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 			return TADD;
 		}
 
-		// case '-': {
-		// 	INCR;
-		// 	if (CHECK('=')) return TMINEQ;
-		// 	else if (CHECK('-')) return TDECR;
-		// 	else if (CHECK('>')) return TARROW;
-		// 	DECR;
-		// 	return TMIN;
-		// }
+		case '-': {
+			incr(s);
+			if (CHECK('=')) 
+				return TMINEQ;
+			else if (CHECK('-')) 
+				return TDECR;
+			else if (CHECK('>')) 
+				return TARROW;
+			decr(s);
+			return TMIN;
+		}
 
-		// case '*': {
-		// 	INCR;
-		// 	if (CHECK('=')) return TMULEQ;
-		// 	DECR;
-		// 	return TMUL;
-		// }
+		case '*': {
+			incr(s);
+			if (CHECK('=')) 
+				return TMULEQ;
+			decr(s);
+			return TMUL;
+		}
 
-		// case '/': {
-		// 	INCR;
-		// 	if (CHECK('=')) return TDIVEQ;
-		// 	DECR;
-		// 	return TDIV;
-		// }
+		case '/': {
+			incr(s);
+			if (CHECK('='))
+				return TDIVEQ;
+			decr(s);
+			return TDIV;
+		}
 
-		// case '%': {
-		// 	INCR;
-		// 	if (CHECK('=')) return TMODEQ;
-		// 	DECR;
-		// 	return TMOD;
-		// }
+		case '%': {
+			incr(s);
+			if (CHECK('='))
+				return TMODEQ;
+			decr(s);
+			return TMOD;
+		}
 		default: break;
 	}
 	return INVALID;
 }
 
-// enum Opp_Token opp_peek_tok(struct Opp_Scan* s, int times)
-// {
-// 	struct Opp_Scan cpy = *s;
-// 	strcpy(s->peek, s->t.buffer.buf);
+static void opp_lex_comments(struct Opp_Scan* s)
+{
+	incr(s);
 
-// 	for (int i = 0; i < times; i++)
-// 		opp_next(s);
+	if (*s->src == '/') {
+		while ((*s->src != 0) && *s->src != '\n')
+			s->src++;
+	}
+	// Long comment
+	else {
+		incr(s);
+		while (*s->src != 0) {
+			if (*s->src == '*' && s->src[1] == '/')
+				break;
+			s->src++;
+		}
 
-// 	enum Opp_Token t = s->t.id;
+		if (*s->src == 0)
+			opp_error(s, "Long comment never terminates!");
 
-// 	// Swap
-// 	for (unsigned int i = 0; i < s->t.buffer.len; i++) {
-// 		char t = s->peek[i];
-// 		s->peek[i] = s->t.buffer.buf[i];
-// 		s->t.buffer.buf[i] = t;
-// 	}
-// 	*s = cpy;
+		incr(s); 
+		incr(s);
+	}
+}
 
-// 	return t;
-// }
+enum Opp_Token opp_peek_tok(struct Opp_Scan* s, int times)
+{
+	INTERNAL_ERROR("Not implemented\n");
+	return 0;
+	// Could not work make sure all Opp_Tok values could not be overwritten 
+	// such as the value.num / value.real ***** RETHINK MOST OF THIS
+	// struct {
+	// 	char* src;
+	// 	unsigned int line, colum;
+	// } temp_copy = {
+	// 	.src = s->src,
+	// 	.line = s->line,
+	// 	.colum = s->colum
+	// };
+
+	// // Save current text buffer
+	// strncpy(s->t.peek, s->t.buffer, s->t.size);
+
+	// for (int i = 0; i < times; i++)
+	// 	opp_next(s);
+
+	// enum Opp_Token peek_tok = s->t.id;
+
+	// // Move temp peek buffer back into text buffer
+	// strncpy(s->t.buffer, s->t.peek, s->t.size);
+
+	// // Restore previous state
+	// s->src   = temp_copy.src;
+	// s->line  = temp_copy.line;
+	// s->colum = temp_copy.colum;
+	
+	// return peek_tok;
+}
 
 void opp_next(struct Opp_Scan* s)
 {
@@ -613,27 +669,10 @@ void opp_next(struct Opp_Scan* s)
 			s->colum = 0;
 		}
 		else if (WHITESPACE(*s->src)) {}
-		// else if (*s->src == '/' && s->src[1] == '/') {
-		// 	while (*s->src && *s->src != '\n')
-		// 		INCR; COMMENTS!!!!!!
-
-		// 	s->line++;
-		// 	s->colum = 0;
-		// }
-		// else if (*s->src == '/' && s->src[1] == '*') {
-		// 	INCR;
-		// 	INCR;
-		// 	while (*s->src) {
-		// 		if (*s->src == '*' && s->src[1] == '/')
-		// 			break;
-		// 		else if (*s->src == '\n') {
-		// 			s->line++;
-		// 			s->colum = 0;
-		// 		}
-		// 		INCR;
-		// 	}
-		// 	INCR;
-		// }
+		else if (*s->src == '/' && (s->src[1] == '/' || s->src[1] == '*')) {
+			opp_lex_comments(s);
+			continue;
+		}
 		else if (*s->src == '\"') {
 			opp_lex_str(s);
 			return;
@@ -670,15 +709,15 @@ void dump_tokens(struct Opp_Scan* s)
 		if (s->t.id == TFLOATING)
 			printf("FLOAT\t %lf\n", s->t.value.real);
 		else if (s->t.id == TINTEGER)
-			printf("INT\t %lld\n", s->t.value.num);
+			printf("INT\t %ld\n", (long int)s->t.value.num);
 		else if (s->t.id == TIDENT)
 			printf("IDENT\t %s\n", s->t.buffer);
 		else if (s->t.id == TSTR)
 			printf("STRING\t \"%s\"\n", s->t.buffer);
 		else if (s->t.id > TK_CHARS && s->t.id < TK_KEYWORDS)
 			printf("CHAR\t '%s'\n", opp_keys[s->t.id].key);
-		// else if (s->t.id >= TAUTO && s->t.id <= TINLINE)
-		// 	printf("KEYWORD\t '%s'\n", opp_keys[s->t.id].key);
+		else if (s->t.id > TK_KEYWORDS && s->t.id < FEND)
+			printf("KEYWORD\t '%s'\n", opp_keys[s->t.id].key);
 		else if (s->t.id == FEND)
 			printf("FILE END\n");
 

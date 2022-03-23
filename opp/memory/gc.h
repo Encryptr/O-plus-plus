@@ -1,6 +1,6 @@
-/** @file memory.h
+/** @file gc.h
  * 
- * @brief Memory implementation
+ * @brief Garbage Collector implementation
  *      
  * Copyright (c) 2022 Maks S
  *
@@ -17,21 +17,20 @@
  * limitations under the License.
  */ 
 
-#ifndef OPP_MEM
-#define OPP_MEM
+#ifndef OPP_GC
+#define OPP_GC
 
 #include <stdio.h>
-#include "gc.h"
+#include "../object/object.h"
 
-void* opp_os_alloc(size_t size);
-void  opp_os_free(void* ptr);
-void* opp_os_realloc(void* ptr, size_t new_size);
-void* opp_realloc(struct GC_State* const gc, void* ptr, size_t old_size, size_t new_size);
+struct GC_State {
+    struct Opp_Obj* obj_list;
+    struct Opp_Obj* gray_list;
+    size_t used;
+    size_t threshold;
+    size_t growth_rate;
+};
 
-#define OPP_ALLOC(gc, size) \
-    opp_realloc(gc, NULL, 0, size)
+void opp_init_gc(struct GC_State* const gc);
 
-#define OPP_FREE(gc, ptr) \
-    opp_realloc(gc, ptr, 0, 0);
-
-#endif /* OPP_MEM */
+#endif /* OPP_GC */

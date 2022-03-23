@@ -8,10 +8,18 @@ BUILD_DIR = build
 TYPE = DEBUG
 SRC_DIR = ./opp
 
-SOURCES  =	./opp/opp.c
+SOURCES  =	$(SRC_DIR)/util/util.c \
+			$(SRC_DIR)/memory/gc.c \
+			$(SRC_DIR)/memory/memory.c \
+			$(SRC_DIR)/lexer/lexer.c \
+			$(SRC_DIR)/parser/parser.c \
+			$(SRC_DIR)/code/code.c \
+			$(SRC_DIR)/vm/vm.c \
+			$(SRC_DIR)/opp.c
+
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 
-DEPS = $(addprefix build\, $(SOURCES:.c=.d))
+DEPS = $(SRC_OBJS:.o=.d)
 CXXFLAGS += -O2 -Wall -std=c11 -pedantic-errors
 
 ifeq ($(TYPE), RELEASE)
@@ -32,13 +40,31 @@ directory:
 	@if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
 
 clean:
-	del $(addprefix .\build\, $(SOURCES:.c=.o))
-	rmdir /s /q $(INSTALL_DIR)
+	rd /s /q .\build
 
-# TO create shortcut mklink qs_short.lnk qs.exe
+# Build Opp Source
+$(BUILD_DIR)/util.o:$(SRC_DIR)/util/util.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
 
-# Build App Source
-$(BUILD_DIR)/%.o:$(SRC_DIR)/%.c
+$(BUILD_DIR)/memory.o:$(SRC_DIR)/memory/memory.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/lexer.o:$(SRC_DIR)/lexer/lexer.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/parser.o:$(SRC_DIR)/parser/parser.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/vm.o:$(SRC_DIR)/vm/vm.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/code.o:$(SRC_DIR)/vm/code.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/gc.o:$(SRC_DIR)/memory/gc.c
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/opp.o:$(SRC_DIR)/opp.c
 	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $<
 
 # Link Together
