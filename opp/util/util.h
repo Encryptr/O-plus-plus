@@ -1,4 +1,4 @@
-/** @file util.h
+/* @file util.h
  * 
  * @brief Opp Utilities
  *      
@@ -35,31 +35,27 @@ void opp_internal_error(const char* file,
 #define MALLOC_FAIL(cond) \
     if (cond) INTERNAL_ERROR("Memory allocation failed...")
 
-#if defined(SYSTEM_WIN_64)
 #define colored_printf(color, str, ...) \
     opp_colored_print((void*)color, str, __VA_ARGS__)
 #define colored_print(color, str) \
     opp_colored_print((void*)color, str)
-#elif defined(SYSTEM_UNX)
-    opp_colored_print(color, str, __VA_ARGS__)
-#endif
 
 void opp_colored_print(void* color, const char* str, ...);
 
-struct Bucket {
-	const char* id;
-	void* data;
-	struct Bucket* next;
-};
+// struct Bucket {
+// 	const char* id;
+// 	void* data;
+// 	struct Bucket* next;
+// };
 
-struct Hashmap {
-	size_t size;
-	struct Bucket** items;
-	struct Hashmap* parent;
-};
+// struct Hashmap {
+// 	size_t size;
+// 	struct Bucket** items;
+// 	struct Hashmap* parent;
+// };
 
-struct Hashmap* opp_create_map(size_t size, struct Hashmap* parent);
-struct Bucket* opp_get_bucket(struct Hashmap* map, char* string);
-struct Bucket* opp_create_bucket(struct Hashmap* map, char* string);
+// struct Hashmap* opp_create_map(size_t size, struct Hashmap* parent);
+// struct Bucket* opp_get_bucket(struct Hashmap* map, char* string);
+// struct Bucket* opp_create_bucket(struct Hashmap* map, char* string);
 
 #endif /* OPP_UTIL */

@@ -93,6 +93,8 @@ void opp_init_module(struct Opp_State* const state)
 			goto err;
 		}
 
+		dump_tokens(env.scan);
+
 		// START_CLOCK();
 		// env.parser = opp_init_parser(env.scan);
 		// opp_begin_parser(env.parser);

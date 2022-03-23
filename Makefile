@@ -1,9 +1,9 @@
 ## ----------------------------------------------------------------------
-## Opp Windows Makefile
+## Opp Unix Makefile
 ## ----------------------------------------------------------------------
 
 CXX = gcc
-EXE = o++.exe
+EXE = o++
 BUILD_DIR = build
 TYPE = DEBUG
 SRC_DIR = ./opp
@@ -20,7 +20,7 @@ SOURCES  =	$(SRC_DIR)/util/util.c \
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 
 DEPS = $(SRC_OBJS:.o=.d)
-CXXFLAGS += -O2 -Wall -std=c11 -pedantic-errors
+CXXFLAGS += -O2 -Wall -std=c11 -pedantic-errors -Wno-newline-eof
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
@@ -29,18 +29,15 @@ endif
 .PHONY: all clean directory
 
 all: directory compile
-ifneq ($(OS), Windows_NT)
-	$(error Makefile only compatible for Windows system)
-endif
 	@echo Build Complete!
 
 compile: $(EXE)
 
 directory:
-	@if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
+	@mkdir -p $(BUILD_DIR)
 
 clean:
-	rd /s /q .\build
+	@rm -r $(BUILD_DIR)
 
 # Build Opp Source
 $(BUILD_DIR)/util.o:$(SRC_DIR)/util/util.c

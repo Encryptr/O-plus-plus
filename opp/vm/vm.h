@@ -20,7 +20,7 @@
 #ifndef OPP_VM
 #define OPP_VM
 
-#include "../object./object.h"
+#include "../object/object.h"
 #include "opcode.h"
 
 struct Func_Call_Frame {

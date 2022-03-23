@@ -53,14 +53,20 @@
 
 /*** Memory Allocation / GC ***/
 
-/* OS MALLOC Function */
-#define OPP_OS_MALLOC malloc
+#define OPP_STANDARD_ALLOCATOR
 
-/* OS REALLOC Function */
-#define OPP_OS_REALLOC realloc
+#ifdef OPP_STANDARD_ALLOCATOR
+   #include <stdlib.h>
 
-/* OS FREE Function */
-#define OPP_OS_FREE free
+   /* OS MALLOC Function */
+   #define OPP_OS_MALLOC malloc
+
+   /* OS REALLOC Function */
+   #define OPP_OS_REALLOC realloc
+
+   /* OS FREE Function */
+   #define OPP_OS_FREE free
+#endif
 
 #define OPP_INITIAL_HEAP_SIZE (1024 * 6)
 
@@ -95,4 +101,4 @@ _Static_assert(
 
 #define LOCAL_LIST_SIZE 256
 
-#endif
+#endif /* OPP_PLATFORM */

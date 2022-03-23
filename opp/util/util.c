@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../memory/memory.h"
+#include <stdarg.h>
 
 void opp_internal_error(const char* file,
                         const char* func,
@@ -44,7 +45,7 @@ void opp_colored_print(void* color, const char* str, ...)
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, (INT_PTR)color);
     #elif defined(SYSTEM_UNX)
-    fprintf(stdout, color);
+    fprintf(stdout, "%s", color);
     #endif
 
 	vfprintf(stdout, str, ap);
