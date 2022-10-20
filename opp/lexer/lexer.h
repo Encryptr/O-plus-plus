@@ -41,22 +41,21 @@ enum Opp_Token {
 
 	// Characters
 	TK_CHARS,
-
+	// =
+	TEQ, 
 	// > <= < >= 
 	TGT, TLE, TLT, TGE,
 	// == != ! 
 	TEQEQ, TNOTEQ, TNOT,  
-	// + - / * % -- ++
-	TADD, TMIN, TDIV, TMUL, TMOD, TDECR, TINCR,
-	// ... 
-	TVA_ARGS,
-	// = += -= /= *= %= 
-	TEQ, TADDEQ, TMINEQ, TDIVEQ, TMULEQ, TMODEQ,
+	// + - / * % 
+	TADD, TMIN, TDIV, TMUL, TMOD,
+	// << >> ^ | ~ &
+	TSHL, TSHR, TBITXOR, TBITOR, TBITNOT, TADDR,
+	// ... -- ++
+	TVA_ARGS, TDECR, TINCR,
 	// ( ) , [ ] { } . ; ->
 	TOPENP, TCLOSEP, TCOMMA, TOPENB, TCLOSEB, 
 	TOPENC, TCLOSEC, TDOT, TSEMICOLON, TARROW,
-	// << >> ^ | ~ &
-	TSHL, TSHR, TBITXOR, TBITOR, TBITNOT, TADDR,
 
 	// Keywords
 	TK_KEYWORDS,
@@ -70,12 +69,11 @@ enum Opp_Token {
 
 struct Opp_Tok {
 	enum Opp_Token id;
-	char* buffer, *peek;
+	char* buffer;
 	unsigned int size;
 	union {
 		int64_t num;
 		double	real;
-		char*   str;
 	} value;
 };
 
@@ -84,7 +82,7 @@ struct Opp_Scan {
 	char* src, *content;
 	struct Opp_IO io;
 	unsigned int line, colum;
-	struct Opp_Tok t;
+	struct Opp_Tok t, peek;
 };
 
 void dump_tokens(struct Opp_Scan* s);
@@ -93,7 +91,7 @@ void opp_free_lex(struct Opp_Scan* s);
 bool opp_init_file(struct Opp_Scan* s, const char* fname);
 void opp_init_from_buffer(struct Opp_Scan* s, char* const buffer);
 void opp_next(struct Opp_Scan* s);
-enum Opp_Token opp_peek_tok(struct Opp_Scan* s, int times);
+enum Opp_Token opp_peek_tok(struct Opp_Scan* s, unsigned int times);
 const char* tok_to_str(struct Opp_Scan* s);
 const char* tok_debug(enum Opp_Token tok);
 void opp_error(struct Opp_Scan* s, const char* str, ...);

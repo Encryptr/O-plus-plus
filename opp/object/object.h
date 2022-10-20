@@ -42,6 +42,14 @@ struct Opp_Func_Obj {
     char* name;
     ARRAY(Instruction) instr;
     struct Opp_Value* stack_begin;
+    struct Opp_Obj** constants;
+    unsigned int consts_len;
+};
+
+struct Opp_String_Obj {
+    struct Opp_Obj obj;
+    char* str;
+    unsigned int len;
 };
 
 enum Opp_Value_Type {

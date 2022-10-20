@@ -30,12 +30,12 @@ enum Scope {
 };
 
 struct Local_Var {
-    char ident[MAX_IDENTIFIER_LEN];
+    char* ident;
     unsigned int depth;
 };
 
 struct Func_Ctx {
-    struct Local_Var locals;
+    struct Local_Var locals[MAX_LOCALS];
     unsigned int local_count;
     struct Opp_Func_Obj* fn;
 };
@@ -44,7 +44,8 @@ struct Opp_Parser {
     struct Opp_Scan* lex;
     enum Scope scope;
     struct Hashmap* globals;
-    struct Func_Ctx* func;
+    struct Func_Ctx* func_scope;
+    struct Func_Ctx *func_top;
 };
 
 struct Opp_Parser* opp_init_parser(struct Opp_Scan* const s);

@@ -144,18 +144,17 @@ struct Opp_Str_Pair {
 #define TOKEN(tok, ch) [tok] = {ch, tok}
 
 static const struct Opp_Str_Pair opp_keys[] = {
-	TOKEN(INVALID  , 0),  TOKEN(TIDENT    , 0),  
-	TOKEN(TINTEGER , 0),  TOKEN(TFLOATING , 0),
-	TOKEN(TSTR     , 0),  TOKEN(FEND      , 0),
+	TOKEN(INVALID  , 0),  TOKEN(TIDENT    , "IDENT"),  
+	TOKEN(TINTEGER , "INTEGER"),  TOKEN(TFLOATING , "REAL"),
+	TOKEN(TSTR     , "STRING"),  TOKEN(FEND      , "FILE END"),
 	
 	// Characters
 	TOKEN(TGT, ">")     , TOKEN(TLE, "<=")    , TOKEN(TLT, "<"),  
 	TOKEN(TGE, ">=")    , TOKEN(TEQEQ, "==")  , TOKEN(TNOTEQ , "!="),  
 	TOKEN(TNOT, "!")    , TOKEN(TADD, "+")    , TOKEN(TMIN, "-"), 
-	TOKEN(TDIV, "/")    , TOKEN(TMUL, "*")    , TOKEN(TMOD, "%%"),
+	TOKEN(TDIV, "/")    , TOKEN(TMUL, "*")    , TOKEN(TMOD, "%"),
 	TOKEN(TDECR, "--")  , TOKEN(TINCR, "++")  , TOKEN(TVA_ARGS, "..."),
-	TOKEN(TEQ, "=")     , TOKEN(TADDEQ, "+=") , TOKEN(TMINEQ, "-="),
-	TOKEN(TDIVEQ, "/=") , TOKEN(TMULEQ, "*=") , TOKEN(TMODEQ, "%%="),
+	TOKEN(TEQ, "=")     , 
 	TOKEN(TOPENP, "(")  , TOKEN(TCLOSEP, ")") , TOKEN(TCOMMA, ","),
 	TOKEN(TOPENB, "[")  , TOKEN(TCLOSEB, "]") , TOKEN(TOPENC, "{"),
 	TOKEN(TCLOSEC, "}") , TOKEN(TDOT, ".")    , TOKEN(TSEMICOLON, ";"),
@@ -222,7 +221,7 @@ void opp_init_from_buffer(struct Opp_Scan* s, char* const buffer)
 {
 	s->io.fname = "input";
 	s->io.fsize = strlen(buffer);
-	s->content = buffer;
+	s->content = buffer; // free here will throw error
 	s->src = s->content;
 }
 
@@ -236,14 +235,15 @@ struct Opp_Scan* opp_init_lex(struct Opp_State* state)
 
 	MALLOC_FAIL(!s);
 
+	memset(s, 0, sizeof(struct Opp_Scan));
+
 	s->state = state;
 	s->line = 1;
 	s->colum = 0;
+	s->content = NULL;
 
 	s->t.buffer = (char*)opp_os_alloc(SCAN_BUFFER_INITAL);
 	MALLOC_FAIL(!s->t.buffer);
-
-	memset(s->t.buffer, 0, SCAN_BUFFER_INITAL);
 
 	s->t.size = SCAN_BUFFER_INITAL;
 
@@ -252,7 +252,10 @@ struct Opp_Scan* opp_init_lex(struct Opp_State* state)
 
 void opp_free_lex(struct Opp_Scan* s)
 {
-	opp_os_free(s->content);
+	if (s->content)
+		opp_os_free(s->content);
+	if (s->peek.buffer)
+		opp_os_free(s->peek.buffer);
 	opp_os_free(s->t.buffer);
 	opp_os_free(s);
 }
@@ -551,9 +554,7 @@ static enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 
 		case '+': {
 			incr(s);
-			if (CHECK('=')) 
-				return TADDEQ;
-			else if (CHECK('+')) 
+			if (CHECK('+')) 
 				return TINCR;
 			decr(s);
 			return TADD;
@@ -561,9 +562,7 @@ static enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 
 		case '-': {
 			incr(s);
-			if (CHECK('=')) 
-				return TMINEQ;
-			else if (CHECK('-')) 
+			if (CHECK('-')) 
 				return TDECR;
 			else if (CHECK('>')) 
 				return TARROW;
@@ -572,26 +571,14 @@ static enum Opp_Token opp_lex_char(struct Opp_Scan* s)
 		}
 
 		case '*': {
-			incr(s);
-			if (CHECK('=')) 
-				return TMULEQ;
-			decr(s);
 			return TMUL;
 		}
 
 		case '/': {
-			incr(s);
-			if (CHECK('='))
-				return TDIVEQ;
-			decr(s);
 			return TDIV;
 		}
 
 		case '%': {
-			incr(s);
-			if (CHECK('='))
-				return TMODEQ;
-			decr(s);
 			return TMOD;
 		}
 		default: break;
@@ -624,38 +611,39 @@ static void opp_lex_comments(struct Opp_Scan* s)
 	}
 }
 
-enum Opp_Token opp_peek_tok(struct Opp_Scan* s, int times)
-{
-	INTERNAL_ERROR("Not implemented\n");
-	return 0;
-	// Could not work make sure all Opp_Tok values could not be overwritten 
-	// such as the value.num / value.real ***** RETHINK MOST OF THIS
-	// struct {
-	// 	char* src;
-	// 	unsigned int line, colum;
-	// } temp_copy = {
-	// 	.src = s->src,
-	// 	.line = s->line,
-	// 	.colum = s->colum
-	// };
+enum Opp_Token opp_peek_tok(struct Opp_Scan* s, unsigned int times)
+{	
+	// Copy current state of token
+	unsigned int line = s->line;
+	unsigned int colum = s->colum;
+	char* src = s->src;
+	s->peek.id = s->t.id;
+	s->peek.value = s->t.value;
 
-	// // Save current text buffer
-	// strncpy(s->t.peek, s->t.buffer, s->t.size);
+	// Realloc peek buffer if needed
+	if (s->peek.size < s->t.size) {
+		s->peek.buffer = opp_os_realloc(s->peek.buffer, s->t.size);
+		MALLOC_FAIL(!s->peek.buffer);
+		s->peek.size = s->t.size;
+	}
 
-	// for (int i = 0; i < times; i++)
-	// 	opp_next(s);
+	strncpy(s->peek.buffer, s->t.buffer, s->t.size);
 
-	// enum Opp_Token peek_tok = s->t.id;
+	for (unsigned int i = 0; i < times; ++i)
+		opp_next(s);
 
-	// // Move temp peek buffer back into text buffer
-	// strncpy(s->t.buffer, s->t.peek, s->t.size);
+	enum Opp_Token peek_tok = s->t.id;
 
-	// // Restore previous state
-	// s->src   = temp_copy.src;
-	// s->line  = temp_copy.line;
-	// s->colum = temp_copy.colum;
-	
-	// return peek_tok;
+	// Return state back to previous
+	s->line    = line;
+	s->colum   = colum;
+	s->src     = src;
+	s->t.id    = s->peek.id;
+	s->t.value = s->peek.value;
+
+	strncpy(s->t.buffer, s->peek.buffer, s->peek.size);
+
+	return peek_tok;
 }
 
 void opp_next(struct Opp_Scan* s)

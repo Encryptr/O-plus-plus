@@ -21,11 +21,14 @@
 #define OPP_UTIL
 
 #include "platform.h"
+#include <assert.h>
 
 #define INTERNAL_ERROR(str) \
     do { \
         opp_internal_error(__FILE__, __func__, __LINE__, str); \
     } while (0)
+
+#define OPP_ASSERT(cond) assert(cond)
 
 void opp_internal_error(const char* file,
                         const char* func,
@@ -42,20 +45,21 @@ void opp_internal_error(const char* file,
 
 void opp_colored_print(void* color, const char* str, ...);
 
-// struct Bucket {
-// 	const char* id;
-// 	void* data;
-// 	struct Bucket* next;
-// };
+struct Bucket {
+	const char* id;
+	void* data;
+	struct Bucket* next;
+};
 
-// struct Hashmap {
-// 	size_t size;
-// 	struct Bucket** items;
-// 	struct Hashmap* parent;
-// };
+struct Hashmap {
+	size_t size;
+	struct Bucket** items;
+	struct Hashmap* parent;
+};
 
-// struct Hashmap* opp_create_map(size_t size, struct Hashmap* parent);
-// struct Bucket* opp_get_bucket(struct Hashmap* map, char* string);
-// struct Bucket* opp_create_bucket(struct Hashmap* map, char* string);
+struct Hashmap* init_map(size_t size, struct Hashmap* parent);
+void free_map(struct Hashmap* map);
+struct Bucket* get_bucket(struct Hashmap* map, char* string);
+struct Bucket* create_bucket(struct Hashmap* map, char* string);
 
 #endif /* OPP_UTIL */

@@ -101,9 +101,3 @@ Libraries:
     WideString
     Thread
     Error
-
-JIT:
-- Possibly implement jit in which functions can be
-
-
-Brainstorm:

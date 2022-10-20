@@ -99,6 +99,8 @@ _Static_assert(
 /* Size of global hashmap */
 #define GLOBAL_HASHMAP_SIZE 64
 
-#define LOCAL_LIST_SIZE 256
+#define MAX_LOCALS 256
+
+#define MAX_FUNC_DEPTH 3
 
 #endif /* OPP_PLATFORM */

@@ -15,7 +15,7 @@ func matrix_dot(mat1, mat2)
 }
 
 mat1 = [1, 3, -5]
-mat2 = [4, -2, -1]
+mat2 = [mat1, -2.3, "hello"]
 
 try {
     // If mat1 or mat2 does not pass matrix_dot precondition check
@@ -25,17 +25,60 @@ try {
     print(e)
 }
 
-if k == 3 and k == 3 {
-    print("ok")
-} 
-elif b == 3 and k > 3 {
 
-}
-
-matrix_dot() {
+// matrix.opp
+matrix_dot(mat1, mat2) {
+    import "std.opp" as std
+    
     sum = 0
     
-    return test(a,b) {
-        return a + b
-    }()
+    for i = 0, i < len(mat1), i++ {
+        sum += mat1[i] * mat2[i]
+    }
+
+    std.log(matrix_dot)
+    
+    return sum
 }
+
+
+"global":
+Const Table:
+    [0]
+        Function "matrix_dot"
+        ...
+Instr:
+    PUSH_CONST 0
+    SET_GLOBAL "std" 
+
+    PUSH_CONST 1
+    SET_GLOBAL "matrix_dot"
+
+"matrix_dot":
+Const Table:
+    [0]
+            Namespace "std"
+            ...
+    PUSH_INT 0
+    SET_LOCAL 2 "sum"
+    PUSH_INT 0
+    SET_LOCAL 3 "i"
+    PUSH_LOCAL 0 "mat1" 
+    CALL "len"
+cond:
+    LESS_THAN exit
+        PUSH_LOCAL 0 "mat1"
+        PUSH_LOCAL 3 "i"
+        PUSH_INDEX "mat1[i]"
+        PUSH_LOCAL 1 "mat2"
+        PUSH_LOCAL 3 "i"
+        PUSH_INDEX "mat2[i]"
+        MUL
+        PUSH_LOCAL 2 "sum"
+        ADD
+        STORE_LOCAL 2 "sum"
+        INCR_LOCAL 3 "i"
+        JUMP cond
+exit:
+    PUSH_LOCAL 2
+    RET

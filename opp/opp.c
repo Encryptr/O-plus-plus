@@ -73,19 +73,18 @@ static void opp_debug_info(const struct Opp_Scan* const s,
 	#endif
 }
 
+struct {
+	struct Opp_Scan* scan;
+	struct Opp_Parser* parser;
+	struct Opp_VM* vm;
+	struct Stats stats;
+} static env;
+
 void opp_init_module(struct Opp_State* const state)
 {
-	struct {
-		struct Opp_Scan* scan;
-		struct Opp_Parser* parser;
-		struct Opp_VM* vm;
-		struct Stats stats;
-	} env = {0};
-
 	enum Error_State error = ERROR_RECOVER(state->error_buf);
 
 	if (error != OPP_ERROR) {
-	
 		env.scan = opp_init_lex(state);
 
 		if (!opp_init_file(env.scan, state->fname)) {
@@ -93,12 +92,10 @@ void opp_init_module(struct Opp_State* const state)
 			goto err;
 		}
 
-		dump_tokens(env.scan);
-
-		// START_CLOCK();
-		// env.parser = opp_init_parser(env.scan);
-		// opp_begin_parser(env.parser);
-		// END_CLOCK(S_PARSER);
+		START_CLOCK();
+		env.parser = opp_init_parser(env.scan);
+		opp_begin_parser(env.parser);
+		END_CLOCK(S_PARSER);
 
 		// START_CLOCK();
 		// env.vm = opp_init_vm(env.parser);
@@ -114,6 +111,7 @@ void opp_init_module(struct Opp_State* const state)
 
 err:
 	opp_free_lex(env.scan);
+	opp_free_parser(env.parser);
 	return;
 }
 
@@ -162,14 +160,13 @@ int main(int argc, const char** argv)
 
 	if (argc < 2) {
 		opp_help();
-		goto err;
+		return 1;
 	}
 
 	if (!opp_args(argc, argv, &status))	
-		goto err;
+		return 1;
 
 	opp_init_module(&status);
 
-err:
 	return 0;
 }

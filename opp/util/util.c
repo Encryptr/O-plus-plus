@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include "../memory/memory.h"
 #include <stdarg.h>
+#include <string.h>
 
 void opp_internal_error(const char* file,
                         const char* func,
@@ -45,7 +46,7 @@ void opp_colored_print(void* color, const char* str, ...)
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, (INT_PTR)color);
     #elif defined(SYSTEM_UNX)
-    fprintf(stdout, "%s", color);
+    fprintf(stdout, "%s", (char*)color);
     #endif
 
 	vfprintf(stdout, str, ap);
@@ -59,38 +60,41 @@ void opp_colored_print(void* color, const char* str, ...)
 	va_end(ap);
 }
 
-// static unsigned int hash_str(char* string, unsigned int size)
-// {
-// 	unsigned int h = 0;
-// 	while (*string) {
-// 		h = ((h<<5)-h)^(unsigned char)*(string++);
-// 	}
-// 	h = h % size;
+static unsigned int hash_str(char* string, unsigned int size)
+{
+	unsigned int h = 0;
+	while (*string) {
+		h = ((h<<5)-h)^(unsigned char)*(string++);
+	}
+	h = h % size;
 	
-// 	return h;
-// }
+	return h;
+}
 
-// struct Hashmap* opp_create_map(size_t size, struct Hashmap* parent)
-// {
-// 	struct Hashmap* map = (struct Hashmap*)
-// 		opp_alloc(sizeof(struct Hashmap));
+struct Hashmap* init_map(size_t size, struct Hashmap* parent)
+{
+	struct Hashmap* map = (struct Hashmap*)
+		opp_os_alloc(sizeof(struct Hashmap));
 
-// 	if (!map)
-// 		MALLOC_FAIL();
+	MALLOC_FAIL(!map);
 
-// 	map->items = (struct Bucket**)
-// 		opp_alloc(sizeof(struct Bucket*)*size);
+	map->items = (struct Bucket**)
+		opp_os_alloc(sizeof(struct Bucket*) * size);
     
-//     if (!map->items)
-//         MALLOC_FAIL();
+    MALLOC_FAIL(!map->items);
 
-// 	map->size = size;
-// 	map->parent = parent;
+	map->size = size;
+	map->parent = parent;
 	
-// 	memset(map->items, 0, sizeof(struct Bucket*)*size);
+	memset(map->items, 0, sizeof(struct Bucket*) * size);
 
-// 	return map;
-// }
+	return map;
+}
+
+void free_map(struct Hashmap* map)
+{
+
+}
 
 // struct Bucket* opp_get_bucket(struct Hashmap* map, char* string)
 // {

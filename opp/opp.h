@@ -36,7 +36,7 @@ enum Error_State {
 
 struct Opp_State {
     unsigned int flags;
-    char* fname;
+    const char* fname;
     jmp_buf error_buf;
 };
 

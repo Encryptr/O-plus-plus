@@ -11,6 +11,8 @@
         "ast.h": "c",
         "stddef.h": "c",
         "vm.h": "c",
-        "opcode.h": "c"
+        "opcode.h": "c",
+        "functional": "c",
+        "iterator": "c"
     }
 }
